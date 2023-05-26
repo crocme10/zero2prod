@@ -1,0 +1,216 @@
+/* FIRA SANS */
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-Thin.ttf');
+  font-weight: 100;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-ThinItalic.ttf');
+  font-weight: 100;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-ExtraLight.ttf');
+  font-weight: 200;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-ExtraLightItalic.ttf');
+  font-weight: 200;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-Light.ttf');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-LightItalic.ttf');
+  font-weight: 300;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-Regular.ttf');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-Italic.ttf');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-Medium.ttf');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-MediumItalic.ttf');
+  font-weight: 500;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-SemiBold.ttf');
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-SemiBoldItalic.ttf');
+  font-weight: 600;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-Bold.ttf');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-BoldItalic.ttf');
+  font-weight: 700;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-ExtraBold.ttf');
+  font-weight: 800;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-ExtraBoldItalic.ttf');
+  font-weight: 800;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-Black.ttf');
+  font-weight: 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FiraSans';
+  src: url('/fonts/FiraSans/FiraSans-BlackItalic.ttf');
+  font-weight: 900;
+  font-style: italic;
+}
+
+/* FONTAWESOME */
+
+@font-face {
+  font-family: 'FontAwesome';
+  /* src: url('/fonts/FontAwesome/fontawesome-free-6.4.0-web/webfonts/fa-regular-400.ttf'); */
+  /* FIXME: Why this ttf file does not work? */
+  src: url('/fonts/FontAwesome/fontawesome-webfont.ttf');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FontAwesomeBrand';
+  /* FIXME: Why this ttf file does not work? */
+  src: url('/fonts/FontAwesome/fontawesome-free-6.4.0-web/webfonts/fa-brands-400.ttf');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+[class^="icon-"]:before,
+[class*=" icon-"]:before {
+  font-family: 'FontAwesome';
+  font-weight: 400;
+  font-style: normal;
+  display: inline-block;
+  text-decoration: inherit;
+}
+
+[class^="brand-"]:before,
+[class*=" brand-"]:before {
+  font-family: 'FontAwesomeBrand';
+  font-weight: 400;
+  font-style: normal;
+  display: inline-block;
+  text-decoration: inherit;
+}
+
+.icon-phone:before {
+  content: "\f095";
+}
+
+.icon-envelope:before {
+  content: "\f0e0";
+}
+
+.icon-bars:before {
+  content: "\f0c9";
+}
+
+.icon-search:before {
+  content: "\f002";
+}
+
+.icon-truck:before {
+  content: "\f0d1";
+}
+
+.icon-circle-user:before {
+  content: "\f2bd";
+}
+
+.brand-facebook:before {
+  content: "\f09a";
+}
+
+.brand-linkedin:before {
+  content: "\f08c";
+}
+
+.brand-twitter:before {
+  content: "\f099";
+}
+
+.brand-instagram:before {
+  content: "\f16d";
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+
