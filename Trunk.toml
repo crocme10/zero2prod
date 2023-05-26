@@ -1,4 +1,0 @@
-[[hooks]]
-stage = "pre_build"
-command = "sh"
-command_arguments = ["-c", "npx tailwindcss -i tailwind.css -o css/main.css"]
