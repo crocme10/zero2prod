@@ -11,6 +11,11 @@ if #[cfg(feature = "ssr")] {
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use zero_to_prod::fallback::file_and_error_handler;
 
+    // `&'static str` becomes a `200 OK` with `content-type: text/plain; charset=utf-8`
+    async fn health() -> &'static str {
+        "ok"
+    }
+
     #[tokio::main]
     async fn main() {
         use zero_to_prod::*;
@@ -25,6 +30,7 @@ if #[cfg(feature = "ssr")] {
         // build our application with a route
         let app = Router::new()
         .route("/favicon.ico", get(file_and_error_handler))
+        .route("/health_check", get(health))
         .leptos_routes(&leptos_options, routes, |cx| view! { cx, <App/> } )
         .fallback(file_and_error_handler)
         .with_state(leptos_options);
