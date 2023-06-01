@@ -1,0 +1,11 @@
+mode = "default"
+
+[network]
+port = 8081
+host = "0.0.0.0"
+
+
+[service]
+  url = "http://127.0.0.1:8081"
+  # Amount of time used to attempt to connect to the service (ms)
+  timeout = 6000

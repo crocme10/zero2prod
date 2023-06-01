@@ -1,58 +1,18 @@
-use cfg_if::cfg_if;
-use leptos::*;
+use clap::Parser;
 
-// boilerplate to run in different modes
-cfg_if! {
-if #[cfg(feature = "ssr")] {
-    use axum::{
-        Router,
-        routing::get,
-    };
-    use leptos_axum::{generate_route_list, LeptosRoutes};
-    use zero_to_prod::fallback::file_and_error_handler;
+use zero2prod::server;
+use zero2prod::settings;
 
-    // `&'static str` becomes a `200 OK` with `content-type: text/plain; charset=utf-8`
-    async fn health() -> &'static str {
-        "ok"
+#[tokio::main]
+async fn main() -> Result<(), Box<server::Error>> {
+    tracing_subscriber::fmt::init();
+
+    let opts = settings::Opts::parse();
+
+    match opts.cmd {
+        settings::Command::Run => server::run(&opts).await?,
+        settings::Command::Config => server::config(&opts).await?,
     }
 
-    #[tokio::main]
-    async fn main() {
-        use zero_to_prod::*;
-
-        let conf = get_configuration(Some("Cargo.toml")).await.unwrap();
-        let leptos_options = conf.leptos_options;
-        let addr = leptos_options.site_addr;
-        let routes = generate_route_list(|cx| view! { cx, <App/> }).await;
-
-        simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
-
-        // build our application with a route
-        let app = Router::new()
-        .route("/favicon.ico", get(file_and_error_handler))
-        .route("/health_check", get(health))
-        .leptos_routes(&leptos_options, routes, |cx| view! { cx, <App/> } )
-        .fallback(file_and_error_handler)
-        .with_state(leptos_options);
-
-        // run our app with hyper
-        // `axum::Server` is a re-export of `hyper::Server`
-        log!("listening on {}", addr);
-        axum::Server::bind(&addr)
-            .serve(app.into_make_service())
-            .await
-            .unwrap();
-    }
-} else {
-        // client-only stuff for Trunk
-        use zero_to_prod::*;
-
-        pub fn main() {
-            _ = console_log::init_with_level(log::Level::Debug);
-            console_error_panic_hook::set_once();
-            mount_to_body(|cx| {
-                view! { cx, <App/> }
-            });
-        }
-    }
+    Ok(())
 }
