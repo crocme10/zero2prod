@@ -26,8 +26,7 @@ impl fmt::Display for Error {
                 write!(fmt, "Could not build client request: {context} | {source}")
             }
             Error::Deserializing { context, source } => {
-                write!(fmt, "Could not build client request: {context} | {source}")
-            }
+                write!(fmt, "Could not build client request: {context} | {source}") }
         }
     }
 }
@@ -70,7 +69,7 @@ pub enum Command {
     Config,
 }
 
-impl TryInto<Settings> for &Opts {
+impl TryInto<Settings> for Opts {
     type Error = Error;
 
     fn try_into(self) -> Result<Settings, Self::Error> {

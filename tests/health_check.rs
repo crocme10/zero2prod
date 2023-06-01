@@ -1,6 +1,5 @@
 use cucumber::{given, then, when, World, WriterExt};
 use reqwest::{Response, StatusCode};
-use tokio::time::{sleep, Duration};
 use zero2prod::{settings, server};
 use std::path::PathBuf;
 
@@ -12,14 +11,22 @@ pub struct TestWorld {
 
 #[given("the service has been started")]
 async fn start_service(_world: &mut TestWorld) {
-    println!("Starting service");
     spawn_service().await
 }
 
 // Steps are defined with `given`, `when` and `then` attributes.
 #[when("the user requests a health check")]
 async fn health_check(world: &mut TestWorld) {
-    let resp = reqwest::get("http://127.0.0.1:3000/health_check")
+    // We have to look into the 'testing' configuration for the port we have to target.
+    let opts = settings::Opts {
+        config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config"),
+        run_mode: Some("testing".to_string()),
+        settings: vec![],
+        cmd: settings::Command::Run,
+    };
+    let settings: settings::Settings = opts.try_into().expect("Could not get settings");
+    let url = format!("http://{}:{}/health", settings.network.host, settings.network.port);
+    let resp = reqwest::get(url)
         .await
         .expect("response");
     world.resp = Some(resp);
@@ -31,20 +38,14 @@ fn response_is_ok(world: &mut TestWorld) {
 }
 
 async fn spawn_service() {
-    sleep(Duration::from_millis(100)).await;
-    println!("100 ms have elapsed");
-    // dbg!("Starting service");
-    // println!("Starting service");
     let opts = settings::Opts {
-        config_dir: PathBuf::from(r"./config"),
+        config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config"),
         run_mode: Some("testing".to_string()),
         settings: vec![],
         cmd: settings::Command::Run,
     };
 
-    if let Err(err) = server::run(&opts).await {
-        eprintln!("zero2prod service error: {}", err);
-    }
+    let _ = tokio::spawn(server::run(opts));
 }
 
 // This runs before everything else, so you can setup things here.

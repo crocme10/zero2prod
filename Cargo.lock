@@ -2617,6 +2617,7 @@ dependencies = [
  "config",
  "cucumber",
  "futures",
+ "hyper",
  "reqwest",
  "scopeguard",
  "serde",

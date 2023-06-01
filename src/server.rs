@@ -6,6 +6,7 @@ use axum::{
 use axum_extra::extract::WithRejection;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::future::Future;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
 use tracing::info;
@@ -25,6 +26,10 @@ pub enum Error {
     Configuration {
         context: String,
         source: SettingsError,
+    },
+    Server {
+        context: String,
+        source: hyper::Error,
     },
 }
 
@@ -46,20 +51,23 @@ impl fmt::Display for Error {
             Error::AddressDefinition { context, source } => {
                 write!(fmt, "Could not build client request: {context} | {source}")
             }
+            Error::Server { context, source } => {
+                write!(fmt, "Server: {context} | {source}")
+            }
         }
     }
 }
 
 impl std::error::Error for Error {}
 
-pub async fn run(opts: &Opts) -> Result<(), Error> {
+//pub async fn run<S>(opts: &Opts) -> Result<impl Future<Output = hyper::Result<()>>, Error> {
+pub async fn run(opts: Opts) -> Result<(), Error> {
     let settings: Settings = opts.try_into().map_err(|err| Error::Configuration {
         context: "REST Server: Could not get server settings".to_string(),
         source: err,
     })?;
 
-    let app_state = AppState {
-    };
+    let app_state = AppState {};
 
     let app = Router::new()
         .route("/health", get(health_endpoint))
@@ -79,17 +87,16 @@ pub async fn run(opts: &Opts) -> Result<(), Error> {
             context: format!("REST Server: Could not resolve address  {host}:{port}",),
         })?;
 
-    info!("Serving natter REST API on {}", addr);
-
     Server::bind(&addr)
         .serve(app.into_make_service())
         .await
-        .unwrap(); // FIXME Check this unwrap
-
-    Ok(())
+        .map_err(|err| Error::Server {
+            context: format!("REST Server"),
+            source: err,
+        })
 }
 
-pub async fn config(opts: &Opts) -> Result<(), Error> {
+pub async fn config(opts: Opts) -> Result<(), Error> {
     let settings: Settings = opts.try_into().map_err(|err| Error::Configuration {
         context: "REST Server: Could not get server settings".to_string(),
         source: err,
@@ -99,7 +106,7 @@ pub async fn config(opts: &Opts) -> Result<(), Error> {
 }
 
 #[derive(Clone)]
-pub struct AppState { }
+pub struct AppState {}
 
 impl From<JsonRejection> for ApiError {
     fn from(rejection: JsonRejection) -> Self {
