@@ -31,7 +31,7 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-#[derive(Debug, clap::Parser)]
+#[derive(Debug, Clone, clap::Parser)]
 #[clap(
     name = "zero2prod",
     about = "Serving REST API for zero2prod",
@@ -59,7 +59,7 @@ pub struct Opts {
     pub cmd: Command,
 }
 
-#[derive(Debug, clap::Parser)]
+#[derive(Debug, Clone, clap::Parser)]
 pub enum Command {
     /// Execute osm2mimir with the given configuration
     Run,
@@ -73,7 +73,7 @@ impl TryInto<Settings> for Opts {
     fn try_into(self) -> Result<Settings, Self::Error> {
         crate::config::merge_configuration(
             self.config_dir.as_ref(),
-            &["service"],
+            &["service", "database"],
             self.run_mode.as_deref(),
             "NATTER",
             self.settings.clone(),
@@ -91,14 +91,33 @@ impl TryInto<Settings> for Opts {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Network {
+pub struct NetworkSettings {
     pub host: String,
     pub port: u16,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseSettings {
+    pub username: String,
+    pub password: String,
+    pub port: u16,
+    pub host: String,
+    pub database_name: String,
+}
+
+impl DatabaseSettings {
+    pub fn connection_string(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}/{}",
+            self.username, self.password, self.host, self.port, self.database_name
+        )
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
-    pub network: Network,
+    pub network: NetworkSettings,
+    pub database: DatabaseSettings,
     pub mode: String,
 }
 

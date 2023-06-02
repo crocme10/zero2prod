@@ -1,15 +1,13 @@
 use axum::{
-    extract::Json,
     routing::{get, post, Router},
     Server,
 };
-use axum_extra::extract::WithRejection;
-use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::net::ToSocketAddrs;
 
-use crate::error::ApiError;
 use crate::settings::{Error as SettingsError, Opts, Settings};
+use crate::routes::{health::health, subscriptions::subscriptions};
+use crate::err_context::ErrorContext;
 
 #[derive(Debug)]
 pub enum Error {
@@ -57,32 +55,30 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-//pub async fn run<S>(opts: &Opts) -> Result<impl Future<Output = hyper::Result<()>>, Error> {
-pub async fn run(opts: Opts) -> Result<(), Error> {
-    let settings: Settings = opts.try_into().map_err(|err| Error::Configuration {
-        context: "REST Server: Could not get server settings".to_string(),
-        source: err,
-    })?;
+impl From<ErrorContext<String, SettingsError>> for Error {
+    fn from(err: ErrorContext<String, SettingsError>) -> Self {
+        Error::Configuration { context: err.0, source: err.1 }
+    }
+}
 
+pub async fn run(settings: Settings) -> Result<(), Error> {
     let app_state = AppState {};
 
     let app = Router::new()
-        .route("/health", get(health_endpoint))
+        .route("/health", get(health))
         .route("/subscriptions", post(subscriptions))
         .with_state(app_state);
 
-    let host = settings.network.host;
-    let port = settings.network.port;
-    let addr = (host.as_str(), port);
+    let addr = (settings.network.host.as_str(), settings.network.port);
     let addr = addr
         .to_socket_addrs()
         .map_err(|err| Error::AddressDefinition {
-            context: format!("REST Server: Could not resolve address  {host}:{port}"),
+            context: format!("REST Server: Could not resolve address  {}:{}", settings.network.host, settings.network.port),
             source: err,
         })?
         .next()
         .ok_or_else(|| Error::AddressResolution {
-            context: format!("REST Server: Could not resolve address  {host}:{port}",),
+            context: format!("REST Server: Could not resolve address  {}:{}", settings.network.host, settings.network.port),
         })?;
 
     Server::bind(&addr)
@@ -105,74 +101,3 @@ pub async fn config(opts: Opts) -> Result<(), Error> {
 
 #[derive(Clone)]
 pub struct AppState {}
-
-// impl From<JsonRejection> for ApiError {
-//     fn from(rejection: JsonRejection) -> Self {
-//         match rejection {
-//             JsonRejection::JsonDataError(_) => {
-//                 tracing::error!("Invalid data");
-//                 ApiError::new_bad_request(String::from("Invalid data"))
-//             }
-//             JsonRejection::MissingJsonContentType(_) => {
-//                 tracing::error!("Missing JSON Content-Type");
-//                 ApiError::new_bad_request(String::from("Missing JSON Content-Type"))
-//             }
-//             JsonRejection::JsonSyntaxError(_) => {
-//                 tracing::error!("Invalid JSON Syntax");
-//                 ApiError::new_bad_request(String::from("Invalid JSON Syntax"))
-//             }
-//             _ => {
-//                 tracing::error!("Invalid JSON");
-//                 ApiError::new_bad_request(String::from("Invalid JSON"))
-//             }
-//         }
-//     }
-// }
-
-/// GET handler for health requests by an application platform
-///
-/// Intended for use in environments such as Amazon ECS or Kubernetes which want
-/// to validate that the HTTP service is available for traffic, by returning a
-/// 200 OK response with any content.
-#[allow(clippy::unused_async)]
-async fn health_endpoint() -> Json<Zero2ProdHealthResp> {
-    let resp = Zero2ProdHealthResp {
-        status: "OK".to_string(),
-    };
-    Json(resp)
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Zero2ProdHealthResp {
-    pub status: String,
-}
-
-/// POST handler for user subscriptions
-#[allow(clippy::unused_async)]
-async fn subscriptions(
-    WithRejection(Json(request), _): WithRejection<Json<SubscriptionRequest>, ApiError>,
-) -> Result<Json<Zero2ProdSubscriptionsResp>, ApiError> {
-    tracing::info!("request: {:?}", request);
-    let SubscriptionRequest { username, email } = request;
-    if username.is_empty() {
-        return Err(ApiError::new_bad_request("Empty username".to_string()));
-    }
-    if email.is_empty() {
-        return Err(ApiError::new_bad_request("Empty email".to_string()));
-    }
-    let resp = Zero2ProdSubscriptionsResp {
-        status: "OK".to_string(),
-    };
-    Ok(Json(resp))
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Zero2ProdSubscriptionsResp {
-    pub status: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct SubscriptionRequest {
-    username: String,
-    email: String,
-}
