@@ -1,15 +1,12 @@
 use axum::{
-    extract::{rejection::JsonRejection, Json, State},
+    extract::Json,
     routing::{get, post, Router},
     Server,
 };
 use axum_extra::extract::WithRejection;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use std::future::Future;
 use std::net::ToSocketAddrs;
-use std::sync::Arc;
-use tracing::info;
 
 use crate::error::ApiError;
 use crate::settings::{Error as SettingsError, Opts, Settings};
@@ -71,6 +68,7 @@ pub async fn run(opts: Opts) -> Result<(), Error> {
 
     let app = Router::new()
         .route("/health", get(health_endpoint))
+        .route("/subscriptions", post(subscriptions))
         .with_state(app_state);
 
     let host = settings.network.host;
@@ -108,28 +106,28 @@ pub async fn config(opts: Opts) -> Result<(), Error> {
 #[derive(Clone)]
 pub struct AppState {}
 
-impl From<JsonRejection> for ApiError {
-    fn from(rejection: JsonRejection) -> Self {
-        match rejection {
-            JsonRejection::JsonDataError(_) => {
-                tracing::error!("Invalid data");
-                ApiError::new_bad_request(String::from("Invalid data"))
-            }
-            JsonRejection::MissingJsonContentType(_) => {
-                tracing::error!("Missing JSON Content-Type");
-                ApiError::new_bad_request(String::from("Missing JSON Content-Type"))
-            }
-            JsonRejection::JsonSyntaxError(_) => {
-                tracing::error!("Invalid JSON Syntax");
-                ApiError::new_bad_request(String::from("Invalid JSON Syntax"))
-            }
-            _ => {
-                tracing::error!("Invalid JSON");
-                ApiError::new_bad_request(String::from("Invalid JSON"))
-            }
-        }
-    }
-}
+// impl From<JsonRejection> for ApiError {
+//     fn from(rejection: JsonRejection) -> Self {
+//         match rejection {
+//             JsonRejection::JsonDataError(_) => {
+//                 tracing::error!("Invalid data");
+//                 ApiError::new_bad_request(String::from("Invalid data"))
+//             }
+//             JsonRejection::MissingJsonContentType(_) => {
+//                 tracing::error!("Missing JSON Content-Type");
+//                 ApiError::new_bad_request(String::from("Missing JSON Content-Type"))
+//             }
+//             JsonRejection::JsonSyntaxError(_) => {
+//                 tracing::error!("Invalid JSON Syntax");
+//                 ApiError::new_bad_request(String::from("Invalid JSON Syntax"))
+//             }
+//             _ => {
+//                 tracing::error!("Invalid JSON");
+//                 ApiError::new_bad_request(String::from("Invalid JSON"))
+//             }
+//         }
+//     }
+// }
 
 /// GET handler for health requests by an application platform
 ///
@@ -137,14 +135,44 @@ impl From<JsonRejection> for ApiError {
 /// to validate that the HTTP service is available for traffic, by returning a
 /// 200 OK response with any content.
 #[allow(clippy::unused_async)]
-async fn health_endpoint() -> Json<NatterRestHealthResp> {
-    let resp = NatterRestHealthResp {
+async fn health_endpoint() -> Json<Zero2ProdHealthResp> {
+    let resp = Zero2ProdHealthResp {
         status: "OK".to_string(),
     };
     Json(resp)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NatterRestHealthResp {
+pub struct Zero2ProdHealthResp {
     pub status: String,
+}
+
+/// POST handler for user subscriptions
+#[allow(clippy::unused_async)]
+async fn subscriptions(
+    WithRejection(Json(request), _): WithRejection<Json<SubscriptionRequest>, ApiError>,
+) -> Result<Json<Zero2ProdSubscriptionsResp>, ApiError> {
+    tracing::info!("request: {:?}", request);
+    let SubscriptionRequest { username, email } = request;
+    if username.is_empty() {
+        return Err(ApiError::new_bad_request("Empty username".to_string()));
+    }
+    if email.is_empty() {
+        return Err(ApiError::new_bad_request("Empty email".to_string()));
+    }
+    let resp = Zero2ProdSubscriptionsResp {
+        status: "OK".to_string(),
+    };
+    Ok(Json(resp))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Zero2ProdSubscriptionsResp {
+    pub status: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct SubscriptionRequest {
+    username: String,
+    email: String,
 }

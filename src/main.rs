@@ -3,6 +3,7 @@ use clap::Parser;
 use zero2prod::server;
 use zero2prod::settings;
 
+#[allow(clippy::result_large_err)]
 #[tokio::main]
 async fn main() -> Result<(), server::Error> {
     tracing_subscriber::fmt::init();

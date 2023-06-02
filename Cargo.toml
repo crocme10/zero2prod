@@ -34,7 +34,7 @@ tracing-subscriber = { version = "^0.3.17" }
 [dev-dependencies]
 scopeguard = "^1.1.0"
 serial_test = "^2.0.0"
-cucumber = { version = "^0.19.1", features = ["libtest", "macros"]}
+cucumber = { git = "https://github.com/cucumber-rs/cucumber.git", branch = "main", features = ["macros", "tracing"]}
 reqwest = { version = "^0.11.18", features = [ "json"] }
 
 [lib]
@@ -46,5 +46,5 @@ name = "zero2prod"
 path = "src/main.rs"
 
 [[test]]
-name = "health_check" # this should be the same as the filename of your test target
+name = "integration" # this should be the same as the filename of your test target
 harness = false  # allows Cucumber to print output instead of libtest

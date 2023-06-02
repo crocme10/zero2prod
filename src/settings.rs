@@ -1,8 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::{env, path::PathBuf};
-
-use crate::config;
+use std::{env, fmt, path::PathBuf};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
@@ -26,7 +23,8 @@ impl fmt::Display for Error {
                 write!(fmt, "Could not build client request: {context} | {source}")
             }
             Error::Deserializing { context, source } => {
-                write!(fmt, "Could not build client request: {context} | {source}") }
+                write!(fmt, "Could not build client request: {context} | {source}")
+            }
         }
     }
 }
@@ -117,7 +115,7 @@ mod tests {
             cmd: Command::Run,
         };
 
-        let settings: Result<Settings, _> = (&opts).try_into();
+        let settings: Result<Settings, _> = opts.try_into();
         println!("settings: {settings:?}");
         assert!(settings.is_ok());
         assert_eq!(settings.unwrap().mode, "default");
