@@ -75,7 +75,7 @@ impl TryInto<Settings> for Opts {
             self.config_dir.as_ref(),
             &["service", "database"],
             self.run_mode.as_deref(),
-            "NATTER",
+            "ZERO2PROD",
             self.settings.clone(),
         )
         .map_err(|err| Error::Building {
