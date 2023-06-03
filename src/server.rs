@@ -2,6 +2,7 @@ use axum::{
     routing::{get, post, Router},
     Server,
 };
+use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::fmt;
 use std::net::ToSocketAddrs;
 
@@ -26,6 +27,10 @@ pub enum Error {
         context: String,
         source: hyper::Error,
     },
+    DBConnection {
+        context: String,
+        source: sqlx::Error,
+    },
 }
 
 impl fmt::Display for Error {
@@ -49,6 +54,9 @@ impl fmt::Display for Error {
             Error::Server { context, source } => {
                 write!(fmt, "Server: {context} | {source}")
             }
+            Error::DBConnection { context, source } => {
+                write!(fmt, "Database connection: {context} | {source}")
+            }
         }
     }
 }
@@ -65,7 +73,12 @@ impl From<ErrorContext<String, SettingsError>> for Error {
 }
 
 pub async fn run(settings: Settings) -> Result<(), Error> {
-    let app_state = AppState {};
+    let conn_str = settings.database.connection_string();
+
+    tracing::info!("Establishing database connection with {}", conn_str);
+
+    let pool = connect_with_conn_str(&conn_str, settings.database.connection_timeout).await?;
+    let app_state = AppState { pool };
 
     let app = Router::new()
         .route("/health", get(health))
@@ -109,4 +122,30 @@ pub async fn config(opts: Opts) -> Result<(), Error> {
 }
 
 #[derive(Clone)]
-pub struct AppState {}
+pub struct AppState {
+    pub pool: PgPool,
+}
+
+pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> Result<PgPool, Error> {
+    PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_millis(timeout))
+        .connect(conn_str)
+        .await 
+        .map_err(|err| {
+
+                 match err {
+                     sqlx::Error::PoolTimedOut => {
+                         Error::DBConnection {
+                             context: format!("PostgreSQL Storage: Connection Timeout"),
+                             source: err
+                         }
+                    },
+                    _ => {
+                         Error::DBConnection {
+                             context: format!("PostgreSQL Storage: Could not establish a connection to {conn_str}",),
+                             source: err,
+                         }
+                     }
+                 }
+        })
+}
