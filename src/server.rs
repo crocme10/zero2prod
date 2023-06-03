@@ -94,7 +94,7 @@ pub async fn run(settings: Settings) -> Result<(), Error> {
         .serve(app.into_make_service())
         .await
         .map_err(|err| Error::Server {
-            context: format!("REST Server"),
+            context: "REST Server".to_string(),
             source: err,
         })
 }
