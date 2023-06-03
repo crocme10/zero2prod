@@ -130,22 +130,17 @@ pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> Result<PgPoo
     PgPoolOptions::new()
         .acquire_timeout(std::time::Duration::from_millis(timeout))
         .connect(conn_str)
-        .await 
-        .map_err(|err| {
-
-                 match err {
-                     sqlx::Error::PoolTimedOut => {
-                         Error::DBConnection {
-                             context: format!("PostgreSQL Storage: Connection Timeout"),
-                             source: err
-                         }
-                    },
-                    _ => {
-                         Error::DBConnection {
-                             context: format!("PostgreSQL Storage: Could not establish a connection to {conn_str}",),
-                             source: err,
-                         }
-                     }
-                 }
+        .await
+        .map_err(|err| match err {
+            sqlx::Error::PoolTimedOut => Error::DBConnection {
+                context: format!("PostgreSQL Storage: Connection Timeout"),
+                source: err,
+            },
+            _ => Error::DBConnection {
+                context: format!(
+                    "PostgreSQL Storage: Could not establish a connection to {conn_str}",
+                ),
+                source: err,
+            },
         })
 }

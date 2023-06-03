@@ -34,9 +34,7 @@ pub async fn subscriptions(
     )
     .execute(&mut conn)
     .await
-    .map_err(|err| {
-        ApiError::new_internal(format!("Database error: {}", err))
-    })?;
+    .map_err(|err| ApiError::new_internal(format!("Database error: {}", err)))?;
     Ok(Json(resp))
 }
 
