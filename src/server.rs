@@ -133,7 +133,7 @@ pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> Result<PgPoo
         .await
         .map_err(|err| match err {
             sqlx::Error::PoolTimedOut => Error::DBConnection {
-                context: format!("PostgreSQL Storage: Connection Timeout"),
+                context: "PostgreSQL Storage: Connection Timeout".to_string(),
                 source: err,
             },
             _ => Error::DBConnection {
