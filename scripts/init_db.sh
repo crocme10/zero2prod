@@ -6,7 +6,7 @@ set -eo pipefail
 DB_USER=${POSTGRES_USER:=postgres}
 DB_PASSWORD="${POSTGRES_PASSWORD:=password}"
 DB_NAME="${POSTGRES_DB:=newsletter}"
-DB_PORT="${POSTGRES_PORT:=5462}"
+DB_PORT="${POSTGRES_PORT:=5432}"
 DB_HOST="localhost"
 
 if ! [ -x "$(command -v psql)" ]; then
