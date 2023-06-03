@@ -8,15 +8,15 @@ on:
   # this specific branch (a.k.a. book chapter).
   push:
     branches:
-      - root-chapter-03-part1
+      - main
   pull_request:
     types: [ opened, synchronize, reopened ]
     branches:
-      - root-chapter-03-part1
+      - main
 
 env:
   CARGO_TERM_COLOR: always
-  SQLX_VERSION: 0.6.2
+  SQLX_VERSION: 0.6.3
   SQLX_FEATURES: "rustls,postgres"
 
 # A workflow run is made up of one or more jobs, which run in parallel by default
