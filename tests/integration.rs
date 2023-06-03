@@ -1,6 +1,6 @@
 use cucumber::World;
 use cucumber::WriterExt;
-use sqlx::{postgres::PgConnection, Connection};
+// use sqlx::{postgres::PgConnection, Connection};
 use std::path::PathBuf;
 use zero2prod::settings::{Command, Opts, Settings};
 
@@ -26,33 +26,20 @@ async fn main() {
 
     spawn_service(settings.clone()).await;
 
-    let conn_string = settings.database.connection_string();
-
-    println!("Establishing database connection with {}", conn_string);
-    tracing::info!("Establishing database connection with {}", conn_string);
-
-    let _connection = PgConnection::connect(&conn_string)
-        .await
-        .expect("Failed to connect to Postgres.");
-
-    println!("Established database connection with {}", conn_string);
     // Use the following if we need some debug output
-    state::TestWorld::cucumber()
-        .max_concurrent_scenarios(1)
-        .with_writer(
-            cucumber::writer::Basic::raw(std::io::stdout(), cucumber::writer::Coloring::Never, 0)
-                .summarized()
-                .assert_normalized(),
-        )
-        .run_and_exit("tests/features")
-        .await;
+    // state::TestWorld::cucumber()
+    //     .max_concurrent_scenarios(1)
+    //     .with_writer(
+    //         cucumber::writer::Basic::raw(std::io::stdout(), cucumber::writer::Coloring::Never, 0)
+    //             .summarized()
+    //             .assert_normalized(),
+    //     )
+    //     .run_and_exit("tests/features")
+    //     .await;
 
     state::TestWorld::cucumber()
-        .init_tracing()
+        //.init_tracing()
         .run("tests/features")
         .await;
 
-    // state::TestWorld::cucumber()
-    //     .run("tests/features")
-    //     .await;
 }

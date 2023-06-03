@@ -10,6 +10,7 @@ Feature: Integration
   Scenario: When the user calls the subscriptions endpoint, we get a 200 Ok response
     When the user subscribes with username "<username>" and email "<email>"
     Then the response is 200 OK
+     And the database stored the username "<username>" and the email "<email>"
 
     Examples:
       | username         | email                     |
