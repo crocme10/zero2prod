@@ -1,4 +1,4 @@
-use config::{Config, Environment, File, ConfigError};
+use config::{Config, ConfigError, Environment, File};
 use std::{env, fmt, path::Path};
 use tracing::trace;
 
@@ -32,7 +32,10 @@ impl std::error::Error for Error {}
 
 impl From<ErrorContext<&'static str, ConfigError>> for Error {
     fn from(context: ErrorContext<&'static str, ConfigError>) -> Error {
-        Error::Configuration { context: context.0, source: context.1 }
+        Error::Configuration {
+            context: context.0,
+            source: context.1,
+        }
     }
 }
 
@@ -101,7 +104,10 @@ pub fn merge_configuration<
         builder = builder.add_source(config_from_args(overrides)?)
     }
 
-    builder.build().context("Could not merge configuration").map_err(|err| err.into())
+    builder
+        .build()
+        .context("Could not merge configuration")
+        .map_err(|err| err.into())
 }
 
 // Create a new configuration source from a list of assignments key=value
@@ -109,7 +115,10 @@ fn config_from_args(args: impl IntoIterator<Item = String>) -> Result<Config, Er
     let builder = args.into_iter().fold(Config::builder(), |builder, arg| {
         builder.add_source(File::from_str(&arg, config::FileFormat::Toml))
     });
-    builder.build().context("Could not build configuration from args").map_err(|err| err.into())
+    builder
+        .build()
+        .context("Could not build configuration from args")
+        .map_err(|err| err.into())
 }
 
 #[cfg(test)]
@@ -188,8 +197,7 @@ mod tests {
             env::remove_var("ZERO2PROD_PROFILE");
             let mut root_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             root_path.push("tests/resources/config");
-            let config =
-                merge_configuration(&root_path, &["service"], None, None, vec![]).unwrap();
+            let config = merge_configuration(&root_path, &["service"], None, None, vec![]).unwrap();
             let value: String = config.get("identity.username").unwrap();
             assert_eq!(value, "foo");
         }
@@ -242,8 +250,7 @@ mod tests {
             env::set_var("ZERO2PROD_PROFILE", "prod");
             let mut root_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             root_path.push("tests/resources/config");
-            let config =
-                merge_configuration(&root_path, &["service"], None, None, vec![]).unwrap();
+            let config = merge_configuration(&root_path, &["service"], None, None, vec![]).unwrap();
             let value: String = config.get("identity.username").unwrap();
             assert_eq!(value, "baz");
         }

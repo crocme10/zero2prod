@@ -1,2 +1,2 @@
-pub mod subscriptions;
 pub mod health;
+pub mod subscriptions;

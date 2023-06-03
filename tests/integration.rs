@@ -41,5 +41,4 @@ async fn main() {
         //.init_tracing()
         .run("tests/features")
         .await;
-
 }

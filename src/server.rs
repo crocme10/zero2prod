@@ -5,9 +5,9 @@ use axum::{
 use std::fmt;
 use std::net::ToSocketAddrs;
 
-use crate::settings::{Error as SettingsError, Opts, Settings};
-use crate::routes::{health::health, subscriptions::subscriptions};
 use crate::err_context::ErrorContext;
+use crate::routes::{health::health, subscriptions::subscriptions};
+use crate::settings::{Error as SettingsError, Opts, Settings};
 
 #[derive(Debug)]
 pub enum Error {
@@ -57,7 +57,10 @@ impl std::error::Error for Error {}
 
 impl From<ErrorContext<String, SettingsError>> for Error {
     fn from(err: ErrorContext<String, SettingsError>) -> Self {
-        Error::Configuration { context: err.0, source: err.1 }
+        Error::Configuration {
+            context: err.0,
+            source: err.1,
+        }
     }
 }
 
@@ -73,12 +76,18 @@ pub async fn run(settings: Settings) -> Result<(), Error> {
     let addr = addr
         .to_socket_addrs()
         .map_err(|err| Error::AddressDefinition {
-            context: format!("REST Server: Could not resolve address  {}:{}", settings.network.host, settings.network.port),
+            context: format!(
+                "REST Server: Could not resolve address  {}:{}",
+                settings.network.host, settings.network.port
+            ),
             source: err,
         })?
         .next()
         .ok_or_else(|| Error::AddressResolution {
-            context: format!("REST Server: Could not resolve address  {}:{}", settings.network.host, settings.network.port),
+            context: format!(
+                "REST Server: Could not resolve address  {}:{}",
+                settings.network.host, settings.network.port
+            ),
         })?;
 
     Server::bind(&addr)

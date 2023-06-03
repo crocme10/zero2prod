@@ -1,8 +1,8 @@
 // inspired by https://shanmukhsista.com/posts/technology/apis/error-handling-in-rest-apis-using-axum-framework-and-custom-error-model-rest-apis/
 //
+use axum::extract::rejection::JsonRejection;
 use axum::http::status::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::extract::rejection::JsonRejection;
 use serde::Serialize;
 use std::fmt;
 
@@ -71,20 +71,18 @@ impl IntoResponse for ApiError {
 impl From<JsonRejection> for ApiError {
     fn from(rejection: JsonRejection) -> ApiError {
         match rejection {
-            JsonRejection::JsonDataError(err) => {
-                serde_json_error_response(err)
-            }
-            JsonRejection::JsonSyntaxError(err) => {
-                serde_json_error_response(err)
-            }
+            JsonRejection::JsonDataError(err) => serde_json_error_response(err),
+            JsonRejection::JsonSyntaxError(err) => serde_json_error_response(err),
             // handle other rejections from the `Json` extractor
-            JsonRejection::MissingJsonContentType(_) => 
-                ApiError::new_bad_request( "Missing `Content-Type: application/json` header".to_string()),
-            JsonRejection::BytesRejection(_) =>
-                ApiError::new_internal( "Failed to buffer request body".to_string()),
+            JsonRejection::MissingJsonContentType(_) => ApiError::new_bad_request(
+                "Missing `Content-Type: application/json` header".to_string(),
+            ),
+            JsonRejection::BytesRejection(_) => {
+                ApiError::new_internal("Failed to buffer request body".to_string())
+            }
             // we must provide a catch-all case since `JsonRejection` is marked
             // `#[non_exhaustive]`
-            _ => ApiError::new_internal( "Unknown error".to_string()),
+            _ => ApiError::new_internal("Unknown error".to_string()),
         }
     }
 }
@@ -96,15 +94,13 @@ where
     E: std::error::Error + 'static,
 {
     if let Some(serde_json_err) = find_error_source::<serde_json::Error>(&err) {
-        ApiError::new_bad_request (
-            format!(
-                "Invalid JSON at line {} column {}",
-                serde_json_err.line(),
-                serde_json_err.column()
-            ),
-        )
+        ApiError::new_bad_request(format!(
+            "Invalid JSON at line {} column {}",
+            serde_json_err.line(),
+            serde_json_err.column()
+        ))
     } else {
-        ApiError::new_bad_request ( "Unknown error".to_string())
+        ApiError::new_bad_request("Unknown error".to_string())
     }
 }
 
