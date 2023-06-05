@@ -1,7 +1,9 @@
 use cucumber::World;
-use cucumber::WriterExt;
-// use sqlx::{postgres::PgConnection, Connection};
+// use cucumber::WriterExt;
 use std::path::PathBuf;
+
+use zero2prod::database::connect_with_conn_str;
+use zero2prod::listener::listen_with_host_port;
 use zero2prod::settings::{Command, Opts, Settings};
 
 mod state;
@@ -20,11 +22,25 @@ async fn main() {
         cmd: Command::Run,
     };
 
-    let settings: Settings = opts.try_into().expect("settings");
+    let settings: Settings = opts.try_into().expect("Compiling Application Settings");
 
-    tracing::info!("Spawning Service");
+    let conn_str = settings.database.connection_string();
 
-    spawn_service(settings.clone()).await;
+    tracing::info!("Establishing database connection with {}", conn_str);
+
+    let pool = connect_with_conn_str(&conn_str, settings.database.connection_timeout)
+        .await
+        .unwrap_or_else(|_| panic!("Establishing a database connection with {conn_str}"));
+
+    let listener = listen_with_host_port(settings.network.host.as_str(), settings.network.port)
+        .unwrap_or_else(|_| {
+            panic!(
+                "Could not create listener for {}:{}",
+                settings.network.host, settings.network.port
+            )
+        });
+
+    spawn_service(listener, pool).await;
 
     // Use the following if we need some debug output
     // state::TestWorld::cucumber()

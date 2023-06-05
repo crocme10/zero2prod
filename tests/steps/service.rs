@@ -1,5 +1,8 @@
 use cucumber::given;
-use zero2prod::{server, settings};
+use std::net::TcpListener;
+use sqlx::postgres::PgPool;
+
+use zero2prod::{server};
 
 use crate::state;
 
@@ -9,6 +12,6 @@ async fn start_service(_world: &mut state::TestWorld) {
     // spawn_service().await
 }
 
-pub async fn spawn_service(settings: settings::Settings) {
-    let _ = tokio::spawn(server::run(settings));
+pub async fn spawn_service (listener: TcpListener, pool: PgPool) {
+    let _ = tokio::spawn(server::run(listener, pool));
 }
