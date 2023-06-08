@@ -1,17 +1,22 @@
 use cucumber::given;
-use std::net::TcpListener;
-use sqlx::postgres::PgPool;
+use tokio::sync::oneshot;
 
-use zero2prod::{server};
+use zero2prod::listener::listen_with_host_port;
+use zero2prod::server;
 
 use crate::state;
 
 #[given("the service has been started")]
-async fn start_service(_world: &mut state::TestWorld) {
-    // println!("Starting service");
-    // spawn_service().await
-}
-
-pub async fn spawn_service (listener: TcpListener, pool: PgPool) {
-    let _ = tokio::spawn(server::run(listener, pool));
+async fn start_service(world: &mut state::TestWorld) {
+    let state = world.exec.take().expect("take transaction");
+    let (tx, rx) = oneshot::channel::<()>();
+    let listener = listen_with_host_port(world.host.as_str(), world.port).unwrap_or_else(|_| {
+        panic!(
+            "Could not create a listener for {}:{}",
+            world.host, world.port
+        )
+    });
+    world.tx = Some(tx);
+    let _ = tokio::spawn(server::run(listener, state.clone(), rx));
+    world.exec = Some(state);
 }

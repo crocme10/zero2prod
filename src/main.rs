@@ -1,5 +1,8 @@
 use clap::Parser;
 use std::fmt;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tokio::signal;
 
 use zero2prod::database::{connect_with_conn_str, Error as DatabaseError};
 use zero2prod::err_context::{ErrorContext, ErrorContextExt};
@@ -17,10 +20,6 @@ pub enum Error {
         context: String,
         source: SettingsError,
     },
-    // Server {
-    //     context: String,
-    //     source: hyper::Error,
-    // },
     Database {
         context: String,
         source: DatabaseError,
@@ -105,11 +104,40 @@ async fn main() -> Result<(), Error> {
             settings.network.host, settings.network.port
         ))?;
 
-    let server = server::run(listener, pool);
+    let (tx, rx) = tokio::sync::oneshot::channel::<()>();
+
+    let conn = pool.acquire()
+        .await
+        .map_err(|err| DatabaseError::DBConnection {
+            context: "couldnot establish connection".to_string(),
+            source: err
+        }).context("Could not acquire db connection".to_string())?;
+
+    let state = Arc::new(Mutex::new(server::State { exec: conn }));
+    let server = server::run(listener, state, rx);
     let server = tokio::spawn(server);
     if let Err(err) = server.await {
         eprintln!("Error: {err}");
     }
+
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    tokio::select! {
+        _ = ctrl_c => { tx.send(()).expect("sig ctrlc") },
+        _ = terminate => { tx.send(()).expect("sig terminate") },
+    };
 
     Ok(())
 }

@@ -1,15 +1,24 @@
 use cucumber::World;
 use reqwest::Response;
-use sqlx::{Connection, PgConnection};
+use sqlx::{PgPool, Postgres, Transaction};
 use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::oneshot::Sender;
+use tokio::sync::Mutex;
+
+use zero2prod::database::connect_with_conn_str;
 use zero2prod::settings::{Command, Opts, Settings};
+use zero2prod::server::State;
 
 #[derive(Debug, World)]
 #[world(init = Self::new)]
 pub struct TestWorld {
-    pub db_connection: PgConnection,
-    // Wrapped in Option so that TestWorld could derive Default.
+    pub pool: PgPool,
+    pub host: String,
+    pub port: u16,
+    pub exec: Option<Arc<Mutex<State<Transaction<'static, Postgres>>>>>,
     pub resp: Option<Response>,
+    pub tx: Option<Sender<()>>,
 }
 
 impl TestWorld {
@@ -23,17 +32,20 @@ impl TestWorld {
 
         let settings: Settings = opts.try_into().expect("settings");
 
-        let conn_string = settings.database.connection_string();
+        let conn_str = settings.database.connection_string();
 
-        tracing::info!("Establishing database connection with {}", conn_string);
-
-        let connection = PgConnection::connect(&conn_string)
+        let pool = connect_with_conn_str(&conn_str, settings.database.connection_timeout)
             .await
-            .expect("Failed to connect to Postgres.");
+            .unwrap_or_else(|_| panic!("Establishing a database connection with {conn_str}"));
+
 
         TestWorld {
-            db_connection: connection,
+            pool,
+            host: settings.network.host,
+            port: settings.network.port,
+            exec: None,
             resp: None,
+            tx: None,
         }
     }
 }

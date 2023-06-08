@@ -1,4 +1,7 @@
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use cucumber::{then, when};
+use zero2prod::server::State;
 use std::collections::HashMap;
 
 use crate::state;
@@ -17,13 +20,22 @@ async fn subscribes_full(world: &mut state::TestWorld, username: String, email: 
 
 #[then(regex = r#"the database stored the username "(\S+)" and the email "(\S+)""#)]
 async fn query_database(world: &mut state::TestWorld, username: String, email: String) {
+    // To run this test, we have to stop the server, take the transaction, and query the database.
+    // After the checks, we put the transaction back in its world, so that it is available for
+    // more tests.
+    let _ = world.tx.take().expect("take tx shutdown").send(());
+    // FIXME Should we wait a bit ?
+    let state = world.exec.take().expect("take executor");
+    let mut exec = Arc::into_inner(state).expect("try unwrap").into_inner().exec;
     let saved = sqlx::query!(
         r#"SELECT email, username FROM subscriptions WHERE username = $1"#,
         username
     )
-    .fetch_one(&mut world.db_connection)
+    .fetch_one(&mut exec)
     .await
     .expect("Failed to fetch saved subscription");
     assert_eq!(saved.email, email);
     assert_eq!(saved.username, username);
+    let state = Arc::new(Mutex::new(State { exec }));
+    world.exec = Some(state);
 }
