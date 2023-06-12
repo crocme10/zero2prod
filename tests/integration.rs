@@ -23,6 +23,7 @@ async fn main() {
         .after(move |_feature, _rule, _scenario, _event, world|
                async {
                    let exec = world.unwrap().exec.take().expect("take transaction");
+                   println!("Arc count: {}", Arc::strong_count(&exec));
                    let exec = Arc::into_inner(exec).expect("try unwrap").into_inner().exec;
                    exec.rollback().await.expect("Unable to rollback transaction");
                }

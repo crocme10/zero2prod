@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio::time::{sleep, Duration};
 use cucumber::{then, when};
 use zero2prod::server::State;
 use std::collections::HashMap;
@@ -25,8 +26,10 @@ async fn query_database(world: &mut state::TestWorld, username: String, email: S
     // more tests.
     let _ = world.tx.take().expect("take tx shutdown").send(());
     // FIXME Should we wait a bit ?
+    sleep(Duration::from_millis(1000)).await;
+    println!("1000 ms have elapsed");
     let state = world.exec.take().expect("take executor");
-    let mut exec = Arc::into_inner(state).expect("try unwrap").into_inner().exec;
+    let mut exec = Arc::into_inner(state).expect("extract state from arc").into_inner().exec;
     let saved = sqlx::query!(
         r#"SELECT email, username FROM subscriptions WHERE username = $1"#,
         username

@@ -10,9 +10,9 @@ use crate::state;
 async fn start_service(world: &mut state::TestWorld) {
     let state = world.exec.take().expect("take transaction");
     let (tx, rx) = oneshot::channel::<()>();
-    let listener = listen_with_host_port(world.host.as_str(), world.port).unwrap_or_else(|_| {
+    let listener = listen_with_host_port(world.host.as_str(), world.port).unwrap_or_else(|err| {
         panic!(
-            "Could not create a listener for {}:{}",
+            "Could not create a listener for {}:{} => {err}",
             world.host, world.port
         )
     });

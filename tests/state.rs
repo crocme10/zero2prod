@@ -13,11 +13,16 @@ use zero2prod::server::State;
 #[derive(Debug, World)]
 #[world(init = Self::new)]
 pub struct TestWorld {
+    // The pool, always connected to the database, from which we will create
     pub pool: PgPool,
+    // The host and port, on which the test server listens to.
     pub host: String,
     pub port: u16,
+    // The transaction  to the database.
     pub exec: Option<Arc<Mutex<State<Transaction<'static, Postgres>>>>>,
     pub resp: Option<Response>,
+    // A sender to request graceful shutdown of the server, so that
+    // we can get access to the state (transaction)
     pub tx: Option<Sender<()>>,
 }
 
@@ -37,7 +42,6 @@ impl TestWorld {
         let pool = connect_with_conn_str(&conn_str, settings.database.connection_timeout)
             .await
             .unwrap_or_else(|_| panic!("Establishing a database connection with {conn_str}"));
-
 
         TestWorld {
             pool,
