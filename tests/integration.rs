@@ -1,4 +1,6 @@
 use cucumber::World;
+use cucumber::WriterExt;
+use cucumber::writer;
 use futures::FutureExt;
 use std::sync::Arc;
 
@@ -14,6 +16,12 @@ use zero2prod::server::{self, State};
 #[tokio::main]
 async fn main() {
     state::TestWorld::cucumber()
+        .max_concurrent_scenarios(1)
+        .with_writer(
+            writer::Basic::raw(std::io::stdout(), writer::Coloring::Never, 0)
+                .summarized()
+                .assert_normalized(),
+        )
         .before(move |_feature, _rule, _scenario, world| {
             async {
                 let storage = Arc::new(
@@ -30,19 +38,20 @@ async fn main() {
 
                 let (tx, rx) = tokio::sync::oneshot::channel::<()>();
 
-                world.tx = tx;
+                world.tx = Some(tx);
                 let state = State { storage };
                 let server = server::run(listener, state, rx);
-                let server = tokio::spawn(server);
-                if let Err(err) = server.await {
-                    eprintln!("Error: {err}");
-                }
+                let handle = tokio::spawn(server);
+                world.handle = Some(handle);
             }
             .boxed()
         })
         .after(move |_feature, _rule, _scenario, _event, world| {
             async {
-                world.unwrap().tx.send(());
+                // let tx = world.unwrap().tx.take().expect("tx");
+                // tx.send(());
+                let handle = world.unwrap().handle.take().expect("handle");
+                handle.abort();
             }
             .boxed()
         })
