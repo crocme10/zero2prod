@@ -2,14 +2,12 @@ use axum::{
     routing::{get, post, Router},
     Server,
 };
-use sqlx::PgExecutor;
 use std::sync::Arc;
 use std::{fmt, net::TcpListener};
-use tokio::sync::Mutex;
-use tokio::sync::oneshot;
 
 use crate::err_context::{ErrorContext, ErrorContextExt};
 use crate::routes::{health::health, subscriptions::subscriptions};
+use crate::storage::Storage;
 
 #[derive(Debug)]
 pub enum Error {
@@ -40,10 +38,7 @@ impl From<ErrorContext<String, hyper::Error>> for Error {
     }
 }
 
-pub async fn run<T>(listener: TcpListener, state: Arc<Mutex<State<T>>>, rx: oneshot::Receiver<()>) -> Result<(), Error>
-where
-    for<'e> &'e mut T: PgExecutor<'e>,
-    T: Send + 'static
+pub async fn run(listener: TcpListener, state: State) -> Result<(), Error>
 {
     let app = Router::new()
         .route("/health", get(health))
@@ -53,7 +48,6 @@ where
     Server::from_tcp(listener)
         .context("Could not create server from TCP Listener".to_string())?
         .serve(app.into_make_service())
-        .with_graceful_shutdown(async { rx.await.ok(); })
         .await
         .map_err(|err| Error::Server {
             context: "REST Server".to_string(),
@@ -61,7 +55,7 @@ where
         })
 }
 
-#[derive(Debug)]
-pub struct State<E> {
-    pub exec: E,
+#[derive(Clone)]
+pub struct State {
+    pub storage: Arc<dyn Storage + Send + Sync>,
 }

@@ -1,7 +1,7 @@
-use sqlx::postgres::{PgPool, PgPoolOptions};
+use async_trait::async_trait;
 use std::fmt;
 
-use crate::err_context::{ErrorContext, ErrorContextExt};
+use crate::err_context::ErrorContext;
 
 #[derive(Debug)]
 pub enum Error {
@@ -31,20 +31,14 @@ impl From<ErrorContext<String, sqlx::Error>> for Error {
                 source: err.1,
             },
             _ => Error::DBConnection {
-                context: format!("PostgreSQL Storage: Could not establish a connection",),
+                context: "PostgreSQL Storage: Could not establish a connection".to_string(),
                 source: err.1,
             },
         }
     }
 }
 
-pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> Result<PgPool, Error> {
-    PgPoolOptions::new()
-        .acquire_timeout(std::time::Duration::from_millis(timeout))
-        .connect(conn_str)
-        .await
-        .context(format!(
-            "Could not establish connection to {conn_str} with timeout {timeout}"
-        ))
-        .map_err(|err| err.into())
+#[async_trait]
+pub trait Storage {
+    async fn create_subscription(&self, username: String, email: String) -> Result<(), Error>;
 }

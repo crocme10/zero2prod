@@ -86,6 +86,7 @@ impl From<JsonRejection> for ApiError {
         }
     }
 }
+
 // From the axum description on extractor: https://docs.rs/axum/latest/axum/extract/index.html
 // attempt to extract the inner `serde_json::Error`, if that succeeds we can
 // provide a more specific error

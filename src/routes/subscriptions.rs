@@ -1,25 +1,17 @@
 use axum::extract::{Json, State as AxumState};
 use axum_extra::extract::WithRejection;
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use sqlx::PgExecutor;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use uuid::Uuid;
 
 use crate::error::ApiError;
 use crate::server::State;
+// use crate::storage::{Error, Storage};
 
 /// POST handler for user subscriptions
 #[allow(clippy::unused_async)]
-pub async fn subscriptions<T>(
-    AxumState(state): AxumState<Arc<Mutex<State<T>>>>,
+pub async fn subscriptions(
+    AxumState(state): AxumState<State>,
     WithRejection(Json(request), _): WithRejection<Json<SubscriptionRequest>, ApiError>,
-) -> Result<Json<Zero2ProdSubscriptionsResp>, ApiError>
-where
-    for<'e> &'e mut T: PgExecutor<'e>,
-    T: Send
-{
+) -> Result<Json<Zero2ProdSubscriptionsResp>, ApiError> {
     tracing::info!("request: {:?}", request);
     let SubscriptionRequest { username, email } = request;
     if username.is_empty() {
@@ -28,20 +20,15 @@ where
     if email.is_empty() {
         return Err(ApiError::new_bad_request("Empty email".to_string()));
     }
-    let mut guard = state.lock().await;
+    state
+        .storage
+        .create_subscription(username, email)
+        .await
+        .map_err(|err| ApiError::new_internal(format!("Cannot create new subscription: {err}")))?;
+
     let resp = Zero2ProdSubscriptionsResp {
         status: "OK".to_string(),
     };
-    let _ = sqlx::query!(
-        r#"INSERT INTO subscriptions (id, email, username, subscribed_at) VALUES ($1, $2, $3, $4)"#,
-        Uuid::new_v4(),
-        email,
-        username,
-        Utc::now()
-    )
-    .execute(&mut guard.exec)
-    .await
-    .map_err(|err| ApiError::new_internal(format!("Database error: {}", err)))?;
     Ok(Json(resp))
 }
 
