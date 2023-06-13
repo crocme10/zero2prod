@@ -1,29 +1,20 @@
 use cucumber::World;
 use reqwest::Response;
-use sqlx::{PgPool, Postgres, Transaction};
+// use sqlx::{PgPool, Postgres, Transaction};
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::oneshot::Sender;
-use tokio::sync::Mutex;
+use tokio::sync::oneshot;
 
-use zero2prod::database::connect_with_conn_str;
+use zero2prod::postgres::{PostgresStorage, PostgresStorageKind};
 use zero2prod::settings::{Command, Opts, Settings};
-use zero2prod::server::State;
 
 #[derive(Debug, World)]
 #[world(init = Self::new)]
 pub struct TestWorld {
-    // The pool, always connected to the database, from which we will create
-    pub pool: PgPool,
-    // The host and port, on which the test server listens to.
-    pub host: String,
-    pub port: u16,
-    // The transaction  to the database.
-    pub exec: Option<Arc<Mutex<State<Transaction<'static, Postgres>>>>>,
+    pub settings: Settings,
+    pub storage: Arc<PostgresStorage>,
     pub resp: Option<Response>,
-    // A sender to request graceful shutdown of the server, so that
-    // we can get access to the state (transaction)
-    pub tx: Option<Sender<()>>,
+    pub tx: oneshot::Sender<()>,
 }
 
 impl TestWorld {
@@ -37,19 +28,20 @@ impl TestWorld {
 
         let settings: Settings = opts.try_into().expect("settings");
 
-        let conn_str = settings.database.connection_string();
-
-        let pool = connect_with_conn_str(&conn_str, settings.database.connection_timeout)
+        let storage = Arc::new(
+            PostgresStorage::new(settings.database.clone(), PostgresStorageKind::Testing)
             .await
-            .unwrap_or_else(|_| panic!("Establishing a database connection with {conn_str}"));
+            .expect("Storage connection")
+            );
+
+        // We create a channel now, but it will be replaced during the test before hook.
+        let (tx, _) = tokio::sync::oneshot::channel::<()>();
 
         TestWorld {
-            pool,
-            host: settings.network.host,
-            port: settings.network.port,
-            exec: None,
+            settings,
+            storage,
             resp: None,
-            tx: None,
+            tx,
         }
     }
 }

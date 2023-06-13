@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::err_context::ErrorContextExt;
 use crate::settings::DatabaseSettings;
-use crate::storage::{Error, Storage};
+use crate::storage::{Error, Storage, Subscription};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
 #[derive(Debug, Clone)]
@@ -64,5 +64,22 @@ impl Storage for PostgresStorage {
                 ))?;
 
         Ok(())
+    }
+
+    async fn get_subscription_by_username(&self, username: &str) -> Result<Option<Subscription>, Error> {
+        let pool = &self.pool;
+        let saved = sqlx::query!(
+            r#"SELECT email, username FROM subscriptions WHERE username = $1"#,
+            username
+            )
+            .fetch_optional(&*pool)
+            .await
+            .context(format!(
+                    "Could not get subscription for {username}"
+                    ))?;
+        Ok(saved.map(|rec| Subscription {
+            username: rec.username,
+            email: rec.email
+        }))
     }
 }

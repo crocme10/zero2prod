@@ -1,7 +1,7 @@
 Feature: Integration
 
-  Background:
-    Given the service has been started
+  # Background:
+  #   Given the service has been started
 
   @serial
   Scenario: When the user calls the health_check endpoint, we get a 200 Ok response

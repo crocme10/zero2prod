@@ -41,4 +41,11 @@ impl From<ErrorContext<String, sqlx::Error>> for Error {
 #[async_trait]
 pub trait Storage {
     async fn create_subscription(&self, username: String, email: String) -> Result<(), Error>;
+    async fn get_subscription_by_username(&self, username: &str) -> Result<Option<Subscription>, Error>;
+}
+
+#[derive(Debug)]
+pub struct Subscription {
+    pub username: String,
+    pub email: String,
 }
