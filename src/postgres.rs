@@ -1,5 +1,7 @@
 use async_trait::async_trait;
 use chrono::Utc;
+use sqlx::Acquire;
+use sqlx::PgExecutor;
 use uuid::Uuid;
 
 use crate::err_context::ErrorContextExt;
@@ -8,19 +10,28 @@ use crate::storage::{Error, Storage, Subscription};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
 #[derive(Debug, Clone)]
-pub struct PostgresStorage {
+pub struct PostgresStorage<E> {
     pub pool: PgPool,
+    pub exec: E,
     pub config: DatabaseSettings,
     pub conn_str: String,
     pub kind: PostgresStorageKind,
 }
 
-impl PostgresStorage {
+impl<E> PostgresStorage<E>
+where
+    for<'e> &'e mut E: PgExecutor<'e>,
+{
     pub async fn new(config: DatabaseSettings, kind: PostgresStorageKind) -> Result<Self, Error> {
         let conn_str = config.connection_string();
         let pool = connect_with_conn_str(&conn_str, config.connection_timeout).await?;
+        let exec = match kind {
+            PostgresStorageKind::Normal => pool.acquire().await.expect("acquire connection"),
+            PostgresStorageKind::Testing => pool.begin().await.expect("acquire transaction"),
+        };
         Ok(PostgresStorage {
             pool,
+            exec,
             config,
             conn_str,
             kind,
@@ -47,7 +58,10 @@ pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> Result<PgPoo
 }
 
 #[async_trait]
-impl Storage for PostgresStorage {
+impl<E> Storage for PostgresStorage<E>
+where
+    for<'e> &'e mut E: PgExecutor<'e>,
+{
     async fn create_subscription(&self, username: String, email: String) -> Result<(), Error> {
         let pool = &self.pool;
         let _ = sqlx::query!(
@@ -57,7 +71,7 @@ impl Storage for PostgresStorage {
         username,
         Utc::now()
         )
-        .execute(&*pool)
+        .execute(&self.exec)
         .await
         .context(format!(
                 "Could not create new subscription for {username}"
@@ -66,20 +80,21 @@ impl Storage for PostgresStorage {
         Ok(())
     }
 
-    async fn get_subscription_by_username(&self, username: &str) -> Result<Option<Subscription>, Error> {
+    async fn get_subscription_by_username(
+        &self,
+        username: &str,
+    ) -> Result<Option<Subscription>, Error> {
         let pool = &self.pool;
         let saved = sqlx::query!(
             r#"SELECT email, username FROM subscriptions WHERE username = $1"#,
             username
-            )
-            .fetch_optional(&*pool)
-            .await
-            .context(format!(
-                    "Could not get subscription for {username}"
-                    ))?;
+        )
+        .fetch_optional(&*pool)
+        .await
+        .context(format!("Could not get subscription for {username}"))?;
         Ok(saved.map(|rec| Subscription {
             username: rec.username,
-            email: rec.email
+            email: rec.email,
         }))
     }
 }
