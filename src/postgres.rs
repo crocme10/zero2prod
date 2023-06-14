@@ -1,37 +1,61 @@
 use async_trait::async_trait;
 use chrono::Utc;
-use sqlx::Acquire;
-use sqlx::PgExecutor;
+use std::sync::Arc;
 use uuid::Uuid;
+use std::ops::{DerefMut, Deref};
 
 use crate::err_context::ErrorContextExt;
 use crate::settings::DatabaseSettings;
 use crate::storage::{Error, Storage, Subscription};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
-#[derive(Debug, Clone)]
-pub struct PostgresStorage<E> {
+pub enum Exec<'c> {
+    Connection(sqlx::pool::PoolConnection<sqlx::Postgres>),
+    Transaction(sqlx::Transaction<'c, sqlx::Postgres>)
+}
+
+impl<'c> Deref for Exec<'c> {
+    type Target = sqlx::PgConnection;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Exec::Connection(conn) => conn.deref(),
+            Exec::Transaction(tx) => tx.deref(),
+        }
+    }
+}
+
+impl<'c> DerefMut for Exec<'c>
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            Exec::Connection(conn) => conn.deref_mut(),
+            Exec::Transaction(tx) => tx.deref_mut(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct PostgresStorage<'a> {
     pub pool: PgPool,
-    pub exec: E,
+    pub exec: Arc<Exec<'a>>,
     pub config: DatabaseSettings,
     pub conn_str: String,
     pub kind: PostgresStorageKind,
 }
 
-impl<E> PostgresStorage<E>
-where
-    for<'e> &'e mut E: PgExecutor<'e>,
+impl PostgresStorage<'_>
 {
-    pub async fn new(config: DatabaseSettings, kind: PostgresStorageKind) -> Result<Self, Error> {
+    pub async fn new(config: DatabaseSettings, kind: PostgresStorageKind) -> Result<PostgresStorage<'static>, Error> {
         let conn_str = config.connection_string();
         let pool = connect_with_conn_str(&conn_str, config.connection_timeout).await?;
         let exec = match kind {
-            PostgresStorageKind::Normal => pool.acquire().await.expect("acquire connection"),
-            PostgresStorageKind::Testing => pool.begin().await.expect("acquire transaction"),
+            PostgresStorageKind::Normal => Exec::Connection(pool.acquire().await.expect("acquire connection")),
+            PostgresStorageKind::Testing => Exec::Transaction(pool.begin().await.expect("acquire transaction")),
         };
         Ok(PostgresStorage {
             pool,
-            exec,
+            exec: Arc::new(exec),
             config,
             conn_str,
             kind,
@@ -58,12 +82,9 @@ pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> Result<PgPoo
 }
 
 #[async_trait]
-impl<E> Storage for PostgresStorage<E>
-where
-    for<'e> &'e mut E: PgExecutor<'e>,
+impl Storage for PostgresStorage<'_>
 {
     async fn create_subscription(&self, username: String, email: String) -> Result<(), Error> {
-        let pool = &self.pool;
         let _ = sqlx::query!(
         r#"INSERT INTO subscriptions (id, email, username, subscribed_at) VALUES ($1, $2, $3, $4)"#,
         Uuid::new_v4(),
@@ -71,7 +92,7 @@ where
         username,
         Utc::now()
         )
-        .execute(&self.exec)
+        .execute(&mut **self.exec)
         .await
         .context(format!(
                 "Could not create new subscription for {username}"
