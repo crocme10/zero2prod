@@ -13,7 +13,7 @@ use sqlx::postgres::{PgPool, PgPoolOptions};
 /// This is the executor type, which can be either a pool connection, or a transaction.
 /// This is the sort of generic solution that I have found which allows me to use
 /// either kind of connection, depending on the context:
-/// a transaction in a testing environment, 
+/// a transaction in a testing environment,
 /// a connection otherwise
 #[derive(Debug)]
 pub enum Exec<'c> {
@@ -50,9 +50,7 @@ pub struct PostgresStorage {
 }
 
 impl PostgresStorage {
-    pub async fn new(
-        config: DatabaseSettings,
-    ) -> Result<PostgresStorage, Error> {
+    pub async fn new(config: DatabaseSettings) -> Result<PostgresStorage, Error> {
         let conn_str = config.connection_string();
         let pool = connect_with_conn_str(&conn_str, config.connection_timeout).await?;
         tracing::info!("Connected Postgres Pool to {conn_str}");
@@ -67,7 +65,9 @@ impl PostgresStorage {
             }
             _ => {
                 tracing::warn!("PostgresStorage: Unrecognized executor kind");
-                return Err(Error::Configuration { context: "Unrecognized error kind".to_string() });
+                return Err(Error::Configuration {
+                    context: "Unrecognized error kind".to_string(),
+                });
             }
         };
         Ok(PostgresStorage {

@@ -38,11 +38,9 @@ async fn main() {
         .before(move |_feature, _rule, _scenario, world| {
             async {
                 let storage = Arc::new(
-                    PostgresStorage::new(
-                        world.settings.database.clone(),
-                    )
-                    .await
-                    .expect("Establishing a database connection"),
+                    PostgresStorage::new(world.settings.database.clone())
+                        .await
+                        .expect("Establishing a database connection"),
                 );
 
                 let listener = listen_with_host_port(
