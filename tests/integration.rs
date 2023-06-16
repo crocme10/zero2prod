@@ -1,8 +1,14 @@
-use cucumber::World;
+use cucumber::{World as _, writer::Coloring};
 use cucumber::WriterExt;
 use cucumber::writer;
 use futures::FutureExt;
 use std::sync::Arc;
+use tracing_subscriber::{
+    filter::LevelFilter,
+    fmt::format::{DefaultFields, Format},
+    layer::SubscriberExt as _,
+    Layer,
+};
 
 mod state;
 mod steps;
@@ -16,14 +22,25 @@ use zero2prod::server::{self, State};
 #[tokio::main]
 async fn main() {
     state::TestWorld::cucumber()
+        .fail_on_skipped()
+        .with_default_cli()
+        .configure_and_init_tracing(
+            DefaultFields::new(),
+            Format::default().with_ansi(false).without_time(),
+            |layer| {
+                tracing_subscriber::registry()
+                    .with(LevelFilter::DEBUG.and_then(layer))
+            },
+        )
         .max_concurrent_scenarios(1)
         .with_writer(
-            writer::Basic::raw(std::io::stdout(), writer::Coloring::Never, 0)
+            writer::Basic::raw(std::io::stdout(), Coloring::Never, 0)
                 .summarized()
                 .assert_normalized(),
         )
         .before(move |_feature, _rule, _scenario, world| {
             async {
+                tracing::info!("cucumber before hook: creating new storage");
                 let storage = Arc::new(
                     PostgresStorage::new(world.settings.database.clone(), PostgresStorageKind::Testing)
                         .await
@@ -40,6 +57,7 @@ async fn main() {
 
                 world.tx = Some(tx);
                 let state = State { storage };
+                tracing::info!("cucumber before hook: spawning new server");
                 let server = server::run(listener, state, rx);
                 let handle = tokio::spawn(server);
                 world.handle = Some(handle);
@@ -48,6 +66,7 @@ async fn main() {
         })
         .after(move |_feature, _rule, _scenario, _event, world| {
             async {
+                tracing::info!("cucumber after hook");
                 // let tx = world.unwrap().tx.take().expect("tx");
                 // tx.send(());
                 let handle = world.unwrap().handle.take().expect("handle");

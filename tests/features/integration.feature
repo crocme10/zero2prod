@@ -8,7 +8,7 @@ Feature: Integration
     When the user requests a health check
     Then the response is 200 OK
 
-  @serial
+  @serial, @success
   Scenario: When the user calls the subscriptions endpoint, we get a 200 Ok response
     When the user subscribes with username "<username>" and email "<email>"
     Then the response is 200 OK
@@ -18,7 +18,7 @@ Feature: Integration
       | username         | email                     |
       | bob              | bob@acme.com              |
 
-  @serial
+  @serial, @failure
   Scenario: When the user calls the subscriptions endpoint with incomplete credentials, we get a 400 Bad Request response
     When the user subscribes with username "<username>" and email "<email>"
     Then the response is 400 Bad Request
