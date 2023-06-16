@@ -15,7 +15,7 @@ mod steps;
 mod utils;
 
 use zero2prod::listener::listen_with_host_port;
-use zero2prod::postgres::{PostgresStorage, PostgresStorageKind};
+use zero2prod::postgres::PostgresStorage;
 use zero2prod::server::{self, State};
 
 // This runs before everything else, so you can setup things here.
@@ -40,7 +40,6 @@ async fn main() {
                 let storage = Arc::new(
                     PostgresStorage::new(
                         world.settings.database.clone(),
-                        PostgresStorageKind::Testing,
                     )
                     .await
                     .expect("Establishing a database connection"),

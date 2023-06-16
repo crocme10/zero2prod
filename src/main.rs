@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use zero2prod::err_context::{ErrorContext, ErrorContextExt};
 use zero2prod::listener::{listen_with_host_port, Error as ListenerError};
-use zero2prod::postgres::{PostgresStorage, PostgresStorageKind};
+use zero2prod::postgres::PostgresStorage;
 use zero2prod::server;
 use zero2prod::settings::{Error as SettingsError, Opts, Settings};
 use zero2prod::storage::Error as StorageError;
@@ -85,7 +85,7 @@ async fn main() -> Result<(), Error> {
         .context("Compiling Application Settings".to_string())?;
 
     let storage = Arc::new(
-        PostgresStorage::new(settings.database, PostgresStorageKind::Production)
+        PostgresStorage::new(settings.database)
             .await
             .context("Establishing a database connection".to_string())?,
     );

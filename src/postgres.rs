@@ -10,6 +10,11 @@ use crate::settings::DatabaseSettings;
 use crate::storage::{Error, Storage, Subscription};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
+/// This is the executor type, which can be either a pool connection, or a transaction.
+/// This is the sort of generic solution that I have found which allows me to use
+/// either kind of connection, depending on the context:
+/// a transaction in a testing environment, 
+/// a connection otherwise
 #[derive(Debug)]
 pub enum Exec<'c> {
     Connection(sqlx::pool::PoolConnection<sqlx::Postgres>),
@@ -42,25 +47,27 @@ pub struct PostgresStorage {
     pub exec: Arc<Mutex<Exec<'static>>>,
     pub config: DatabaseSettings,
     pub conn_str: String,
-    pub kind: PostgresStorageKind,
 }
 
 impl PostgresStorage {
     pub async fn new(
         config: DatabaseSettings,
-        kind: PostgresStorageKind,
     ) -> Result<PostgresStorage, Error> {
         let conn_str = config.connection_string();
         let pool = connect_with_conn_str(&conn_str, config.connection_timeout).await?;
         tracing::info!("Connected Postgres Pool to {conn_str}");
-        let exec = match kind {
-            PostgresStorageKind::Production => {
+        let exec = match config.executor.as_str() {
+            "connection" => {
                 tracing::info!("PostgresStorage: Creating a connection");
                 Exec::Connection(pool.acquire().await.expect("acquire connection"))
             }
-            PostgresStorageKind::Testing => {
+            "transaction" => {
                 tracing::info!("PostgresStorage: Creating a transaction");
                 Exec::Transaction(pool.begin().await.expect("acquire transaction"))
+            }
+            _ => {
+                tracing::warn!("PostgresStorage: Unrecognized executor kind");
+                return Err(Error::Configuration { context: "Unrecognized error kind".to_string() });
             }
         };
         Ok(PostgresStorage {
@@ -68,15 +75,8 @@ impl PostgresStorage {
             exec: Arc::new(Mutex::new(exec)),
             config,
             conn_str,
-            kind,
         })
     }
-}
-
-#[derive(Debug, Clone)]
-pub enum PostgresStorageKind {
-    Production,
-    Testing,
 }
 
 pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> Result<PgPool, Error> {

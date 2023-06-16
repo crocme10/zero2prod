@@ -104,6 +104,7 @@ pub struct DatabaseSettings {
     pub host: String,
     pub database_name: String,
     pub connection_timeout: u64,
+    pub executor: String,
 }
 
 impl DatabaseSettings {

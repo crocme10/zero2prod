@@ -5,17 +5,23 @@ use crate::err_context::ErrorContext;
 
 #[derive(Debug)]
 pub enum Error {
-    DBConnection {
+    Connection {
         context: String,
         source: sqlx::Error,
+    },
+    Configuration {
+        context: String,
     },
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::DBConnection { context, source } => {
-                write!(fmt, "Database: {context} | {source}")
+            Error::Connection { context, source } => {
+                write!(fmt, "Database Connection: {context} | {source}")
+            }
+            Error::Configuration { context } => {
+                write!(fmt, "Database Configuration: {context}")
             }
         }
     }
@@ -26,11 +32,11 @@ impl std::error::Error for Error {}
 impl From<ErrorContext<String, sqlx::Error>> for Error {
     fn from(err: ErrorContext<String, sqlx::Error>) -> Self {
         match err.1 {
-            sqlx::Error::PoolTimedOut => Error::DBConnection {
+            sqlx::Error::PoolTimedOut => Error::Connection {
                 context: "PostgreSQL Storage: Connection Timeout".to_string(),
                 source: err.1,
             },
-            _ => Error::DBConnection {
+            _ => Error::Connection {
                 context: "PostgreSQL Storage: Could not establish a connection".to_string(),
                 source: err.1,
             },

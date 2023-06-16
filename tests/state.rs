@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 
-use zero2prod::postgres::{PostgresStorage, PostgresStorageKind};
+use zero2prod::postgres::PostgresStorage;
 use zero2prod::server::Error;
 use zero2prod::settings::{Command, Opts, Settings};
 
@@ -29,7 +29,7 @@ impl TestWorld {
         let settings: Settings = opts.try_into().expect("settings");
 
         let storage = Arc::new(
-            PostgresStorage::new(settings.database.clone(), PostgresStorageKind::Testing)
+            PostgresStorage::new(settings.database.clone())
                 .await
                 .expect("Storage connection"),
         );
