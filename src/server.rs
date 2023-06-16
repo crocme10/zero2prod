@@ -4,7 +4,6 @@ use axum::{
 };
 use std::sync::Arc;
 use std::{fmt, net::TcpListener};
-use tokio::sync::oneshot;
 
 use crate::err_context::{ErrorContext, ErrorContextExt};
 use crate::routes::{health::health, subscriptions::subscriptions};
@@ -39,8 +38,7 @@ impl From<ErrorContext<String, hyper::Error>> for Error {
     }
 }
 
-pub async fn run(listener: TcpListener, state: State, rx: oneshot::Receiver<()>) -> Result<(), Error>
-{
+pub async fn run(listener: TcpListener, state: State) -> Result<(), Error> {
     let app = Router::new()
         .route("/health", get(health))
         .route("/subscriptions", post(subscriptions))
@@ -49,7 +47,6 @@ pub async fn run(listener: TcpListener, state: State, rx: oneshot::Receiver<()>)
     Server::from_tcp(listener)
         .context("Could not create server from TCP Listener".to_string())?
         .serve(app.into_make_service())
-        .with_graceful_shutdown(async { rx.await.ok(); })
         .await
         .map_err(|err| Error::Server {
             context: "REST Server".to_string(),

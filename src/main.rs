@@ -1,14 +1,13 @@
 use clap::Parser;
 use std::fmt;
 use std::sync::Arc;
-use tokio::signal;
 
 use zero2prod::err_context::{ErrorContext, ErrorContextExt};
 use zero2prod::listener::{listen_with_host_port, Error as ListenerError};
 use zero2prod::postgres::{PostgresStorage, PostgresStorageKind};
-use zero2prod::storage::Error as StorageError;
 use zero2prod::server;
 use zero2prod::settings::{Error as SettingsError, Opts, Settings};
+use zero2prod::storage::Error as StorageError;
 
 #[derive(Debug)]
 pub enum Error {
@@ -100,33 +99,12 @@ async fn main() -> Result<(), Error> {
             settings.network.host, settings.network.port
         ))?;
 
-    let (tx, rx) = tokio::sync::oneshot::channel::<()>();
-
     let state = server::State { storage };
-    let server = server::run(listener, state, rx);
+    let server = server::run(listener, state);
     let server = tokio::spawn(server);
     if let Err(err) = server.await {
         eprintln!("Error: {err}");
     }
-
-    let ctrl_c = async {
-        signal::ctrl_c()
-            .await
-            .expect("failed to install Ctrl+C handler");
-    };
-
-    #[cfg(unix)]
-    let terminate = async {
-        signal::unix::signal(signal::unix::SignalKind::terminate())
-            .expect("failed to install signal handler")
-            .recv()
-            .await;
-    };
-
-    tokio::select! {
-        _ = ctrl_c => { tx.send(()).expect("sig ctrlc") },
-        _ = terminate => { tx.send(()).expect("sig terminate") },
-    };
 
     Ok(())
 }

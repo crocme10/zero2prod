@@ -1,6 +1,6 @@
-use cucumber::{World as _, writer::Coloring};
-use cucumber::WriterExt;
 use cucumber::writer;
+use cucumber::WriterExt;
+use cucumber::{writer::Coloring, World as _};
 use futures::FutureExt;
 use std::sync::Arc;
 use tracing_subscriber::{
@@ -27,10 +27,7 @@ async fn main() {
         .configure_and_init_tracing(
             DefaultFields::new(),
             Format::default().with_ansi(false).without_time(),
-            |layer| {
-                tracing_subscriber::registry()
-                    .with(LevelFilter::DEBUG.and_then(layer))
-            },
+            |layer| tracing_subscriber::registry().with(LevelFilter::DEBUG.and_then(layer)),
         )
         .max_concurrent_scenarios(1)
         .with_writer(
@@ -42,9 +39,12 @@ async fn main() {
             async {
                 tracing::info!("cucumber before hook: creating new storage");
                 let storage = Arc::new(
-                    PostgresStorage::new(world.settings.database.clone(), PostgresStorageKind::Testing)
-                        .await
-                        .expect("Establishing a database connection"),
+                    PostgresStorage::new(
+                        world.settings.database.clone(),
+                        PostgresStorageKind::Testing,
+                    )
+                    .await
+                    .expect("Establishing a database connection"),
                 );
 
                 let listener = listen_with_host_port(
@@ -53,12 +53,9 @@ async fn main() {
                 )
                 .expect("Could not create listener");
 
-                let (tx, rx) = tokio::sync::oneshot::channel::<()>();
-
-                world.tx = Some(tx);
                 let state = State { storage };
                 tracing::info!("cucumber before hook: spawning new server");
-                let server = server::run(listener, state, rx);
+                let server = server::run(listener, state);
                 let handle = tokio::spawn(server);
                 world.handle = Some(handle);
             }
