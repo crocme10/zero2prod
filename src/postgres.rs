@@ -54,7 +54,7 @@ impl PostgresStorage {
         let pool = connect_with_conn_str(&conn_str, config.connection_timeout).await?;
         tracing::info!("Connected Postgres Pool to {conn_str}");
         let exec = match kind {
-            PostgresStorageKind::Normal => {
+            PostgresStorageKind::Production => {
                 tracing::info!("PostgresStorage: Creating a connection");
                 Exec::Connection(pool.acquire().await.expect("acquire connection"))
             }
@@ -75,7 +75,7 @@ impl PostgresStorage {
 
 #[derive(Debug, Clone)]
 pub enum PostgresStorageKind {
-    Normal,
+    Production,
     Testing,
 }
 
@@ -94,7 +94,7 @@ pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> Result<PgPoo
 #[async_trait]
 impl Storage for PostgresStorage {
     async fn create_subscription(&self, username: String, email: String) -> Result<(), Error> {
-        tracing::info!("Creating a subscription");
+        tracing::info!("Creating a subscription for username {username}");
         let mut conn = self.exec.lock().await;
         let _ = sqlx::query!(
         r#"INSERT INTO subscriptions (id, email, username, subscribed_at) VALUES ($1, $2, $3, $4)"#,
@@ -109,15 +109,6 @@ impl Storage for PostgresStorage {
                 "Could not create new subscription for {username}"
                 ))?;
 
-        tracing::info!("checking saved");
-        let saved = sqlx::query!(
-            r#"SELECT email, username FROM subscriptions WHERE username = $1"#,
-            username
-        )
-        .fetch_optional(&mut **conn)
-        .await
-        .context(format!("Could not get subscription for {username}"))?;
-        tracing::info!("saved: {saved:?}");
         Ok(())
     }
 

@@ -37,9 +37,6 @@ impl fmt::Display for Error {
             Error::Listener { context, source } => {
                 write!(fmt, "Could not build TCP listener: {context} | {source}")
             }
-            // Error::Server { context, source } => {
-            //     write!(fmt, "Server: {context} | {source}")
-            // }
             Error::Storage { context, source } => {
                 write!(fmt, "Storage Error: {context} | {source}")
             }
@@ -88,7 +85,7 @@ async fn main() -> Result<(), Error> {
         .context("Compiling Application Settings".to_string())?;
 
     let storage = Arc::new(
-        PostgresStorage::new(settings.database, PostgresStorageKind::Normal)
+        PostgresStorage::new(settings.database, PostgresStorageKind::Production)
             .await
             .context("Establishing a database connection".to_string())?,
     );

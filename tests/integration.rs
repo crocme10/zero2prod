@@ -37,7 +37,6 @@ async fn main() {
         )
         .before(move |_feature, _rule, _scenario, world| {
             async {
-                tracing::info!("cucumber before hook: creating new storage");
                 let storage = Arc::new(
                     PostgresStorage::new(
                         world.settings.database.clone(),
@@ -53,19 +52,18 @@ async fn main() {
                 )
                 .expect("Could not create listener");
 
-                let state = State { storage };
-                tracing::info!("cucumber before hook: spawning new server");
+                let state = State {
+                    storage: storage.clone(),
+                };
                 let server = server::run(listener, state);
                 let handle = tokio::spawn(server);
                 world.handle = Some(handle);
+                world.storage = storage;
             }
             .boxed()
         })
         .after(move |_feature, _rule, _scenario, _event, world| {
             async {
-                tracing::info!("cucumber after hook");
-                // let tx = world.unwrap().tx.take().expect("tx");
-                // tx.send(());
                 let handle = world.unwrap().handle.take().expect("handle");
                 handle.abort();
             }
