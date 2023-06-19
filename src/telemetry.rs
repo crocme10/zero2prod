@@ -2,9 +2,9 @@ use tracing::Subscriber;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
 use tracing_subscriber::filter::EnvFilter;
+use tracing_subscriber::fmt::MakeWriter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::Registry;
-use tracing_subscriber::fmt::MakeWriter;
 
 /// Sets up a tracing subscriber.
 pub fn get_subscriber<Sink>(

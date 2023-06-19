@@ -77,7 +77,8 @@ impl From<ErrorContext<String, ListenerError>> for Error {
 #[allow(clippy::result_large_err)]
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let subscriber = telemetry::get_subscriber("zero2prod".to_string(), "info".to_string(), std::io::stdout);
+    let subscriber =
+        telemetry::get_subscriber("zero2prod".to_string(), "info".to_string(), std::io::stdout);
     telemetry::init_subscriber(subscriber);
 
     let opts = Opts::parse();
