@@ -2,7 +2,7 @@
 name = "zero2prod"
 version = "0.0.1"
 edition = "2021"
-license-file = "LICENSE"
+license = "MIT"
 readme = "README.md"
 description = "Testing Zero 2 Prod"
 keywords = [ "API" ]
@@ -24,8 +24,23 @@ config = "^0.13.3"
 hyper = "^0.14.26"
 serde = { version = "^1.0.164", features = [ "derive" ] }
 serde_json = "^1.0.97"
-sqlx = { version = "^0.6.3", default-features= false, features = ["runtime-actix-rustls", "macros", "postgres", "uuid", "chrono", "migrate"] }
-tokio = { version = "^1.28.2", features = ["macros", "rt-multi-thread", "rt", "sync", "signal", "time" ] }
+sqlx = { version = "^0.6.3", default-features= false, features = [
+    "chrono",
+    "macros",
+    "migrate",
+    "offline",
+    "postgres",
+    "runtime-actix-rustls",
+    "uuid"
+  ] }
+tokio = { version = "^1.28.2", features = [
+    "macros",
+    "rt-multi-thread",
+    "rt",
+    "sync",
+    "signal",
+    "time"
+  ] }
 tower = "^0.4.13"
 tower-http = { version = "^0.4.0", features = ["trace"] }
 tracing = "^0.1.37"

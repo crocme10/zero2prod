@@ -1,8 +1,0 @@
-[database]
-host = "localhost"
-port = 5462
-username = "postgres"
-password = "password"
-database_name = "newsletter"
-connection_timeout = 2000 # ms
-executor = "connection"

@@ -1,12 +1,9 @@
-mod db_config;
 pub mod tasks;
 
 use std::{
     path::{Path, PathBuf},
     process::Command,
 };
-
-pub use db_config::DbConfig;
 
 pub fn project_root() -> PathBuf {
     Path::new(&env!("CARGO_MANIFEST_DIR"))
