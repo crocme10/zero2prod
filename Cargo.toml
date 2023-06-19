@@ -1,4 +1,4 @@
 [workspace]
 default-members = ["zero2prod"]
-members = ["zero2prod", "xtask"]
+members = ["zero2prod", "xtask", "common"]
 resolver = "2"

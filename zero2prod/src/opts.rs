@@ -1,14 +1,17 @@
-use serde::{Deserialize, Serialize};
+//use serde::{Deserialize, Serialize};
 use std::{env, fmt, path::PathBuf};
+
+use zero2prod_common::config;
+use zero2prod_common::settings;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
 
 #[derive(Debug)]
 pub enum Error {
-    Building {
+    Merging {
         context: String,
-        source: crate::config::Error,
+        source: config::Error,
     },
     Deserializing {
         context: String,
@@ -19,7 +22,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Building { context, source } => {
+            Error::Merging { context, source } => {
                 write!(fmt, "Could not build client request: {context} | {source}")
             }
             Error::Deserializing { context, source } => {
@@ -67,18 +70,18 @@ pub enum Command {
     Config,
 }
 
-impl TryInto<Settings> for Opts {
+impl TryInto<settings::Settings> for Opts {
     type Error = Error;
 
-    fn try_into(self) -> Result<Settings, Self::Error> {
-        crate::config::merge_configuration(
+    fn try_into(self) -> Result<settings::Settings, Self::Error> {
+        config::merge_configuration(
             self.config_dir.as_ref(),
             &["service", "database"],
             self.run_mode.as_deref(),
             "ZERO2PROD",
             self.settings.clone(),
         )
-        .map_err(|err| Error::Building {
+        .map_err(|err| Error::Merging {
             context: "REST Server Settings: Could not merge configuration".to_string(),
             source: err,
         })?
@@ -88,39 +91,6 @@ impl TryInto<Settings> for Opts {
             source: err,
         })
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NetworkSettings {
-    pub host: String,
-    pub port: u16,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DatabaseSettings {
-    pub username: String,
-    pub password: String,
-    pub port: u16,
-    pub host: String,
-    pub database_name: String,
-    pub connection_timeout: u64,
-    pub executor: String,
-}
-
-impl DatabaseSettings {
-    pub fn connection_string(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.username, self.password, self.host, self.port, self.database_name
-        )
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Settings {
-    pub network: NetworkSettings,
-    pub database: DatabaseSettings,
-    pub mode: String,
 }
 
 #[cfg(test)]
@@ -136,7 +106,7 @@ mod tests {
             cmd: Command::Run,
         };
 
-        let settings: Result<Settings, _> = opts.try_into();
+        let settings: Result<settings::Settings, _> = opts.try_into();
         println!("settings: {settings:?}");
         assert!(settings.is_ok());
         assert_eq!(settings.unwrap().mode, "default");

@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::{fmt, net::TcpListener};
 use tower_http::trace::TraceLayer;
 
-use crate::err_context::{ErrorContext, ErrorContextExt};
+use zero2prod_common::err_context::{ErrorContext, ErrorContextExt};
 use crate::routes::{health::health, subscriptions::subscriptions};
 use crate::storage::Storage;
 

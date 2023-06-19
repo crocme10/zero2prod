@@ -2,16 +2,21 @@ use clap::Parser;
 use std::fmt;
 use std::sync::Arc;
 
-use zero2prod::err_context::{ErrorContext, ErrorContextExt};
 use zero2prod::listener::{listen_with_host_port, Error as ListenerError};
+use zero2prod::opts::{Error as OptsError, Opts};
 use zero2prod::postgres::PostgresStorage;
 use zero2prod::server;
-use zero2prod::settings::{Error as SettingsError, Opts, Settings};
 use zero2prod::storage::Error as StorageError;
 use zero2prod::telemetry;
+use zero2prod_common::err_context::{ErrorContext, ErrorContextExt};
+use zero2prod_common::settings::{Error as SettingsError, Settings};
 
 #[derive(Debug)]
 pub enum Error {
+    Options {
+        context: String,
+        source: OptsError,
+    },
     Listener {
         context: String,
         source: ListenerError,
@@ -41,6 +46,9 @@ impl fmt::Display for Error {
             Error::Storage { context, source } => {
                 write!(fmt, "Storage Error: {context} | {source}")
             }
+            Error::Options { context, source } => {
+                write!(fmt, "Options Error: {context} | {source}")
+            }
         }
     }
 }
@@ -68,6 +76,15 @@ impl From<ErrorContext<String, StorageError>> for Error {
 impl From<ErrorContext<String, ListenerError>> for Error {
     fn from(err: ErrorContext<String, ListenerError>) -> Self {
         Error::Listener {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<String, OptsError>> for Error {
+    fn from(err: ErrorContext<String, OptsError>) -> Self {
+        Error::Options {
             context: err.0,
             source: err.1,
         }

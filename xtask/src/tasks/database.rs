@@ -1,6 +1,6 @@
 use std::{env, process::Command, thread, time::Duration};
-use zero2prod::config::merge_configuration;
-use zero2prod::settings::{DatabaseSettings, Settings};
+use zero2prod_common::config::merge_configuration;
+use zero2prod_common::settings::{DatabaseSettings, Settings};
 
 use crate::{check_psql_exists, check_sqlx_exists, project_root};
 

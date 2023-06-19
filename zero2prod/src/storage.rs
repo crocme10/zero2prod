@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::fmt;
 
-use crate::err_context::ErrorContext;
+use zero2prod_common::err_context::ErrorContext;
 
 #[derive(Debug)]
 pub enum Error {

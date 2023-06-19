@@ -3184,7 +3184,7 @@ dependencies = [
  "chrono",
  "man",
  "owo-colors",
- "zero2prod",
+ "zero2prod-common",
 ]
 
 [[package]]
@@ -3219,6 +3219,26 @@ dependencies = [
  "tokio",
  "tower",
  "tower-http",
+ "tracing",
+ "tracing-attributes",
+ "tracing-bunyan-formatter",
+ "tracing-futures",
+ "tracing-log",
+ "tracing-subscriber",
+ "uuid",
+ "zero2prod-common",
+]
+
+[[package]]
+name = "zero2prod-common"
+version = "0.0.1"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "clap",
+ "config",
+ "serde",
+ "serde_json",
  "tracing",
  "tracing-attributes",
  "tracing-bunyan-formatter",

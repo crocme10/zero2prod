@@ -5,8 +5,8 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::err_context::ErrorContextExt;
-use crate::settings::DatabaseSettings;
+use zero2prod_common::err_context::ErrorContextExt;
+use zero2prod_common::settings::DatabaseSettings;
 use crate::storage::{Error, Storage, Subscription};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
