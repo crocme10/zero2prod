@@ -4,6 +4,7 @@ use axum::{
 };
 use std::sync::Arc;
 use std::{fmt, net::TcpListener};
+use tower_http::trace::TraceLayer;
 
 use crate::err_context::{ErrorContext, ErrorContextExt};
 use crate::routes::{health::health, subscriptions::subscriptions};
@@ -42,7 +43,8 @@ pub async fn run(listener: TcpListener, state: State) -> Result<(), Error> {
     let app = Router::new()
         .route("/health", get(health))
         .route("/subscriptions", post(subscriptions))
-        .with_state(state);
+        .with_state(state)
+        .layer(TraceLayer::new_for_http());
 
     Server::from_tcp(listener)
         .context("Could not create server from TCP Listener".to_string())?

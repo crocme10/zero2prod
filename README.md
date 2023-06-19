@@ -1,4 +1,17 @@
-# Zero to Job
+# Zero 2 Prod
+
+Zero To Production in Rust is a book by Luca Palmieri where he details his progress
+implementing a web application using Rust. It's a wonderful book, with lots of resources,
+tips and tricks. It has fostered lots of projects, and so its useful to browse through
+github and look at how developers have taken the book initial version and made changes
+based on their own expertise.
+
+This is such a project, where the main changes are:
+* Using axum instead of actix-web (many developers seem to do that.)
+* I use cucumber for integration testing.
+* I don't use any error library
+
+(* Maybe xtask)
 
 > Exploring Leptos, Axum, and more using the Zero to Production ideas.
 
@@ -45,6 +58,9 @@ In one terminal window, you monitor all tailwind:
 npx tailwindcss -i tailwind.css -o css/main.css
 ```
 
+```sh
+curl --header "Content-Type: application/json" --request POST --data '{"username": "alice", "email": "alice@acme.inc"}' http://localhost:8082/subscriptions
+```
 In another terminal, you run 
 
 ```sh
