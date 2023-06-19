@@ -1,0 +1,4 @@
+mode = "default"
+
+[identity]
+username = "baz"
