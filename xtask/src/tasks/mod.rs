@@ -1,3 +1,3 @@
 pub mod ci;
-pub mod test;
 pub mod database;
+pub mod test;

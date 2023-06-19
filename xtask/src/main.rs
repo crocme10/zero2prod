@@ -1,7 +1,7 @@
 use std::env;
 
 use xtask::tasks::ci::ci;
-use xtask::tasks::database::{migrate_postgres_db, sqlx_prepare, postgres_db};
+use xtask::tasks::database::{migrate_postgres_db, postgres_db, sqlx_prepare};
 
 fn main() {
     if let Err(e) = try_main() {

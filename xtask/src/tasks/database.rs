@@ -1,6 +1,6 @@
 use std::{env, process::Command, thread, time::Duration};
-use zero2prod::settings::{Settings, DatabaseSettings};
 use zero2prod::config::merge_configuration;
+use zero2prod::settings::{DatabaseSettings, Settings};
 
 use crate::{check_psql_exists, check_sqlx_exists, project_root};
 
@@ -21,24 +21,27 @@ pub fn sqlx_prepare() -> Result<(), anyhow::Error> {
 
 pub fn database_settings() -> DatabaseSettings {
     let config_dir = project_root().join("zero2prod/config");
-    println!("Reading database configuration from {}", config_dir.display());
-    let settings: Settings = merge_configuration (
+    println!(
+        "Reading database configuration from {}",
+        config_dir.display()
+    );
+    let settings: Settings = merge_configuration(
         &config_dir,
         &["database", "service"],
         "testing",
         "ZERO2PROD",
-        vec![]
-        )
-        .unwrap()
-        .try_deserialize()
-        .unwrap();
+        vec![],
+    )
+    .unwrap()
+    .try_deserialize()
+    .unwrap();
     settings.database
 }
 
 pub fn postgres_db() -> Result<(), anyhow::Error> {
     check_psql_exists()?;
 
-    let settings = database_settings();  
+    let settings = database_settings();
 
     let skip_docker = env::var("SKIP_DOCKER")
         .unwrap_or_else(|_| "false".to_string())
@@ -96,10 +99,7 @@ pub fn migrate_postgres_db() -> Result<(), anyhow::Error> {
             "DATABASE_URL",
             format!(
                 "postgres://{}:{}@localhost:{}/{}",
-                settings.username,
-                settings.password,
-                settings.port,
-                settings.database_name
+                settings.username, settings.password, settings.port, settings.database_name
             ),
         )
         .args(["database", "create"])
@@ -111,10 +111,7 @@ pub fn migrate_postgres_db() -> Result<(), anyhow::Error> {
             "DATABASE_URL",
             format!(
                 "postgres://{}:{}@localhost:{}/{}",
-                settings.username,
-                settings.password,
-                settings.port,
-                settings.database_name
+                settings.username, settings.password, settings.port, settings.database_name
             ),
         )
         .args(["migrate", "run"])
@@ -130,7 +127,6 @@ pub fn migrate_postgres_db() -> Result<(), anyhow::Error> {
 }
 
 fn wait_for_postgres() -> Result<(), anyhow::Error> {
-
     let settings = database_settings();
 
     let mut check_online = Command::new("psql");
@@ -170,7 +166,7 @@ fn wait_for_postgres() -> Result<(), anyhow::Error> {
 //         .unwrap();
 //     let running_container_id = String::from_utf8(running_container.stdout).unwrap();
 //     let running_container_id = running_container_id.trim().to_string();
-// 
+//
 //     if !running_container_id.is_empty() {
 //         anyhow::bail!(
 //             "Redis container already running.\n\t\
@@ -178,7 +174,7 @@ fn wait_for_postgres() -> Result<(), anyhow::Error> {
 //             running_container_id
 //         );
 //     }
-// 
+//
 //     Command::new("docker")
 //         .current_dir(project_root())
 //         .args([
