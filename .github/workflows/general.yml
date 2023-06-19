@@ -1,5 +1,4 @@
-# The name of your workflow. GitHub displays the names of your workflows on your repository's "Actions" tab
-name: Rust
+name: CI / CD Prechecks
 
 # To automatically trigger the workflow
 on:
@@ -48,46 +47,39 @@ jobs:
     steps:
       # Downloads a copy of the code in your repository before running CI tests
       - name: Check out repository code
-        # The uses keyword specifies that this step will run v3 of the actions/checkout action.
-        # This is an action that checks out your repository onto the runner, allowing you to run
-        # scripts or other actions against your code (such as build and test tools).
-        # You should use the checkout action any time your workflow will run against the repository's code.
         uses: actions/checkout@v3
-
-        # This GitHub Action installs a Rust toolchain using rustup. It is designed for one-line
-        # concise usage and good defaults.
       - name: Install the Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-
-      # A GitHub Action that implements smart caching for rust/cargo projects with sensible defaults.
       - name: Rust Cache Action
         uses: Swatinem/rust-cache@v2
         with:
-          # An additional cache key that is added alongside the automatic `job`-based cache key
-          # and can be used to further differentiate jobs. default: empty
           key: sqlx-${{ env.SQLX_VERSION }}
-
       - name: Install sqlx-cli
         run:
-          cargo install sqlx-cli --version=${{ env.SQLX_VERSION }} --features
-          ${{ env.SQLX_FEATURES }} --no-default-features --locked
-          # The --locked flag can be used to force Cargo to use the packaged Cargo.lock file if it is available.
+          cargo install sqlx-cli
+          --version=${{ env.SQLX_VERSION }}
+          --features ${{ env.SQLX_FEATURES }}
+          --no-default-features
+          --locked
+          # The --locked flag can be used to force Cargo to use the packaged
+          # Cargo.lock file if it is available.
           # This may be useful for ensuring reproducible builds, to use the exact same set of
           #   dependencies that were available when the package was published.
           # It may also be useful if a newer version of a dependency is published that no
           #   longer builds on your system, or has other problems
 
-      - name: Install postgresql-client
-        run: sudo apt-get update && sudo apt-get install postgresql-client -y
-
-      # We can skip the docker container because we use a postgres service (see the services section).
       - name: Migrate database
-        run: SKIP_DOCKER=true ./scripts/init_db.sh
-
+        run: |
+          sudo apt-get update && sudo apt-get install libpq-dev -y
+          cd zero2prod
+          SKIP_DOCKER=true cargo xtask postgres
+      - name: Check sqlx-data.json up to date.
+        run: |
+          sudo apt-get update && sudo apt-get install libpq-dev -y
+          cd zero2prod
+          SKIP_DOCKER=true cargo xtask postgres
       - name: Run unit tests
         run: cargo test --bins --lib
-
-      # Since we use a profile defined by an environment variable, this is the one that will be used.
       # We use the specific 'github' profile, which assigns, for example, the port 5432.
       # (See config/database/github.toml)
       - name: Run integration tests
@@ -131,41 +123,16 @@ jobs:
         run:
           cargo install sqlx-cli --version=${{ env.SQLX_VERSION }} --features
           ${{ env.SQLX_FEATURES }} --no-default-features --locked
-      - name: Install postgresql-client
-        run: sudo apt-get update && sudo apt-get install postgresql-client -y
       - name: Migrate database
-        run: SKIP_DOCKER=true ./scripts/init_db.sh
+        run: |
+          sudo apt-get update && sudo apt-get install libpq-dev -y
+          cd zero2prod
+          SKIP_DOCKER=true cargo xtask postgres
+      - name: Check sqlx-data.json up to date.
+        run: |
+          sudo apt-get update && sudo apt-get install libpq-dev -y
+          cd zero2prod
+          SKIP_DOCKER=true cargo xtask postgres
       - name: Linting
         run: cargo clippy -- -D warnings
 
-  # `coverage` container job
-  coverage:
-    name: Code coverage
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Install postgresql-client
-        run: sudo apt-get update && sudo apt-get install postgresql-client -y
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: sqlx-${{ env.SQLX_VERSION }}
-      - name: Install sqlx-cli
-        run:
-          cargo install sqlx-cli --version=${{ env.SQLX_VERSION }} --features
-          ${{ env.SQLX_FEATURES }} --no-default-features --locked
-      - name: Migrate database
-        run: SKIP_DOCKER=true ./scripts/init_db.sh
-      - name: Generate code coverage
-        run:
-          cargo install cargo-tarpaulin && cargo tarpaulin --verbose --workspace --bins --lib

@@ -1,12 +1,12 @@
 use std::{env, process::Command, thread, time::Duration};
-use zero2prod::settings::DatabaseSettings;
+use zero2prod::settings::{Settings, DatabaseSettings};
 use zero2prod::config::merge_configuration;
 
 use crate::{check_psql_exists, check_sqlx_exists, project_root};
 
 pub fn db_command() -> Result<(), anyhow::Error> {
     postgres_db()?;
-    setup_redis()?;
+    // setup_redis()?;
     Ok(())
 }
 
@@ -20,22 +20,25 @@ pub fn sqlx_prepare() -> Result<(), anyhow::Error> {
 }
 
 pub fn database_settings() -> DatabaseSettings {
-    merge_configuration (
-        config_dir,
-        &["database"],
+    let config_dir = project_root().join("zero2prod/config");
+    println!("Reading database configuration from {}", config_dir.display());
+    let settings: Settings = merge_configuration (
+        &config_dir,
+        &["database", "service"],
         "testing",
         "ZERO2PROD",
         vec![]
         )
         .unwrap()
         .try_deserialize()
-        .unwrap()
+        .unwrap();
+    settings.database
 }
 
 pub fn postgres_db() -> Result<(), anyhow::Error> {
     check_psql_exists()?;
 
-    let settings = database_settings();                                               )
+    let settings = database_settings();  
 
     let skip_docker = env::var("SKIP_DOCKER")
         .unwrap_or_else(|_| "false".to_string())
@@ -138,9 +141,9 @@ fn wait_for_postgres() -> Result<(), anyhow::Error> {
             "-h",
             "localhost",
             "-U",
-            settings.username,
+            &settings.username,
             "-p",
-            settings.port,
+            &settings.port.to_string(),
             "-d",
             "postgres",
             "-c",

@@ -4,13 +4,25 @@ on:
     - cron: '0 0 * * *'
   push:
     paths:
-      - '**/Cargo.toml'
       - '**/Cargo.lock'
+      - '.github/workflows/audit.yml'
+  pull_request:
+    paths: Cargo.lock
+
 jobs:
-  security_audit:
+  cargo-deny:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans licenses sources
+    
+    # Prevent sudden announcement of a new advisory from failing ci
+    continue-on-error: ${{ matrix.checks == 'advisories' }}
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: taiki-e/install-action@cargo-deny
-      - name: Scan for vulnerabilities
-        run: cargo deny check advisories
+      - uses: actions/checkout@v3 
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check ${{ matrix.checks }}
