@@ -1,0 +1,44 @@
+{
+  "db": "PostgreSQL",
+  "59651e97a67f0e4bb6f1510daa30698c03b71ac3d6036db9925f3a28db880569": {
+    "describe": {
+      "columns": [
+        {
+          "name": "email",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "username",
+          "ordinal": 1,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT email, username FROM subscriptions WHERE username = $1"
+  },
+  "f53225ac34edbf85661bf7aaa70d83bd39f8a2ecf72fa7fd12cb1c4a52cfc748": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text",
+          "Text",
+          "Timestamptz"
+        ]
+      }
+    },
+    "query": "INSERT INTO subscriptions (id, email, username, subscribed_at) VALUES ($1, $2, $3, $4)"
+  }
+}
