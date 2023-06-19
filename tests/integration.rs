@@ -17,6 +17,11 @@ mod utils;
 use zero2prod::listener::listen_with_host_port;
 use zero2prod::postgres::PostgresStorage;
 use zero2prod::server::{self, State};
+// TODO See how to use telemetry within integration tests.
+// use zero2prod::telemetry;
+
+// let subscriber = telemetry::get_subscriber("zero2prod".to_string(), "info".to_string());
+// telemetry::init_subscriber(subscriber);
 
 // This runs before everything else, so you can setup things here.
 #[tokio::main]
@@ -28,6 +33,7 @@ async fn main() {
             DefaultFields::new(),
             Format::default().with_ansi(false).without_time(),
             |layer| tracing_subscriber::registry().with(LevelFilter::DEBUG.and_then(layer)),
+            // { telemetry::get_subscriber("test".to_string(), "debug".to_string()).with(layer) }
         )
         .max_concurrent_scenarios(1)
         .with_writer(

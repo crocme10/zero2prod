@@ -8,6 +8,7 @@ use zero2prod::postgres::PostgresStorage;
 use zero2prod::server;
 use zero2prod::settings::{Error as SettingsError, Opts, Settings};
 use zero2prod::storage::Error as StorageError;
+use zero2prod::telemetry;
 
 #[derive(Debug)]
 pub enum Error {
@@ -76,7 +77,8 @@ impl From<ErrorContext<String, ListenerError>> for Error {
 #[allow(clippy::result_large_err)]
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    tracing_subscriber::fmt::init();
+    let subscriber = telemetry::get_subscriber("zero2prod".to_string(), "info".to_string(), std::io::stdout);
+    telemetry::init_subscriber(subscriber);
 
     let opts = Opts::parse();
 

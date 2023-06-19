@@ -93,8 +93,10 @@ pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> Result<PgPoo
 
 #[async_trait]
 impl Storage for PostgresStorage {
+    #[tracing::instrument(
+        name = "Storing a new subscription in postgres"
+    )]
     async fn create_subscription(&self, username: String, email: String) -> Result<(), Error> {
-        tracing::info!("Creating a subscription for username {username}");
         let mut conn = self.exec.lock().await;
         let _ = sqlx::query!(
         r#"INSERT INTO subscriptions (id, email, username, subscribed_at) VALUES ($1, $2, $3, $4)"#,
@@ -112,6 +114,9 @@ impl Storage for PostgresStorage {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "Fetching a subscription by username in postgres"
+    )]
     async fn get_subscription_by_username(
         &self,
         username: &str,

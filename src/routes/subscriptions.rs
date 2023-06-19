@@ -1,19 +1,26 @@
 use axum::extract::{Json, State as AxumState};
 use axum_extra::extract::WithRejection;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::error::ApiError;
 use crate::server::State;
-// use crate::storage::{Error, Storage};
 
 /// POST handler for user subscriptions
 #[allow(clippy::unused_async)]
+#[tracing::instrument(
+    name = "Adding a new subscription"
+    skip(state),
+    fields(
+        request_id = %Uuid::new_v4(),
+    )
+)]
 pub async fn subscriptions(
     AxumState(state): AxumState<State>,
     WithRejection(Json(request), _): WithRejection<Json<SubscriptionRequest>, ApiError>,
 ) -> Result<Json<Zero2ProdSubscriptionsResp>, ApiError> {
-    tracing::info!("request: {:?}", request);
     let SubscriptionRequest { username, email } = request;
+
     if username.is_empty() {
         return Err(ApiError::new_bad_request("Empty username".to_string()));
     }

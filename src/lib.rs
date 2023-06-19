@@ -7,3 +7,4 @@ pub mod routes;
 pub mod server;
 pub mod settings;
 pub mod storage;
+pub mod telemetry;
