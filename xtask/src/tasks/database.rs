@@ -20,7 +20,7 @@ pub fn sqlx_prepare() -> Result<(), anyhow::Error> {
 }
 
 pub fn database_settings() -> DatabaseSettings {
-    let config_dir = project_root().join("zero2prod/config");
+    let config_dir = project_root().join("config");
     println!(
         "Reading database configuration from {}",
         config_dir.display()
