@@ -10,7 +10,7 @@ region: fra
 services:
   - name: zero2prod
     # Relative to the repository root
-    dockerfile_path: docker/zero2prod/Dockerfile
+    dockerfile_path: Dockerfile
     source_dir: .
     github:
       # Depending on when you created the repository,
