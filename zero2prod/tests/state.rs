@@ -1,6 +1,6 @@
 use cucumber::World;
 use reqwest::Response;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 
@@ -21,7 +21,9 @@ pub struct TestWorld {
 impl TestWorld {
     pub async fn new() -> Self {
         let opts = Opts {
-            config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config"),
+            config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("..")
+                .join("config"),
             run_mode: Some("testing".to_string()),
             settings: vec![],
             cmd: Command::Run,

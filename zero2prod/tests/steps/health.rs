@@ -10,7 +10,9 @@ use crate::state::TestWorld;
 async fn health_check(world: &mut TestWorld) {
     // We have to look into the 'testing' configuration for the port we have to target.
     let opts = opts::Opts {
-        config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config"),
+        config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("config"),
         run_mode: Some("testing".to_string()),
         settings: vec![],
         cmd: opts::Command::Run,

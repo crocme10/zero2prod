@@ -11,7 +11,8 @@ RUN USER=root cargo new zero2prod
 
 WORKDIR /home/zero2prod
 
-COPY . .
+COPY zero2prod/ .
+COPY config/ ./config
 
 # Set sqlx to offline because we don't have access to
 # the database while compiling in this docker environment.
