@@ -1,6 +1,6 @@
 use cucumber::World;
 use reqwest::Response;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 

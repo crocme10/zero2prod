@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use serde_aux::field_attributes::deserialize_number_from_string;
+use sqlx::postgres::PgConnectOptions;
 use std::fmt;
 
 #[derive(Debug)]
@@ -31,6 +33,7 @@ impl std::error::Error for Error {}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkSettings {
     pub host: String,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
 }
 
@@ -38,6 +41,7 @@ pub struct NetworkSettings {
 pub struct DatabaseSettings {
     pub username: String,
     pub password: String,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
     pub database_name: String,
@@ -51,6 +55,15 @@ impl DatabaseSettings {
             "postgres://{}:{}@{}:{}/{}",
             self.username, self.password, self.host, self.port, self.database_name
         )
+    }
+
+    pub fn connect_options(&self) -> PgConnectOptions {
+        PgConnectOptions::new()
+            .host(&self.host)
+            .username(&self.username)
+            .password(&self.password)
+            .database(&self.database_name)
+            .port(self.port)
     }
 }
 

@@ -6,7 +6,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::storage::{Error, Storage, Subscription};
-use sqlx::postgres::{PgPool, PgPoolOptions};
+use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use zero2prod_common::err_context::ErrorContextExt;
 use zero2prod_common::settings::DatabaseSettings;
 
@@ -46,14 +46,14 @@ pub struct PostgresStorage {
     pub pool: PgPool,
     pub exec: Arc<Mutex<Exec<'static>>>,
     pub config: DatabaseSettings,
-    pub conn_str: String,
+    pub conn_options: PgConnectOptions,
 }
 
 impl PostgresStorage {
     pub async fn new(config: DatabaseSettings) -> Result<PostgresStorage, Error> {
-        let conn_str = config.connection_string();
-        let pool = connect_with_conn_str(&conn_str, config.connection_timeout).await?;
-        tracing::info!("Connected Postgres Pool to {conn_str}");
+        let options = config.connect_options();
+        let pool = connect_with_options(options.clone(), config.connection_timeout).await?;
+        tracing::debug!("Connected Postgres Pool to {:?}", options);
         let exec = match config.executor.as_str() {
             "connection" => {
                 tracing::info!("PostgresStorage: Creating a connection");
@@ -74,7 +74,7 @@ impl PostgresStorage {
             pool,
             exec: Arc::new(Mutex::new(exec)),
             config,
-            conn_str,
+            conn_options: options,
         })
     }
 }
@@ -86,6 +86,21 @@ pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> Result<PgPoo
         .await
         .context(format!(
             "Could not establish connection to {conn_str} with timeout {timeout}"
+        ))?;
+
+    Ok(pool)
+}
+
+pub async fn connect_with_options(
+    options: PgConnectOptions,
+    timeout: u64,
+) -> Result<PgPool, Error> {
+    let pool = PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_millis(timeout))
+        .connect_with(options)
+        .await
+        .context(format!(
+            "Could not establish connection to database with timeout {timeout}"
         ))?;
 
     Ok(pool)
