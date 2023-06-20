@@ -100,7 +100,9 @@ mod tests {
     #[test]
     fn should_return_ok_with_default_config_dir() {
         let opts = Opts {
-            config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config"),
+            config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("..")
+                .join("config"),
             run_mode: None,
             settings: vec![],
             cmd: Command::Run,
