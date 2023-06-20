@@ -61,4 +61,4 @@ databases:
     num_nodes: 1
     size: db-s-dev-database
     # Postgres version - using the latest digital ocean supports here
-    version: "15"
+    version: "12"
