@@ -6,9 +6,9 @@ use std::sync::Arc;
 use std::{fmt, net::TcpListener};
 use tower_http::trace::TraceLayer;
 
-use zero2prod_common::err_context::{ErrorContext, ErrorContextExt};
 use crate::routes::{health::health, subscriptions::subscriptions};
 use crate::storage::Storage;
+use zero2prod_common::err_context::{ErrorContext, ErrorContextExt};
 
 #[derive(Debug)]
 pub enum Error {

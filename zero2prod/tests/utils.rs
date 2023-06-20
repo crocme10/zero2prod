@@ -1,6 +1,6 @@
 use std::path::PathBuf;
-use zero2prod_common::settings;
 use zero2prod::opts;
+use zero2prod_common::settings;
 
 pub fn testing_url_for_endpoint(endpoint: &str) -> String {
     // We have to look into the 'testing' configuration for the port we have to target.

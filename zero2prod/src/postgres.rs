@@ -5,10 +5,10 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use zero2prod_common::err_context::ErrorContextExt;
-use zero2prod_common::settings::DatabaseSettings;
 use crate::storage::{Error, Storage, Subscription};
 use sqlx::postgres::{PgPool, PgPoolOptions};
+use zero2prod_common::err_context::ErrorContextExt;
+use zero2prod_common::settings::DatabaseSettings;
 
 /// This is the executor type, which can be either a pool connection, or a transaction.
 /// This is the sort of generic solution that I have found which allows me to use
