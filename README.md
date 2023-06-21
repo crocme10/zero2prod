@@ -49,7 +49,25 @@ Windows:
 
 ?
 
-## Usage example
+## Usage
+
+### Server
+
+When you build the server (debug or release), you get a binary in target/{debug, release}/zero2prod
+
+This binay can be configured with configuration files found in ./config
+
+The binary requires a path to a configuration directory where all configuration is found.
+
+This configuration can be overriden with local configuration files, and with environment variables.
+
+Environment variables use '__' to separate sections, and ZERO2PROD for the prefix. So to modify the 
+database's name, which is the database.database_name key, we should set ZERO2PROD__DATABASE__DATABASE_NAME=newsletter
+
+The server takes two command:
+* config to display the configuration as JSON
+* run to run the server.
+
 
 In one terminal window, you monitor all tailwind:
 

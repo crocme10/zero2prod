@@ -3,7 +3,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use zero2prod::listener::{listen_with_host_port, Error as ListenerError};
-use zero2prod::opts::{Error as OptsError, Opts};
+use zero2prod::opts::{Command, Error as OptsError, Opts};
 use zero2prod::postgres::PostgresStorage;
 use zero2prod::server;
 use zero2prod::storage::Error as StorageError;
@@ -100,28 +100,37 @@ async fn main() -> Result<(), Error> {
 
     let opts = Opts::parse();
 
+    let cmd = opts.cmd.clone();
+
     let settings: Settings = opts
         .try_into()
         .context("Compiling Application Settings".to_string())?;
 
-    let storage = Arc::new(
-        PostgresStorage::new(settings.database)
-            .await
-            .context("Establishing a database connection".to_string())?,
-    );
+    match cmd {
+        Command::Config => {
+            println!("{}", serde_json::to_string_pretty(&settings).unwrap());
+        }
+        Command::Run => {
+            let storage = Arc::new(
+                PostgresStorage::new(settings.database)
+                    .await
+                    .context("Establishing a database connection".to_string())?,
+            );
 
-    let listener = listen_with_host_port(settings.network.host.as_str(), settings.network.port)
-        .context(format!(
-            "Could not create listener for {}:{}",
-            settings.network.host, settings.network.port
-        ))?;
+            let listener =
+                listen_with_host_port(settings.network.host.as_str(), settings.network.port)
+                    .context(format!(
+                        "Could not create listener for {}:{}",
+                        settings.network.host, settings.network.port
+                    ))?;
 
-    let state = server::State { storage };
-    let server = server::run(listener, state);
-    let server = tokio::spawn(server);
-    if let Err(err) = server.await {
-        eprintln!("Error: {err}");
+            let state = server::State { storage };
+            let server = server::run(listener, state);
+            let server = tokio::spawn(server);
+            if let Err(err) = server.await {
+                eprintln!("Error: {err}");
+            }
+        }
     }
-
     Ok(())
 }
