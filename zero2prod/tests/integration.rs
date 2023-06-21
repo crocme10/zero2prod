@@ -1,3 +1,4 @@
+use cucumber::cli;
 use cucumber::writer;
 use cucumber::WriterExt;
 use cucumber::{writer::Coloring, World as _};
@@ -18,29 +19,23 @@ use zero2prod::listener::listen_with_host_port;
 use zero2prod::postgres::PostgresStorage;
 use zero2prod::server::{self, State};
 // TODO See how to use telemetry within integration tests.
-// use zero2prod::telemetry;
 
-// let subscriber = telemetry::get_subscriber("zero2prod".to_string(), "info".to_string());
-// telemetry::init_subscriber(subscriber);
+#[derive(cli::Args)] // re-export of `clap::Args`
+struct CustomOpts {
+    /// Use tracing for debug output
+    #[arg(long)]
+    trace: Option<bool>,
+}
 
-// This runs before everything else, so you can setup things here.
 #[tokio::main]
 async fn main() {
-    state::TestWorld::cucumber()
+    let opts = cli::Opts::<_, _, _, CustomOpts>::parsed();
+    let trace = opts.custom.trace.unwrap_or_default();
+
+    let cucumber = state::TestWorld::cucumber()
         .fail_on_skipped()
-        .with_default_cli()
-        .configure_and_init_tracing(
-            DefaultFields::new(),
-            Format::default().with_ansi(false).without_time(),
-            |layer| tracing_subscriber::registry().with(LevelFilter::DEBUG.and_then(layer)),
-            // { telemetry::get_subscriber("test".to_string(), "debug".to_string()).with(layer) }
-        )
+        .with_cli(opts)
         .max_concurrent_scenarios(1)
-        .with_writer(
-            writer::Basic::raw(std::io::stdout(), Coloring::Never, 0)
-                .summarized()
-                .assert_normalized(),
-        )
         .before(move |_feature, _rule, _scenario, world| {
             async {
                 let storage = Arc::new(
@@ -71,7 +66,24 @@ async fn main() {
                 handle.abort();
             }
             .boxed()
-        })
-        .run("tests/features")
-        .await;
+        });
+
+    if trace {
+        cucumber
+            .configure_and_init_tracing(
+                DefaultFields::new(),
+                Format::default().with_ansi(false).without_time(),
+                |layer| tracing_subscriber::registry().with(LevelFilter::DEBUG.and_then(layer)),
+                // { telemetry::get_subscriber("test".to_string(), "debug".to_string()).with(layer) }
+            )
+            .with_writer(
+                writer::Basic::raw(std::io::stdout(), Coloring::Never, 0)
+                    .summarized()
+                    .assert_normalized(),
+            )
+            .run("tests/features")
+            .await;
+    } else {
+        cucumber.run("tests/features").await;
+    }
 }

@@ -37,19 +37,19 @@ services:
     routes:
       - path: /
     envs:
-      - key: APP_DATABASE__USERNAME
+      - key: ZERO2PROD__USERNAME
         scope: RUN_TIME
         value: ${newsletter.USERNAME}
-      - key: APP_DATABASE__PASSWORD
+      - key: ZERO2PROD__PASSWORD
         scope: RUN_TIME
         value: ${newsletter.PASSWORD}
-      - key: APP_DATABASE__HOST
+      - key: ZERO2PROD__HOST
         scope: RUN_TIME
         value: ${newsletter.HOSTNAME}
-      - key: APP_DATABASE__PORT
+      - key: ZERO2PROD__PORT
         scope: RUN_TIME
         value: ${newsletter.PORT}
-      - key: APP_DATABASE__DATABASE_NAME
+      - key: ZERO2PROD__DATABASE_NAME
         scope: RUN_TIME
         value: ${newsletter.DATABASE}
 databases:

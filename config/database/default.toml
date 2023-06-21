@@ -5,4 +5,5 @@ username = "postgres"
 password = "password"
 database_name = "newsletter"
 connection_timeout = 2000 # ms
+require_ssl = true
 executor = "connection"

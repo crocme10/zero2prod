@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::PgConnectOptions;
+use sqlx::postgres::PgSslMode;
 use std::fmt;
 
 #[derive(Debug)]
@@ -45,6 +46,7 @@ pub struct DatabaseSettings {
     pub port: u16,
     pub host: String,
     pub database_name: String,
+    pub require_ssl: bool,
     pub connection_timeout: u64,
     pub executor: String,
 }
@@ -58,12 +60,19 @@ impl DatabaseSettings {
     }
 
     pub fn connect_options(&self) -> PgConnectOptions {
+        let ssl_mode = if self.require_ssl {
+            PgSslMode::Require
+        } else {
+            // Try an encrypted connection, fallback
+            PgSslMode::Prefer
+        };
         PgConnectOptions::new()
             .host(&self.host)
             .username(&self.username)
             .password(&self.password)
             .database(&self.database_name)
             .port(self.port)
+            .ssl_mode(ssl_mode)
     }
 }
 

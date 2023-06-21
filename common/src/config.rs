@@ -125,6 +125,8 @@ fn config_from_args(args: impl IntoIterator<Item = String>) -> Result<Config, Er
 mod tests {
     // Note: We must serialize tests as some tests depend on environment variables.
     use super::*;
+    use serial_test::serial;
+    use std::path::PathBuf;
 
     #[test]
     fn should_correctly_create_a_source_from_int_assignment() {
@@ -171,5 +173,155 @@ mod tests {
         let port: i32 = config.get("service.port").unwrap();
         assert_eq!(url, "http://localhost:5432");
         assert_eq!(port, 6666);
+    }
+
+    #[test]
+    #[serial]
+    fn should_correctly_read_default_from_directory() {
+        // In this test, we expect the function 'merge_configuration' to pick the default
+        // configuration in the given subdirectory. Of course this relies on the fact that
+        // the environment variable is not set. So, in the test, we back it up, unset it,
+        // and then restore it.
+        let back_profile_var = env::var_os("ZERO2PROD_PROFILE");
+        // Here we create a scope, which will trigger the scopeguard on exit.
+        {
+            // We create a scopeguard to restore the previous value of the environment variable,
+            // because we unset it during this test, to make sure the environment during the test
+            // is without the variable set.
+            scopeguard::defer! {
+                // If the variable was set, restore it, otherwise do nothing.
+                if let Some(value) = back_profile_var {
+                    env::set_var("ZERO2PROD_PROFILE", value);
+                }
+            }
+            env::remove_var("ZERO2PROD_PROFILE");
+            let mut root_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            root_path.push("tests/resources/config");
+            let config = merge_configuration(&root_path, &["service"], None, None, vec![]).unwrap();
+            let value: String = config.get("identity.username").unwrap();
+            assert_eq!(value, "foo");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn should_correctly_overwrite_with_arg_mode() {
+        // In this test, we call merge_configuration with a 'dev' mode. There is both a default and
+        // a dev file, with the same key. The final configuration should have the dev value.
+        let back_profile_var = env::var_os("ZERO2PROD_PROFILE");
+        // Here we create a scope, which will trigger the scopeguard on exit.
+        {
+            // We create a scopeguard to restore the previous value of the environment variable,
+            // because we unset it during this test, to make sure the environment during the test
+            // is without the variable set.
+            scopeguard::defer! {
+                // If the variable was set, restore it, otherwise do nothing.
+                if let Some(value) = back_profile_var {
+                    env::set_var("ZERO2PROD_PROFILE", value);
+                }
+            }
+            env::remove_var("ZERO2PROD_PROFILE");
+            let mut root_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            root_path.push("tests/resources/config");
+            let config =
+                merge_configuration(&root_path, &["service"], "dev", None, vec![]).unwrap();
+            let value: String = config.get("identity.username").unwrap();
+            assert_eq!(value, "bar");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn should_correctly_overwrite_with_env_mode() {
+        // In this test, we call merge_configuration with a 'prod' mode set using an env var. There is both a default and
+        // a prod file, with the same key. The final configuration should have the dev value.
+        let back_profile_var = env::var_os("ZERO2PROD_PROFILE");
+        // Here we create a scope, which will trigger the scopeguard on exit.
+        {
+            // We create a scopeguard to restore the previous value of the environment variable,
+            // because we unset it during this test, to make sure the environment during the test
+            // is without the variable set.
+            scopeguard::defer! {
+                // If the variable was set, restore it, otherwise do nothing.
+                if let Some(value) = back_profile_var {
+                    env::set_var("ZERO2PROD_PROFILE", value);
+                }
+            }
+            env::set_var("ZERO2PROD_PROFILE", "prod");
+            let mut root_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            root_path.push("tests/resources/config");
+            let config = merge_configuration(&root_path, &["service"], None, None, vec![]).unwrap();
+            let value: String = config.get("identity.username").unwrap();
+            assert_eq!(value, "baz");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn should_correctly_ignore_unknown_mode() {
+        // In this test, if there is no file corresponding to the given mode, then we use the
+        // default. So we specify a 'cloud' environment, for which there is no configuration.
+        let back_profile_var = env::var_os("ZERO2PROD_PROFILE");
+        // Here we create a scope, which will trigger the scopeguard on exit.
+        {
+            // We create a scopeguard to restore the previous value of the environment variable,
+            // because we unset it during this test, to make sure the environment during the test
+            // is without the variable set.
+            scopeguard::defer! {
+                // If the variable was set, restore it, otherwise do nothing.
+                if let Some(value) = back_profile_var {
+                    env::set_var("ZERO2PROD_PROFILE", value);
+                }
+            }
+            env::remove_var("ZERO2PROD_PROFILE");
+            let mut root_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            root_path.push("tests/resources/config");
+            let config =
+                merge_configuration(&root_path, &["service"], "cloud", None, vec![]).unwrap();
+            let value: String = config.get("identity.username").unwrap();
+            assert_eq!(value, "foo");
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "not found")]
+    fn should_correctly_report_an_error_when_missing_default() {
+        // In this test, there should be no 'service' directory under the root directory.
+        // Yet, if the user specifies this 'service' directory, he should be warned.
+        let mut root_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        root_path.push("tests/resources/config");
+        let config = merge_configuration(&root_path, &["service"], None, None, vec![]).unwrap();
+        let port: i32 = config.get("service.port").unwrap();
+        assert_eq!(port, 5432);
+    }
+
+    #[test]
+    #[serial]
+    fn should_correctly_overwrite_with_values() {
+        // In this test, we call merge_configuration with a 'prod' mode set using an argument. But
+        // then we overwrite the 'value'.
+        let back_profile_var = env::var_os("ZERO2PROD_PROFILE");
+        // Here we create a scope, which will trigger the scopeguard on exit.
+        {
+            scopeguard::defer! {
+                // If the variable was set, restore it, otherwise do nothing.
+                if let Some(value) = back_profile_var {
+                    env::set_var("ZERO2PROD_PROFILE", value);
+                }
+            }
+            env::set_var("ZERO2PROD_PROFILE", "prod");
+            let mut root_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            root_path.push("tests/resources/config");
+            let config = merge_configuration(
+                &root_path,
+                &["service"],
+                None,
+                None,
+                vec![String::from("identity.username = 'zot'")],
+            )
+            .unwrap();
+            let value: String = config.get("identity.username").unwrap();
+            assert_eq!(value, "zot");
+        }
     }
 }
