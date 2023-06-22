@@ -10,6 +10,8 @@ region: fra
 services:
   - name: zero2prod
     # Relative to the repository root
+    # FIXME I would like the Dockerfile to be in `/docker/zero2prod/Dockerfile`, but
+    # DO does not seem to like that (I get a 'no component detected' error.)
     dockerfile_path: Dockerfile
     source_dir: .
     github:
@@ -37,19 +39,19 @@ services:
     routes:
       - path: /
     envs:
-      - key: ZERO2PROD__USERNAME
+      - key: ZERO2PROD__DATABASE__USERNAME
         scope: RUN_TIME
         value: ${newsletter.USERNAME}
-      - key: ZERO2PROD__PASSWORD
+      - key: ZERO2PROD__DATABASE__PASSWORD
         scope: RUN_TIME
         value: ${newsletter.PASSWORD}
-      - key: ZERO2PROD__HOST
+      - key: ZERO2PROD__DATABASE__HOST
         scope: RUN_TIME
         value: ${newsletter.HOSTNAME}
-      - key: ZERO2PROD__PORT
+      - key: ZERO2PROD__DATABASE__PORT
         scope: RUN_TIME
         value: ${newsletter.PORT}
-      - key: ZERO2PROD__DATABASE_NAME
+      - key: ZERO2PROD__DATABASE__DATABASE_NAME
         scope: RUN_TIME
         value: ${newsletter.DATABASE}
 databases:
@@ -61,4 +63,4 @@ databases:
     num_nodes: 1
     size: db-s-dev-database
     # Postgres version - using the latest digital ocean supports here
-    version: "12"
+    version: "14"
