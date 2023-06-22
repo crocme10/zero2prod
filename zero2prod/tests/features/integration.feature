@@ -16,7 +16,7 @@ Feature: Integration
       | bob              | bob@acme.com              |
 
   @serial, @failure
-  Scenario: When the user calls the subscriptions endpoint with incomplete credentials, we get a 400 Bad Request response
+  Scenario: When the user calls the subscriptions endpoint with invalid credentials, we get a 400 Bad Request response
     When the user subscribes with username "<username>" and email "<email>"
     Then the response is 400 Bad Request
 
@@ -25,4 +25,5 @@ Feature: Integration
       |                  | bob@acme.com              |
       | bob              |                           |
       |                  |                           |
+      | bob              | not-an-email              |
 
