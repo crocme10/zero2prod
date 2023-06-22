@@ -33,11 +33,14 @@ impl From<ErrorContext<String, sqlx::Error>> for Error {
     fn from(err: ErrorContext<String, sqlx::Error>) -> Self {
         match err.1 {
             sqlx::Error::PoolTimedOut => Error::Connection {
-                context: format!("PostgreSQL Storage: Connection Timeout: {err.0}"),
+                context: format!("PostgreSQL Storage: Connection Timeout: {}", err.0),
                 source: err.1,
             },
             _ => Error::Connection {
-                context: format!("PostgreSQL Storage: Could not establish a connection: {err.0}"),
+                context: format!(
+                    "PostgreSQL Storage: Could not establish a connection: {}",
+                    err.0
+                ),
                 source: err.1,
             },
         }
