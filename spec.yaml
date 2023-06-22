@@ -40,19 +40,19 @@ services:
       - path: /
     envs:
       - key: ZERO2PROD__DATABASE__USERNAME
-        scope: RUN_TIME
+        scope: RUN_AND_BUILD_TIME
         value: ${newsletter.USERNAME}
       - key: ZERO2PROD__DATABASE__PASSWORD
-        scope: RUN_TIME
+        scope: RUN_AND_BUILD_TIME
         value: ${newsletter.PASSWORD}
       - key: ZERO2PROD__DATABASE__HOST
-        scope: RUN_TIME
+        scope: RUN_AND_BUILD_TIME
         value: ${newsletter.HOSTNAME}
       - key: ZERO2PROD__DATABASE__PORT
-        scope: RUN_TIME
+        scope: RUN_AND_BUILD_TIME
         value: ${newsletter.PORT}
       - key: ZERO2PROD__DATABASE__DATABASE_NAME
-        scope: RUN_TIME
+        scope: RUN_AND_BUILD_TIME
         value: ${newsletter.DATABASE}
 databases:
   # PG = Postgres
