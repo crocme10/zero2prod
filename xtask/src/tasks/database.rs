@@ -95,6 +95,7 @@ pub fn migrate_postgres_db() -> Result<(), anyhow::Error> {
 
     println!("Migrating database...");
 
+    println!("DATABASE_URL: {}", settings.connection_string());
     let migration_status1 = Command::new("sqlx")
         .current_dir(project_root())
         .env("DATABASE_URL", settings.connection_string())
@@ -119,19 +120,26 @@ pub fn migrate_postgres_db() -> Result<(), anyhow::Error> {
 fn wait_for_postgres() -> Result<(), anyhow::Error> {
     let settings = database_settings();
 
+    // TODO: If we're checking that postgres is available before
+    // we run the migration, then we can't target the 'settings.database_name', but
+    // rather we should target 'postgres'. But 'postgres' is not available in
+    // remote DO environment it seems.
+    // => Maybe check if the host is 'localhost', then target postgres,
+    // otherwise target settings.database_name
     let mut check_online = Command::new("psql");
     let check_online = check_online
         .current_dir(project_root())
         .env("PGPASSWORD", settings.password)
         .args([
             "-h",
-            "localhost",
+            &settings.host,
             "-U",
             &settings.username,
             "-p",
             &settings.port.to_string(),
             "-d",
-            "postgres",
+            &settings.database_name,
+            //"postgres",
             "-c",
             "\\q",
         ]);
