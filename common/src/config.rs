@@ -95,7 +95,9 @@ pub fn merge_configuration<
         })?;
 
     if let Some(prefix) = prefix.into() {
-        let prefix = Environment::with_prefix(prefix).separator("__");
+        let prefix = Environment::with_prefix(prefix)
+            .prefix_separator("__")
+            .separator("__");
         builder = builder.add_source(prefix)
     }
 

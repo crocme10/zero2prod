@@ -11,6 +11,8 @@ This is such a project, where the main changes are:
 - Using axum instead of actix-web (many developers seem to do that.)
 - I use cucumber for integration testing.
 - I don't use any error library
+- Using different database executor depending on the environment: Connection in
+  Production, or Transaction in Testing.
 - Maybe xtask?
 - Maybe opentelemetry?
 - Maybe frontend?
@@ -58,13 +60,13 @@ and run the migrations to setup the database.
 cargo xtask postgres
 ```
 
-This will take some time to build a part of the project (the common workspace) which
-does not depend on the database, and the xtask workspace. It will run this task. The
-database is configured with the files found in `./config/database`.
+This will take some time to build a part of the project (the common workspace)
+which does not depend on the database, and the xtask workspace. It will run this
+task. The database is configured with the files found in `./config/database`.
 
-Now we should have a running database, we can compile the rest of the project. sqlx
-depends on the environment variable `DATABASE_URL`, whose value can be found at the
-last line of the previous command:
+Now we should have a running database, we can compile the rest of the project.
+sqlx depends on the environment variable `DATABASE_URL`, whose value can be
+found at the last line of the previous command:
 
 for bash users:
 
@@ -78,28 +80,23 @@ or for fish users:
 set DATABASE_URL="postgres://postgres:password@localhost:5462/newsletter"
 ```
 
+Then compile zero2prod:
+
 ```sh
-cargo install --locked cargo-leptos
-# Not sure cargo install trunk is useful anymore.
-npm install -D tailwindcss
+cargo build
 ```
 
-By default, `cargo-leptos` uses `nightly` Rust, `cargo-generate`, and `sass`. If
-you run into any trouble, you may need to install one or more of these tools.
+### Build for Docker
 
-1. `rustup toolchain install nightly --allow-downgrade` - make sure you have
-   Rust nightly
-2. `rustup default nightly` - setup nightly as default, or you can use
-   rust-toolchain file later on
-3. `rustup target add wasm32-unknown-unknown` - add the ability to compile Rust
-   to WebAssembly
-4. `cargo install cargo-generate` - install `cargo-generate` binary (should be
-   installed automatically in future)
-5. `npm install -g sass` - install `dart-sass` (should be optional in future
+At the root of the project:
 
-Windows:
+```sh
+docker build -t zero2prod:latest .
+```
 
-?
+## Deployment
+
+[Details](/documentations/deployment.md)
 
 ## Usage
 
@@ -143,12 +140,19 @@ cargo leptos watch
 
 ## Development setup
 
-Describe how to install all development dependencies and how to run an automated
-test-suite of some kind. Potentially do this for multiple platforms.
+Start by deploying a postgres docker container:
 
 ```sh
-make install
-npm test
+cargo xtask postgres
+```
+
+Then set your DATABASE_URL variable accordingly
+
+And then build run the tests.
+
+```sh
+cargo xtask ci
+
 ```
 
 ## Release History
@@ -158,27 +162,16 @@ npm test
 
 ## Meta
 
-YourEmail@example.com
+Distributed under the MIT license. See `LICENSE` for more information.
 
-Distributed under the XYZ license. See `LICENSE` for more information.
-
-[https://github.com/yourname/github-link](https://github.com/dbader/)
+[https://github.com/crocme10/zero2prod](https://github.com/crocme10/)
 
 ## Contributing
 
-1. Fork it (<https://github.com/yourname/yourproject/fork>)
+1. Fork it (<https://github.com/crocme10/zero2prod/fork>)
 2. Create your feature branch (`git checkout -b feature/fooBar`)
 3. Commit your changes (`git commit -am 'Add some fooBar'`)
 4. Push to the branch (`git push origin feature/fooBar`)
 5. Create a new Pull Request
 
 <!-- Markdown link & img dfn's -->
-
-[npm-image]: https://img.shields.io/npm/v/datadog-metrics.svg?style=flat-square
-[npm-url]: https://npmjs.org/package/datadog-metrics
-[npm-downloads]:
-  https://img.shields.io/npm/dm/datadog-metrics.svg?style=flat-square
-[travis-image]:
-  https://img.shields.io/travis/dbader/node-datadog-metrics/master.svg?style=flat-square
-[travis-url]: https://travis-ci.org/dbader/node-datadog-metrics
-[wiki]: https://github.com/yourname/yourproject/wiki
