@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
+use crate::domain::NewSubscription;
 use crate::storage::{Error, Storage, Subscription};
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use zero2prod_common::err_context::ErrorContextExt;
@@ -109,19 +110,19 @@ pub async fn connect_with_options(config: &DatabaseSettings) -> Result<PgPool, E
 #[async_trait]
 impl Storage for PostgresStorage {
     #[tracing::instrument(name = "Storing a new subscription in postgres")]
-    async fn create_subscription(&self, username: String, email: String) -> Result<(), Error> {
+    async fn create_subscription(&self, subscription: &NewSubscription) -> Result<(), Error> {
         let mut conn = self.exec.lock().await;
         let _ = sqlx::query!(
         r#"INSERT INTO subscriptions (id, email, username, subscribed_at) VALUES ($1, $2, $3, $4)"#,
         Uuid::new_v4(),
-        email,
-        username,
+        &subscription.email,
+        subscription.username.as_ref(),
         Utc::now()
         )
         .execute(&mut **conn)
         .await
         .context(format!(
-                "Could not create new subscription for {username}"
+                "Could not create new subscription for {}", subscription.username.as_ref()
                 ))?;
 
         Ok(())

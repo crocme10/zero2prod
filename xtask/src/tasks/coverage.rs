@@ -19,4 +19,3 @@ pub fn run_coverage_test() -> Result<ExitStatus, anyhow::Error> {
     };
     Ok(test)
 }
-

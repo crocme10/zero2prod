@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use std::fmt;
 
+use crate::domain::NewSubscription;
 use zero2prod_common::err_context::ErrorContext;
 
 #[derive(Debug)]
@@ -49,7 +50,7 @@ impl From<ErrorContext<String, sqlx::Error>> for Error {
 
 #[async_trait]
 pub trait Storage {
-    async fn create_subscription(&self, username: String, email: String) -> Result<(), Error>;
+    async fn create_subscription(&self, subscription: &NewSubscription) -> Result<(), Error>;
     async fn get_subscription_by_username(
         &self,
         username: &str,

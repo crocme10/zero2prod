@@ -49,6 +49,7 @@ tracing-bunyan-formatter = "^0.3.7"
 tracing-futures = "^0.2.5"
 tracing-log = "^0.1.3"
 tracing-subscriber = { version = "^0.3.17", features = [ "env-filter" ] }
+unicode-segmentation = "^1.10.1"
 uuid = { version = "^1.3.4", features = ["serde", "v4" ] }
 zero2prod-common = { path = "../common" }
 

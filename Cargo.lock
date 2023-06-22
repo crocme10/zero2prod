@@ -3236,6 +3236,7 @@ dependencies = [
  "tracing-futures",
  "tracing-log",
  "tracing-subscriber",
+ "unicode-segmentation",
  "uuid",
  "zero2prod-common",
 ]
