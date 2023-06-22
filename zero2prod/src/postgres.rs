@@ -51,9 +51,8 @@ pub struct PostgresStorage {
 
 impl PostgresStorage {
     pub async fn new(config: DatabaseSettings) -> Result<PostgresStorage, Error> {
-        let options = config.connect_options();
-        let pool = connect_with_options(options.clone(), config.connection_timeout).await?;
-        tracing::debug!("Connected Postgres Pool to {:?}", options);
+        let pool = connect_with_options(&config).await?;
+        tracing::debug!("Connected Postgres Pool to {}", config.connection_string());
         let exec = match config.executor.as_str() {
             "connection" => {
                 tracing::info!("PostgresStorage: Creating a connection");
@@ -70,11 +69,12 @@ impl PostgresStorage {
                 });
             }
         };
+        let conn_options = config.connect_options();
         Ok(PostgresStorage {
             pool,
             exec: Arc::new(Mutex::new(exec)),
             config,
-            conn_options: options,
+            conn_options,
         })
     }
 }
@@ -91,16 +91,16 @@ pub async fn connect_with_conn_str(conn_str: &str, timeout: u64) -> Result<PgPoo
     Ok(pool)
 }
 
-pub async fn connect_with_options(
-    options: PgConnectOptions,
-    timeout: u64,
-) -> Result<PgPool, Error> {
+pub async fn connect_with_options(config: &DatabaseSettings) -> Result<PgPool, Error> {
+    let options = config.connect_options();
     let pool = PgPoolOptions::new()
-        .acquire_timeout(std::time::Duration::from_millis(timeout))
+        .acquire_timeout(std::time::Duration::from_millis(config.connection_timeout))
         .connect_with(options)
         .await
         .context(format!(
-            "Could not establish connection to database with timeout {timeout}"
+            "Could not establish connection to {} with timeout {}",
+            config.connection_string(),
+            config.connection_timeout
         ))?;
 
     Ok(pool)

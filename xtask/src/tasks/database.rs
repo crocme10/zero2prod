@@ -82,6 +82,8 @@ pub fn postgres_db() -> Result<(), anyhow::Error> {
     // Migrate the database automatically as part of initialization
     migrate_postgres_db()?;
 
+    println!("Set DATABASE_URL=\"{}\"", settings.connection_string());
+
     Ok(())
 }
 
@@ -95,25 +97,13 @@ pub fn migrate_postgres_db() -> Result<(), anyhow::Error> {
 
     let migration_status1 = Command::new("sqlx")
         .current_dir(project_root())
-        .env(
-            "DATABASE_URL",
-            format!(
-                "postgres://{}:{}@localhost:{}/{}",
-                settings.username, settings.password, settings.port, settings.database_name
-            ),
-        )
+        .env("DATABASE_URL", settings.connection_string())
         .args(["database", "create"])
         .status();
 
     let migration_status2 = Command::new("sqlx")
         .current_dir(project_root().join("zero2prod"))
-        .env(
-            "DATABASE_URL",
-            format!(
-                "postgres://{}:{}@localhost:{}/{}",
-                settings.username, settings.password, settings.port, settings.database_name
-            ),
-        )
+        .env("DATABASE_URL", settings.connection_string())
         .args(["migrate", "run"])
         .status();
 
