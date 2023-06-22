@@ -2,12 +2,14 @@
 
 ## Digital Ocean
 
-The app is deployed on Digital Ocean (DO)'s' "App platform", in a continuous delivery setup. This means every time
-a push (TODO Validated / Tested ?) occurs on the main branch, DO pulls the new version, builds it, and redeploys it.
+The app is deployed on Digital Ocean (DO)'s' "App platform", in a continuous
+delivery setup. This means every time a push (TODO Validated / Tested ?) occurs
+on the main branch, DO pulls the new version, builds it, and redeploys it.
 
 The specification for the app is in `/spec.yaml`
 
-The app is deployed as a docker container, so we find `dockerfile_path: Dockerfile`
+The app is deployed as a docker container, so we find
+`dockerfile_path: Dockerfile`
 
 ### Preflight checks
 
@@ -21,12 +23,14 @@ docker build -t zero2prod:latest .
 
 #### Docker Stack
 
-You must be able to use this docker image just built together with a dockerized database.
+You must be able to use this docker image just built together with a dockerized
+database.
 
 We use docker stack to run some tests...
 
-The stack.yaml uses environment variables to configure the database parameters for the webapp,
-because this is what will be used for the Digital Ocean's App Plaftorm.
+The stack.yaml uses environment variables to configure the database parameters
+for the webapp, because this is what will be used for the Digital Ocean's App
+Plaftorm.
 
 Start the docker stack
 
@@ -46,7 +50,8 @@ ybaw4emgoxen    \_ zero2prod_zero2prod.1   zero2prod:latest   taipan    Shutdown
 iezn8qfmzoga    \_ zero2prod_zero2prod.1   zero2prod:latest   taipan    Shutdown        Complete 9 seconds ago
 ```
 
-Something does not seem to work... zero2prod is starting and shuting down immediately. What's going on?
+Something does not seem to work... zero2prod is starting and shuting down
+immediately. What's going on?
 
 Check the logs
 
@@ -56,7 +61,8 @@ zero2prod_zero2prod.1.cnz0cuzxvl60@taipan    | Hello, world!
 [...]
 ```
 
-Something is _very_ wrong.... Nowhere in my code do I have the string 'Hello, world!'
+Something is _very_ wrong.... Nowhere in my code do I have the string 'Hello,
+world!'
 
 So, stop the stack:
 
@@ -66,10 +72,11 @@ docker stack rm zero2prod
 
 and run the zero2prod container interactively to explore...
 
-Since I might have to do that a few times, and I need environment variables to parameterize the connection
-to the postgres database, I store the environment variables in the `.env`, and run `load-dot-env .env` since
-I use fish. `env | grep ZERO2PROD` tells me the environment variables have been correctly set, so lets start
-the container...
+Since I might have to do that a few times, and I need environment variables to
+parameterize the connection to the postgres database, I store the environment
+variables in the `.env`, and run `load-dot-env .env` since I use fish.
+`env | grep ZERO2PROD` tells me the environment variables have been correctly
+set, so lets start the container...
 
 ```sh
 docker run -it zero2prod:latest
@@ -78,17 +85,20 @@ Hello, world!
 
 Ok, our worst fears are confirmed!
 
-And then, after a few minutes of wonderment.... I understand what's going on.... The 'Hello, world!' is not
-my code, it's the default binary when creating a new rust project. So the problem is with the Dockerfile...
+And then, after a few minutes of wonderment.... I understand what's going on....
+The 'Hello, world!' is not my code, it's the default binary when creating a new
+rust project. So the problem is with the Dockerfile...
 
-After fixing the Dockerfile, the previous command looks more like what its supposed to be, albeit not a full success:
+After fixing the Dockerfile, the previous command looks more like what its
+supposed to be, albeit not a full success:
 
 ```sh
 docker run -it zero2prod:latest
 Error: Storage { context: "Establishing a database connection", source: Connection { context: "PostgreSQL Storage: Could not establish a connection", source: Io(Os { code: 99, kind: AddrNotAvailable, message: "Cannot assign requested address" }) } }
 ```
 
-Let's fix that connection issue... First let's see what parameters zero2prod uses to connect to the database:
+Let's fix that connection issue... First let's see what parameters zero2prod
+uses to connect to the database:
 
 ```sh
 ./target/debug/zero2prod -c ./config config
@@ -111,8 +121,9 @@ Let's fix that connection issue... First let's see what parameters zero2prod use
 }
 ```
 
-This confirms that environment variables are read correctly... Now lets try to manually connect with those parameters
-(Note that the docker container with the database should still be running).
+This confirms that environment variables are read correctly... Now lets try to
+manually connect with those parameters (Note that the docker container with the
+database should still be running).
 
-
+## Digital Ocean 
 Run some requests against the web app's API.
