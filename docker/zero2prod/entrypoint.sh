@@ -2,15 +2,11 @@
 
 set -Eeo pipefail
 
-echo "${newsletter.HOSTNAME}"
-echo "${newsletter.PORT}"
-echo "${newsletter.USERNAME}"
-echo "${newsletter.PASSWORD}"
 echo "------"
-echo "${ZERO2PROD__DATABASE_HOST}"
-echo "${ZERO2PROD__DATABASE_PORT}"
-echo "${ZERO2PROD__DATABASE_USERNAME}"
-echo "${ZERO2PROD__DATABASE_PASSWORD}"
+echo "${ZERO2PROD__DATABASE__HOST}"
+echo "${ZERO2PROD__DATABASE__PORT}"
+echo "${ZERO2PROD__DATABASE__USERNAME}"
+echo "${ZERO2PROD__DATABASE__PASSWORD}"
 echo "------"
 
 _main() {
