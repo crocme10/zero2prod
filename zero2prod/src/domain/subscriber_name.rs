@@ -57,7 +57,6 @@ mod tests {
         assert_that(&SubscriberName::parse(name)).is_ok();
     }
 
-    
     #[test]
     fn a_name_longer_than_256_graphemes_should_be_rejected() {
         let name = "a".repeat(257);

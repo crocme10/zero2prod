@@ -115,7 +115,7 @@ impl Storage for PostgresStorage {
         let _ = sqlx::query!(
         r#"INSERT INTO subscriptions (id, email, username, subscribed_at) VALUES ($1, $2, $3, $4)"#,
         Uuid::new_v4(),
-        &subscription.email,
+        subscription.email.as_ref(),
         subscription.username.as_ref(),
         Utc::now()
         )
