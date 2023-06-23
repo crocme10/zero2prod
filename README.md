@@ -16,6 +16,7 @@ This is such a project, where the main changes are:
 - Maybe xtask?
 - Maybe opentelemetry?
 - Maybe frontend?
+- Use speculoos instead of claim (unmaintained)
 
 [![CI/CD Prechecks](https://github.com/crocme10/zero2prod/actions/workflows/general.yml/badge.svg)](https://github.com/crocme10/zero2prod/actions/workflows/general.yml)
 [![Security audit](https://github.com/crocme10/zero2prod/actions/workflows/audit.yml/badge.svg)](https://github.com/crocme10/zero2prod/actions/workflows/audit.yml)

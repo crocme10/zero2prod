@@ -60,6 +60,7 @@ serial_test = "^2.0.0"
 cucumber = { git = "https://github.com/cucumber-rs/cucumber.git", branch = "main", features = ["macros", "tracing"]}
 reqwest = { version = "^0.11.18", features = [ "json"] }
 futures = "^0.3.28"
+speculoos = "^0.11.0"
 
 [lib]
 name = "zero2prod"
