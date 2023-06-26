@@ -3,7 +3,7 @@ use axum_extra::extract::WithRejection;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::{NewSubscription, SubscriberEmail, SubscriberName};
+use crate::domain::NewSubscription;
 use crate::error::ApiError;
 use crate::server::State;
 
@@ -20,13 +20,8 @@ pub async fn subscriptions(
     AxumState(state): AxumState<State>,
     WithRejection(Json(request), _): WithRejection<Json<SubscriptionRequest>, ApiError>,
 ) -> Result<Json<Zero2ProdSubscriptionsResp>, ApiError> {
-    let SubscriptionRequest { username, email } = request;
+    let subscription = NewSubscription::try_from(request).map_err(ApiError::new_bad_request)?;
 
-    let username = SubscriberName::try_from(username).map_err(ApiError::new_bad_request)?;
-
-    let email = SubscriberEmail::try_from(email).map_err(ApiError::new_bad_request)?;
-
-    let subscription = NewSubscription { username, email };
     state
         .storage
         .create_subscription(&subscription)
@@ -46,6 +41,6 @@ pub struct Zero2ProdSubscriptionsResp {
 
 #[derive(Deserialize, Debug)]
 pub struct SubscriptionRequest {
-    username: String,
-    email: String,
+    pub username: String,
+    pub email: String,
 }

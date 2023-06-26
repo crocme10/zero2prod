@@ -27,7 +27,7 @@ pub fn database_settings() -> DatabaseSettings {
     );
     let settings: Settings = merge_configuration(
         &config_dir,
-        &["database", "service"],
+        &["database", "service", "email"],
         "testing",
         "ZERO2PROD",
         vec![],

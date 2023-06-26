@@ -1,4 +1,6 @@
 pub mod domain;
+pub mod email;
+pub mod email_client;
 pub mod error;
 pub mod listener;
 pub mod opts;

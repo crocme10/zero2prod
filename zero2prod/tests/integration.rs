@@ -15,6 +15,7 @@ mod state;
 mod steps;
 mod utils;
 
+use zero2prod::email_client::EmailClient;
 use zero2prod::listener::listen_with_host_port;
 use zero2prod::postgres::PostgresStorage;
 use zero2prod::server::{self, State};
@@ -44,6 +45,12 @@ async fn main() {
                         .expect("Establishing a database connection"),
                 );
 
+                let email = Arc::new(
+                    EmailClient::new(world.settings.email_client.clone())
+                        .await
+                        .expect("Establishing an email service connection"),
+                );
+
                 let listener = listen_with_host_port(
                     &world.settings.network.host,
                     world.settings.network.port,
@@ -52,7 +59,9 @@ async fn main() {
 
                 let state = State {
                     storage: storage.clone(),
+                    email: email.clone(),
                 };
+
                 let server = server::run(listener, state);
                 let handle = tokio::spawn(server);
                 world.handle = Some(handle);

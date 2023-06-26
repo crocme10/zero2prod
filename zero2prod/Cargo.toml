@@ -19,9 +19,10 @@ axum = { version = "^0.6.18", features = [ "headers", "ws", "macros" ] }
 axum-extra = "^0.7.4"
 axum-macros = "^0.3.7"
 chrono = { version = "^0.4.26", features = [ "serde" ] }
-clap = { version = "^4.3.4", features = [ "derive" ] }
+clap = { version = "^4.3.8", features = [ "derive" ] }
 config = "^0.13.3"
 hyper = "^0.14.26"
+reqwest = { version = "^0.11.18", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "^1.0.164", features = [ "derive" ] }
 serde_json = "^1.0.97"
 sqlx = { version = "^0.6.3", default-features= false, features = [
@@ -55,16 +56,17 @@ validator = "^0.16.1"
 zero2prod-common = { path = "../common" }
 
 [dev-dependencies]
-scopeguard = "^1.1.0"
-serial_test = "^2.0.0"
 # For cucumber, using branch main to enable tracing
 cucumber = { git = "https://github.com/cucumber-rs/cucumber.git", branch = "main", features = ["macros", "tracing"]}
-reqwest = { version = "^0.11.18", features = [ "json"] }
-futures = "^0.3.28"
-speculoos = "^0.11.0"
 fake = "^2.6.1"
+futures = "^0.3.28"
 quickcheck = "^1.0.3"
 quickcheck_macros = "^1.0.0"
+reqwest = { version = "^0.11.18", features = [ "json"] }
+scopeguard = "^1.1.0"
+serial_test = "^2.0.0"
+speculoos = "^0.11.0"
+wiremock = "^0.5.19"
 
 [lib]
 name = "zero2prod"

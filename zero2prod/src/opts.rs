@@ -76,18 +76,18 @@ impl TryInto<settings::Settings> for Opts {
     fn try_into(self) -> Result<settings::Settings, Self::Error> {
         config::merge_configuration(
             self.config_dir.as_ref(),
-            &["service", "database"],
+            &["service", "database", "email"],
             self.run_mode.as_deref(),
             "ZERO2PROD",
             self.settings.clone(),
         )
         .map_err(|err| Error::Merging {
-            context: "REST Server Settings: Could not merge configuration".to_string(),
+            context: "Zero2Prod Server Settings: Could not merge configuration".to_string(),
             source: err,
         })?
         .try_deserialize()
         .map_err(|err| Error::Deserializing {
-            context: "REST Server Settings: Could not deserialize configuration".to_string(),
+            context: "Zero2Prod Server Settings: Could not deserialize configuration".to_string(),
             source: err,
         })
     }

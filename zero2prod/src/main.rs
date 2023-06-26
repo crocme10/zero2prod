@@ -2,6 +2,8 @@ use clap::Parser;
 use std::fmt;
 use std::sync::Arc;
 
+use zero2prod::email::Error as EmailError;
+use zero2prod::email_client::EmailClient;
 use zero2prod::listener::{listen_with_host_port, Error as ListenerError};
 use zero2prod::opts::{Command, Error as OptsError, Opts};
 use zero2prod::postgres::PostgresStorage;
@@ -29,6 +31,10 @@ pub enum Error {
         context: String,
         source: StorageError,
     },
+    Email {
+        context: String,
+        source: EmailError,
+    },
 }
 
 impl fmt::Display for Error {
@@ -48,6 +54,9 @@ impl fmt::Display for Error {
             }
             Error::Options { context, source } => {
                 write!(fmt, "Options Error: {context} | {source}")
+            }
+            Error::Email { context, source } => {
+                write!(fmt, "Email Error: {context} | {source}")
             }
         }
     }
@@ -91,6 +100,15 @@ impl From<ErrorContext<String, OptsError>> for Error {
     }
 }
 
+impl From<ErrorContext<String, EmailError>> for Error {
+    fn from(err: ErrorContext<String, EmailError>) -> Self {
+        Error::Email {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
 #[allow(clippy::result_large_err)]
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -117,6 +135,12 @@ async fn main() -> Result<(), Error> {
                     .context("Establishing a database connection".to_string())?,
             );
 
+            let email = Arc::new(
+                EmailClient::new(settings.email_client)
+                    .await
+                    .context("Establishing an email service connection".to_string())?,
+            );
+
             let listener =
                 listen_with_host_port(settings.network.host.as_str(), settings.network.port)
                     .context(format!(
@@ -124,7 +148,7 @@ async fn main() -> Result<(), Error> {
                         settings.network.host, settings.network.port
                     ))?;
 
-            let state = server::State { storage };
+            let state = server::State { storage, email };
             let server = server::run(listener, state);
             let server = tokio::spawn(server);
             if let Err(err) = server.await {

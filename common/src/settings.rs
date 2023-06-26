@@ -77,8 +77,17 @@ impl DatabaseSettings {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmailClientSettings {
+    /// URL of the Email Service the client connects to.
+    pub base_url: String,
+    pub sender_email: String,
+    pub authorization_token: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub network: NetworkSettings,
     pub database: DatabaseSettings,
+    pub email_client: EmailClientSettings,
     pub mode: String,
 }

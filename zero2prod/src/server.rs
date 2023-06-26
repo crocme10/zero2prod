@@ -6,6 +6,7 @@ use std::sync::Arc;
 use std::{fmt, net::TcpListener};
 use tower_http::trace::TraceLayer;
 
+use crate::email::Email;
 use crate::routes::{health::health, subscriptions::subscriptions};
 use crate::storage::Storage;
 use zero2prod_common::err_context::{ErrorContext, ErrorContextExt};
@@ -59,4 +60,5 @@ pub async fn run(listener: TcpListener, state: State) -> Result<(), Error> {
 #[derive(Clone)]
 pub struct State {
     pub storage: Arc<dyn Storage + Send + Sync>,
+    pub email: Arc<dyn Email + Send + Sync>,
 }
