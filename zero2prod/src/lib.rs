@@ -1,3 +1,4 @@
+pub mod application;
 pub mod domain;
 pub mod email;
 pub mod email_client;

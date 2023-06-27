@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::domain::NewSubscription;
 use crate::error::ApiError;
-use crate::server::State;
+use crate::server::AppState;
 
 /// POST handler for user subscriptions
 #[allow(clippy::unused_async)]
@@ -17,7 +17,7 @@ use crate::server::State;
     )
 )]
 pub async fn subscriptions(
-    AxumState(state): AxumState<State>,
+    AxumState(state): AxumState<AppState>,
     WithRejection(Json(request), _): WithRejection<Json<SubscriptionRequest>, ApiError>,
 ) -> Result<Json<Zero2ProdSubscriptionsResp>, ApiError> {
     let subscription = NewSubscription::try_from(request).map_err(ApiError::new_bad_request)?;

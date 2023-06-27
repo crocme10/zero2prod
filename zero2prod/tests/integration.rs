@@ -18,7 +18,7 @@ mod utils;
 use zero2prod::email_client::EmailClient;
 use zero2prod::listener::listen_with_host_port;
 use zero2prod::postgres::PostgresStorage;
-use zero2prod::server::{self, State};
+use zero2prod::server;
 // TODO See how to use telemetry within integration tests.
 
 #[derive(cli::Args)] // re-export of `clap::Args`
@@ -39,6 +39,11 @@ async fn main() {
         .max_concurrent_scenarios(1)
         .before(move |_feature, _rule, _scenario, world| {
             async {
+                // We should be using the same code as in main, namely use
+                // Application::new(settings). But we need access to the storage, so that
+                // transaction can be dropped (and aborted) at the end of each scenario.
+                // So the following code is essentially what's happening inside the
+                // Application::new function.
                 let storage = Arc::new(
                     PostgresStorage::new(world.settings.database.clone())
                         .await
@@ -52,17 +57,20 @@ async fn main() {
                 );
 
                 let listener = listen_with_host_port(
-                    &world.settings.network.host,
+                    world.settings.network.host.as_str(),
                     world.settings.network.port,
                 )
-                .expect("Could not create listener");
+                .expect(&format!(
+                    "Could not create listener for {}:{}",
+                    world.settings.network.host, world.settings.network.port
+                ));
 
-                let state = State {
-                    storage: storage.clone(),
-                    email: email.clone(),
-                };
-
-                let server = server::run(listener, state);
+                let server = server::new(
+                    listener,
+                    storage.clone(),
+                    email,
+                    world.settings.network.host.clone(),
+                );
                 let handle = tokio::spawn(server);
                 world.handle = Some(handle);
                 world.storage = storage;

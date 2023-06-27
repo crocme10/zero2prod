@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 
+use hyper::Error;
 use zero2prod::opts::{Command, Opts};
 use zero2prod::postgres::PostgresStorage;
-use zero2prod::server::Error;
 use zero2prod_common::settings::Settings;
 
 #[derive(Debug, World)]
