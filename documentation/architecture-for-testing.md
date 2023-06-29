@@ -2,4 +2,4 @@
 
 Use mockall instead of wiremock               |
 
-![system](/documentation/img/system.svg)
+![system](/documentation/img/system.png)
