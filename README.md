@@ -6,17 +6,28 @@ lots of resources, tips and tricks. It has fostered lots of projects, and so its
 useful to browse through github and look at how developers have taken the book's
 initial code and choices and made changes.
 
-This is such a project, where the main changes are:
+This is such a project, in which I have
+- relied on the work of Luca,
+- used bits and pieces in similar projects,
+- used my own experience and made a couple of departures
 
-- Using axum instead of actix-web (many developers seem to do that.)
-- I use cucumber for integration testing.
+
++------------------------------------+--------------------------------------------+
+| DIFFERENCE                         | MOTIVATION                                 |
++====================================+============================================+
+| s / actix-web / axum / g           | [Motivation](/documentation/webserver.md)  |
++------------------------------------+--------------------------------------------+
+| cucumber / gherkin for integration | [Motivation](/documentation/cucumber.md)   |
++------------------------------------+--------------------------------------------+
+
 - I don't use any error library
 - Using different database executor depending on the environment: Connection in
   Production, or Transaction in Testing.
-- Maybe xtask?
+- Using xtask (lifted from [Damccull](https://github.com/damccull/zero2prod.git))
 - Maybe opentelemetry?
 - Maybe frontend?
 - Use speculoos instead of claim (unmaintained)
+- Use mockall instead of wiremock
 
 [![CI/CD Prechecks](https://github.com/crocme10/zero2prod/actions/workflows/general.yml/badge.svg)](https://github.com/crocme10/zero2prod/actions/workflows/general.yml)
 [![Security audit](https://github.com/crocme10/zero2prod/actions/workflows/audit.yml/badge.svg)](https://github.com/crocme10/zero2prod/actions/workflows/audit.yml)

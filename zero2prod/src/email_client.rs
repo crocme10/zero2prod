@@ -92,30 +92,30 @@ mod tests {
     use fake::faker::lorem::en::{Paragraph, Sentence};
     use fake::{Fake, Faker};
     use speculoos::prelude::*;
-    use wiremock::matchers::{any, header, header_exists, method, path};
-    use wiremock::{Mock, MockServer, Request, ResponseTemplate};
+    // use wiremock::matchers::{any, header, header_exists, method, path};
+    // use wiremock::{Mock, MockServer, Request, ResponseTemplate};
 
     use zero2prod_common::settings::EmailClientSettings;
 
     // Used by wiremock to ensure that our request sent
     // to the email service has all the fields required.
-    struct SendEmailBodyMatcher;
-    impl wiremock::Match for SendEmailBodyMatcher {
-        fn matches(&self, request: &Request) -> bool {
-            // Try to parse the body's json
-            let result: Result<serde_json::Value, _> = serde_json::from_slice(&request.body);
-            if let Ok(body) = result {
-                // Ensure mandatory fields are populated
-                body.get("From").is_some()
-                    && body.get("To").is_some()
-                    && body.get("Subject").is_some()
-                    && body.get("HtmlBody").is_some()
-                    && body.get("TextBody").is_some()
-            } else {
-                false
-            }
-        }
-    }
+    // struct SendEmailBodyMatcher;
+    // impl wiremock::Match for SendEmailBodyMatcher {
+    //     fn matches(&self, request: &Request) -> bool {
+    //         // Try to parse the body's json
+    //         let result: Result<serde_json::Value, _> = serde_json::from_slice(&request.body);
+    //         if let Ok(body) = result {
+    //             // Ensure mandatory fields are populated
+    //             body.get("From").is_some()
+    //                 && body.get("To").is_some()
+    //                 && body.get("Subject").is_some()
+    //                 && body.get("HtmlBody").is_some()
+    //                 && body.get("TextBody").is_some()
+    //         } else {
+    //             false
+    //         }
+    //     }
+    // }
 
     /// Generate a random email subject
     fn subject() -> String {

@@ -4,14 +4,19 @@ use async_trait::async_trait;
 use std::fmt;
 use zero2prod_common::err_context::ErrorContext;
 
+#[cfg(test)]
+use mockall::{automock, mock, predicate::*};
+
 // use zero2prod_common::err_context::ErrorContext;
 
 #[derive(Debug)]
 pub enum Error {
+    /// Cannot connect to Email Service
     Connection {
         context: String,
         source: reqwest::Error,
     },
+    /// Configuration Error for Email Service Client
     Configuration {
         context: String,
     },
@@ -41,6 +46,7 @@ impl From<ErrorContext<String, reqwest::Error>> for Error {
     }
 }
 
+#[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait Email {
     async fn send_email(

@@ -66,7 +66,7 @@ reqwest = { version = "^0.11.18", features = [ "json"] }
 scopeguard = "^1.1.0"
 serial_test = "^2.0.0"
 speculoos = "^0.11.0"
-wiremock = "^0.5.19"
+mockall = "^0.11.4"
 
 [lib]
 name = "zero2prod"
