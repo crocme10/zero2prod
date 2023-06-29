@@ -92,8 +92,9 @@ mod tests {
     use fake::faker::lorem::en::{Paragraph, Sentence};
     use fake::{Fake, Faker};
     use speculoos::prelude::*;
-    // use wiremock::matchers::{any, header, header_exists, method, path};
-    // use wiremock::{Mock, MockServer, Request, ResponseTemplate};
+    // use crate::email::MockEmail;
+    use wiremock::matchers::{any, header, header_exists, method, path};
+    use wiremock::{Mock, MockServer, Request, ResponseTemplate};
 
     use zero2prod_common::settings::EmailClientSettings;
 
@@ -146,6 +147,7 @@ mod tests {
         let email_client = EmailClient::new(email_settings)
             .await
             .expect("email client");
+
         Mock::given(header_exists("X-Postmark-Server-Token"))
             .and(header("Content-Type", "application/json"))
             .and(path("/email"))
@@ -165,6 +167,7 @@ mod tests {
     #[tokio::test]
     async fn send_email_succeeds_if_the_server_returns_200() {
         // Arrange
+
         let mock_server = MockServer::start().await;
         let base_url = mock_server.uri();
         let email_settings = EmailClientSettings {
