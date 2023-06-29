@@ -12,13 +12,10 @@ This is such a project, in which I have
 - used my own experience and made a couple of departures
 
 
-+------------------------------------+--------------------------------------------+
 | DIFFERENCE                         | MOTIVATION                                 |
-+====================================+============================================+
+|------------------------------------|--------------------------------------------|
 | s / actix-web / axum / g           | [Motivation](/documentation/webserver.md)  |
-+------------------------------------+--------------------------------------------+
 | cucumber / gherkin for integration | [Motivation](/documentation/cucumber.md)   |
-+------------------------------------+--------------------------------------------+
 
 - I don't use any error library
 - Using different database executor depending on the environment: Connection in
