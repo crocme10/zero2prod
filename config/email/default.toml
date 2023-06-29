@@ -1,4 +1,5 @@
 [email_client]
+# This is used to send a link to an API endpoint to the user.
 base_url = "localhost"
 sender_email = "matt@test.com"
 authorization_token = "secret-token"

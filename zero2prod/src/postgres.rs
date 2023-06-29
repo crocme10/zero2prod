@@ -113,11 +113,12 @@ impl Storage for PostgresStorage {
     async fn create_subscription(&self, subscription: &NewSubscription) -> Result<(), Error> {
         let mut conn = self.exec.lock().await;
         let _ = sqlx::query!(
-        r#"INSERT INTO subscriptions (id, email, username, subscribed_at) VALUES ($1, $2, $3, $4)"#,
+        r#"INSERT INTO subscriptions (id, email, username, subscribed_at, status) VALUES ($1, $2, $3, $4, $5)"#,
         Uuid::new_v4(),
         subscription.email.as_ref(),
         subscription.username.as_ref(),
-        Utc::now()
+        Utc::now(),
+        SubscriptionStatus::PendingConfirmation as SubscriptionStatus,
         )
         .execute(&mut **conn)
         .await
@@ -136,7 +137,7 @@ impl Storage for PostgresStorage {
         tracing::info!("Fetching subscription by username {username}");
         let mut conn = self.exec.lock().await;
         let saved = sqlx::query!(
-            r#"SELECT email, username FROM subscriptions WHERE username = $1"#,
+            r#"SELECT email, username, status::text FROM subscriptions WHERE username = $1"#,
             username
         )
         .fetch_optional(&mut **conn)
@@ -146,6 +147,23 @@ impl Storage for PostgresStorage {
         Ok(saved.map(|rec| Subscription {
             username: rec.username,
             email: rec.email,
+            status: rec.status.unwrap_or_default(),
         }))
     }
 }
+
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "subscription_status")]
+#[sqlx(rename_all = "lowercase")]
+enum SubscriptionStatus {
+    PendingConfirmation,
+}
+
+// impl<'c> FromRow<'c, PgRow> for Subscription {
+//     fn from_row(row: &'c PgRow) -> Result<Self, sqlx::Error> {
+//         Ok(Subscription {
+//             username: row.try_get(1)?,
+//             email: row.try_get(2)?,
+//         })
+//     }
+// }

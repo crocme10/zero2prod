@@ -77,7 +77,7 @@ pub fn new(
 pub struct AppState {
     pub storage: Arc<dyn Storage + Send + Sync>,
     pub email: Arc<dyn Email + Send + Sync>,
-    base_url: ApplicationBaseUrl,
+    pub base_url: ApplicationBaseUrl,
 }
 
 pub type AppServer = Server<AddrIncoming, IntoMakeService<Router>>;

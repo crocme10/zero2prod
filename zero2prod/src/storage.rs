@@ -61,4 +61,5 @@ pub trait Storage {
 pub struct Subscription {
     pub username: String,
     pub email: String,
+    pub status: String,
 }

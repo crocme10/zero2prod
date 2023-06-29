@@ -11,8 +11,12 @@ use zero2prod_common::settings::EmailClientSettings;
 
 #[derive(Debug, Clone)]
 pub struct EmailClient {
+    // This is the client end of a connection to an email service API.
     http_client: Client,
+    // This is the base of the URL representing our application. It is
+    // used to send link to our application to the end user
     base_url: String,
+    // This is the sender of the email sent to the end user.
     sender: SubscriberEmail,
     authorization_token: String,
 }
