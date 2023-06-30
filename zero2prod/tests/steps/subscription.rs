@@ -26,4 +26,5 @@ async fn query_database(world: &mut state::TestWorld, username: String, email: S
     let subscription = subscription.expect("subscription");
     assert_eq!(subscription.email, email);
     assert_eq!(subscription.username, username);
+    assert_eq!(subscription.status, "pending_confirmation");
 }

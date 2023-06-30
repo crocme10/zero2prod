@@ -13,9 +13,8 @@ use zero2prod_common::settings::EmailClientSettings;
 pub struct EmailClient {
     // This is the client end of a connection to an email service API.
     http_client: Client,
-    // This is the base of the URL representing our application. It is
-    // used to send link to our application to the end user
-    base_url: String,
+    // This is the URL of the Email server
+    server_url: String,
     // This is the sender of the email sent to the end user.
     sender: SubscriberEmail,
     authorization_token: String,
@@ -32,7 +31,7 @@ impl EmailClient {
                 .timeout(std::time::Duration::from_secs(settings.timeout))
                 .build()
                 .unwrap(),
-            base_url: settings.base_url,
+            server_url: settings.server_url,
             sender,
             authorization_token: settings.authorization_token,
         })
@@ -49,7 +48,7 @@ impl Email for EmailClient {
         text_content: &str,
     ) -> Result<(), Error> {
         //TODO: Replace this with Url::join() eventually
-        let url = format!("{}/email", self.base_url);
+        let url = format!("{}/email", self.server_url);
 
         let request_body = SendEmailRequest {
             from: self.sender.as_ref(),
@@ -134,12 +133,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn send_email_should_fire_a_request_to_base_url() {
+    async fn send_email_should_fire_a_request_to_server_url() {
         // Arrange
         let mock_server = MockServer::start().await;
-        let base_url = mock_server.uri();
+        let server_url = mock_server.uri();
         let email_settings = EmailClientSettings {
-            base_url,
+            server_url,
             sender_email: SafeEmail().fake(),
             authorization_token: Faker.fake::<String>(),
             timeout: 10, // sec
@@ -169,9 +168,9 @@ mod tests {
         // Arrange
 
         let mock_server = MockServer::start().await;
-        let base_url = mock_server.uri();
+        let server_url = mock_server.uri();
         let email_settings = EmailClientSettings {
-            base_url,
+            server_url,
             sender_email: SafeEmail().fake(),
             authorization_token: Faker.fake::<String>(),
             timeout: 10, // sec
@@ -199,9 +198,9 @@ mod tests {
     async fn send_email_fails_if_the_server_returns_500() {
         // Arrange
         let mock_server = MockServer::start().await;
-        let base_url = mock_server.uri();
+        let server_url = mock_server.uri();
         let email_settings = EmailClientSettings {
-            base_url,
+            server_url,
             sender_email: SafeEmail().fake(),
             authorization_token: Faker.fake::<String>(),
             timeout: 10, // sec
@@ -232,9 +231,9 @@ mod tests {
         // mock_server, to test the response
         // Arrange
         let mock_server = MockServer::start().await;
-        let base_url = mock_server.uri();
+        let server_url = mock_server.uri();
         let email_settings = EmailClientSettings {
-            base_url,
+            server_url,
             sender_email: SafeEmail().fake(),
             authorization_token: Faker.fake::<String>(),
             timeout: 3, // sec

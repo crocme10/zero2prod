@@ -79,7 +79,7 @@ impl DatabaseSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmailClientSettings {
     /// URL of the Email Service the client connects to.
-    pub base_url: String,
+    pub server_url: String,
     pub sender_email: String,
     pub authorization_token: String,
     pub timeout: u64,

@@ -154,7 +154,7 @@ impl Storage for PostgresStorage {
 
 #[derive(sqlx::Type)]
 #[sqlx(type_name = "subscription_status")]
-#[sqlx(rename_all = "lowercase")]
+#[sqlx(rename_all = "snake_case")]
 enum SubscriptionStatus {
     PendingConfirmation,
 }
