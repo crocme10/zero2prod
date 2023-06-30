@@ -5,8 +5,8 @@ use axum::{
     Server,
 };
 use hyper::server::conn::AddrIncoming;
-use std::sync::Arc;
 use std::{fmt, net::TcpListener};
+use std::{fmt::Display, sync::Arc};
 use tower_http::trace::TraceLayer;
 
 use crate::email::Email;
@@ -73,10 +73,13 @@ pub fn new(
         .serve(app.into_make_service())
 }
 
+pub type DynStorage = Arc<dyn Storage + Send + Sync>;
+pub type DynEmail = Arc<dyn Email + Send + Sync>;
+
 #[derive(Clone)]
 pub struct AppState {
-    pub storage: Arc<dyn Storage + Send + Sync>,
-    pub email: Arc<dyn Email + Send + Sync>,
+    pub storage: DynStorage,
+    pub email: DynEmail,
     pub base_url: ApplicationBaseUrl,
 }
 
@@ -84,6 +87,12 @@ pub type AppServer = Server<AddrIncoming, IntoMakeService<Router>>;
 
 #[derive(Clone)]
 pub struct ApplicationBaseUrl(pub String);
+
+impl Display for ApplicationBaseUrl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 // TODO Investigate:
 // impl FromRef<AppState> for PgPool {

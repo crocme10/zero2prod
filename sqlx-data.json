@@ -1,6 +1,32 @@
 {
   "db": "PostgreSQL",
-  "59651e97a67f0e4bb6f1510daa30698c03b71ac3d6036db9925f3a28db880569": {
+  "7196bf11c9311399eb7c1f0540c3cb35e7ba5fe2f68f0ead38012861f5d165ac": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text",
+          "Text",
+          "Timestamptz",
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "pending_confirmation",
+                  "confirmed"
+                ]
+              },
+              "name": "subscription_status"
+            }
+          }
+        ]
+      }
+    },
+    "query": "INSERT INTO subscriptions (id, email, username, subscribed_at, status) VALUES ($1, $2, $3, $4, $5)"
+  },
+  "caa3e956bacd2e45c3caf0bd2b30e06bb65290b7f5e456944e890f8836e9bdb9": {
     "describe": {
       "columns": [
         {
@@ -12,11 +38,17 @@
           "name": "username",
           "ordinal": 1,
           "type_info": "Text"
+        },
+        {
+          "name": "status",
+          "ordinal": 2,
+          "type_info": "Text"
         }
       ],
       "nullable": [
         false,
-        false
+        false,
+        null
       ],
       "parameters": {
         "Left": [
@@ -24,21 +56,6 @@
         ]
       }
     },
-    "query": "SELECT email, username FROM subscriptions WHERE username = $1"
-  },
-  "f53225ac34edbf85661bf7aaa70d83bd39f8a2ecf72fa7fd12cb1c4a52cfc748": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Uuid",
-          "Text",
-          "Text",
-          "Timestamptz"
-        ]
-      }
-    },
-    "query": "INSERT INTO subscriptions (id, email, username, subscribed_at) VALUES ($1, $2, $3, $4)"
+    "query": "SELECT email, username, status::text FROM subscriptions WHERE username = $1"
   }
 }

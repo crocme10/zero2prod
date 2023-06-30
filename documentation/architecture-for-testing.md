@@ -24,4 +24,4 @@ headers, path, arguments of the call to the wiremock::Server.
 
 Here we want to make sure that the user code correctly calls the interface. So
 we replace the service implementation with a Mockall implementation, which inspects
-the function calls made to it.
+the function calls made to it. The user code is, in our case, the route handler.

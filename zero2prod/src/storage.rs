@@ -48,6 +48,7 @@ impl From<ErrorContext<String, sqlx::Error>> for Error {
     }
 }
 
+#[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait Storage {
     async fn create_subscription(&self, subscription: &NewSubscription) -> Result<(), Error>;

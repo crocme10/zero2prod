@@ -94,7 +94,7 @@ mod tests {
     use speculoos::prelude::*;
     // use crate::email::MockEmail;
     use wiremock::matchers::{any, header, header_exists, method, path};
-    use wiremock::{Mock, MockServer, Request, ResponseTemplate};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     use zero2prod_common::settings::EmailClientSettings;
 

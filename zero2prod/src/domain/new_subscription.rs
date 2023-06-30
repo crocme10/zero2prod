@@ -2,7 +2,7 @@ use crate::domain::SubscriberEmail;
 use crate::domain::SubscriberName;
 use crate::routes::subscriptions::SubscriptionRequest;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct NewSubscription {
     pub email: SubscriberEmail,
     pub username: SubscriberName,

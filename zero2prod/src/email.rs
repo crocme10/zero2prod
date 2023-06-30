@@ -5,7 +5,7 @@ use std::fmt;
 use zero2prod_common::err_context::ErrorContext;
 
 #[cfg(test)]
-use mockall::{automock, mock, predicate::*};
+use mockall::predicate::*;
 
 // use zero2prod_common::err_context::ErrorContext;
 
@@ -17,9 +17,7 @@ pub enum Error {
         source: reqwest::Error,
     },
     /// Configuration Error for Email Service Client
-    Configuration {
-        context: String,
-    },
+    Configuration { context: String },
 }
 
 impl fmt::Display for Error {
