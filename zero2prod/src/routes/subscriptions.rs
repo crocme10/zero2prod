@@ -59,6 +59,9 @@ pub async fn subscriptions(
     Ok(Json(resp))
 }
 
+/// This is what we return to the user in response to the subscription request.
+/// Currently this is just a placeholder, and it does not return any useful
+/// information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubscriptionsResp {
     pub status: String,
@@ -72,29 +75,37 @@ pub struct SubscriptionRequest {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        domain::{NewSubscription, SubscriberEmail},
-        email_service::MockEmailService,
-        routes::subscriptions::SubscriptionRequest,
-        server::{AppState, ApplicationBaseUrl},
-        storage::MockStorage,
-    };
-
-    use super::*;
     use axum::{
         body::Body,
         http::{header, Request, StatusCode},
         routing::{post, Router},
     };
+    use fake::faker::internet::en::{IPv4, SafeEmail};
+    use fake::faker::name::en::Name;
+    // use fake::faker::lorem::en::{Paragraph, Sentence};
+    use fake::Fake;
     use mockall::predicate::*;
-    // if need to check response body: use serde_json::{json, Value};
     use std::sync::Arc;
     use tower::ServiceExt;
 
+    use crate::{
+        domain::{NewSubscription, SubscriberEmail},
+        email_service::MockEmailService,
+        routes::subscriptions::SubscriptionRequest,
+        server::{AppState, ApplicationBaseUrl},
+        storage::{Error as StorageError, MockStorage},
+    };
+
+    use super::*;
+
+    /// This is a helper function to build an App with axum.
     fn subscription_route() -> Router<AppState> {
         Router::new().route("/subscriptions", post(subscriptions))
     }
 
+    /// This is a helper function to build the content of the request
+    /// to our subscription endpoint. Essentially, it wraps the content
+    /// of the subscription request into a html request with the proper header.
     fn send_subscription_request(uri: &str, request: SubscriptionRequest) -> Request<Body> {
         Request::builder()
             .uri(uri)
@@ -106,6 +117,8 @@ mod tests {
             .unwrap()
     }
 
+    /// This is a helper function to extract a url from a text.
+    /// It assumes that the text contains one and only one url.
     fn get_url_link(s: &str) -> String {
         let links: Vec<_> = linkify::LinkFinder::new()
             .links(s)
@@ -117,10 +130,15 @@ mod tests {
 
     #[tokio::test]
     async fn subscription_should_store_subscriber_info() {
-        let request = SubscriptionRequest {
-            username: "bob".to_string(),
-            email: "bob@acme.inc".to_string(),
-        };
+        // In this test, we use a MockStorage, and we expect that
+        // the subscription handler will trigger a call to Storage::create_subscription.
+        // Note that we do not actually use a database and check that the subscription is stored in
+        // there.
+
+        let username = Name().fake::<String>();
+        let email = SafeEmail().fake::<String>();
+
+        let request = SubscriptionRequest { username, email };
 
         let subscription = NewSubscription::try_from(request.clone()).unwrap();
 
@@ -157,17 +175,24 @@ mod tests {
 
     #[tokio::test]
     async fn subscription_should_send_email_confirmation() {
-        let base_url = "http://127.0.0.1".to_string();
+        // In this test, we make sure that the subscription handler calls
+        // the EmailService::send_email
+        // We also check some of the field values in the email.
+
+        let username = Name().fake::<String>();
+        let email_addr = SafeEmail().fake::<String>();
 
         let request = SubscriptionRequest {
-            username: "bob".to_string(),
-            email: "bob@acme.inc".to_string(),
+            username,
+            email: email_addr.clone(),
         };
 
+        let base_url = format!("http://{}", IPv4().fake::<String>());
+        let base_url_clone = base_url.clone();
         let mut email_mock = MockEmailService::new();
         email_mock
             .expect_send_email()
-            .withf(|email: &Email| {
+            .withf(move |email: &Email| {
                 let Email {
                     to,
                     subject: _,
@@ -175,12 +200,12 @@ mod tests {
                     text_content: _,
                 } = email;
 
-                if *to != SubscriberEmail::parse("bob@acme.inc".to_string()).unwrap() {
+                if *to != SubscriberEmail::parse(email_addr.clone()).unwrap() {
                     return false;
                 }
                 let confirmation_link = get_url_link(html_content);
                 println!("confirmation link: {confirmation_link}");
-                if confirmation_link != "http://127.0.0.1/subscription/confirmation" {
+                if confirmation_link != format!("{}/subscription/confirmation", base_url_clone) {
                     return false;
                 }
                 true
@@ -208,5 +233,57 @@ mod tests {
 
         // Check the response status code.
         assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn subscription_should_return_an_error_if_storage_fails() {
+        // In this test, we use a MockStorage, and we expect that
+        // the subscription handler will trigger a call to Storage::create_subscription.
+        // Note that we do not actually use a database and check that the subscription is stored in
+        // there.
+
+        let username = Name().fake::<String>();
+        let email = SafeEmail().fake::<String>();
+
+        let request = SubscriptionRequest { username, email };
+
+        let subscription = NewSubscription::try_from(request.clone()).unwrap();
+
+        // This mock storage returns an error which does not really makes
+        // sense.
+        let mut storage_mock = MockStorage::new();
+        storage_mock
+            .expect_create_subscription()
+            .with(eq(subscription))
+            .return_once(|_| {
+                Err(StorageError::Database {
+                    context: "subscription context".to_string(),
+                    source: sqlx::Error::RowNotFound,
+                })
+            });
+
+        let mut email_mock = MockEmailService::new();
+        email_mock.expect_send_email().return_once(|_| Ok(()));
+
+        let state = AppState {
+            storage: Arc::new(storage_mock),
+            email: Arc::new(email_mock),
+            base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+        };
+
+        let app = subscription_route().with_state(state);
+
+        let response = app
+            .oneshot(send_subscription_request("/subscriptions", request))
+            .await
+            .expect("response");
+
+        // Check the response status code.
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+
+        // Check the response body.
+        // let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        // let body: Value = serde_json::from_slice(&body).unwrap();
+        // assert_eq!(body, json!(&dummy_heroes));
     }
 }

@@ -6,6 +6,10 @@ use zero2prod_common::err_context::ErrorContext;
 
 #[derive(Debug)]
 pub enum Error {
+    Database {
+        context: String,
+        source: sqlx::Error,
+    },
     Connection {
         context: String,
         source: sqlx::Error,
@@ -18,6 +22,9 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Error::Database { context, source } => {
+                write!(fmt, "Database: {context} | {source}")
+            }
             Error::Connection { context, source } => {
                 write!(fmt, "Database Connection: {context} | {source}")
             }
@@ -35,6 +42,10 @@ impl From<ErrorContext<String, sqlx::Error>> for Error {
         match err.1 {
             sqlx::Error::PoolTimedOut => Error::Connection {
                 context: format!("PostgreSQL Storage: Connection Timeout: {}", err.0),
+                source: err.1,
+            },
+            sqlx::Error::Database(_) => Error::Database {
+                context: format!("PostgreSQL Storage: Database: {}", err.0),
                 source: err.1,
             },
             _ => Error::Connection {
