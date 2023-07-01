@@ -4,7 +4,7 @@ use serde::Serialize;
 use zero2prod_common::err_context::ErrorContextExt;
 
 use crate::domain::SubscriberEmail;
-use crate::email::{Email, Error};
+use crate::email_service::{Email, EmailService, Error};
 
 // use zero2prod_common::err_context::ErrorContextExt;
 use zero2prod_common::settings::EmailClientSettings;
@@ -39,23 +39,24 @@ impl EmailClient {
 }
 
 #[async_trait]
-impl Email for EmailClient {
-    async fn send_email(
-        &self,
-        recipient: &SubscriberEmail,
-        subject: &str,
-        html_content: &str,
-        text_content: &str,
-    ) -> Result<(), Error> {
+impl EmailService for EmailClient {
+    async fn send_email(&self, email: Email) -> Result<(), Error> {
+        let Email {
+            to,
+            subject,
+            html_content,
+            text_content,
+        } = email;
+
         //TODO: Replace this with Url::join() eventually
         let url = format!("{}/email", self.server_url);
 
         let request_body = SendEmailRequest {
+            to: to.as_ref(),
             from: self.sender.as_ref(),
-            to: recipient.as_ref(),
-            subject,
-            html_body: html_content,
-            text_body: text_content,
+            subject: &subject,
+            html_content: &html_content,
+            text_content: &text_content,
         };
 
         self.http_client
@@ -78,15 +79,15 @@ struct SendEmailRequest<'a> {
     from: &'a str,
     to: &'a str,
     subject: &'a str,
-    html_body: &'a str,
-    text_body: &'a str,
+    html_content: &'a str,
+    text_content: &'a str,
 }
 
 #[cfg(test)]
 mod tests {
     use crate::domain::SubscriberEmail;
-    use crate::email::Email;
-    use crate::email_client::EmailClient;
+    use crate::email_service::{Email, EmailService};
+    use crate::email_service_impl::EmailClient;
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::lorem::en::{Paragraph, Sentence};
     use fake::{Fake, Faker};
@@ -128,7 +129,7 @@ mod tests {
     }
 
     /// Generate a random subscriber email
-    fn email() -> SubscriberEmail {
+    fn email_addr() -> SubscriberEmail {
         SubscriberEmail::parse(SafeEmail().fake()).unwrap()
     }
 
@@ -155,10 +156,16 @@ mod tests {
             .expect(1)
             .mount(&mock_server)
             .await;
+
+        let email = Email {
+            to: email_addr(),
+            subject: subject(),
+            html_content: content(),
+            text_content: content(),
+        };
+
         // Act
-        let _ = email_client
-            .send_email(&email(), &subject(), &content(), &content())
-            .await;
+        let _ = email_client.send_email(email).await;
         // Assert
         // wiremock asserts on drop
     }
@@ -185,10 +192,15 @@ mod tests {
             .mount(&mock_server)
             .await;
 
+        let email = Email {
+            to: email_addr(),
+            subject: subject(),
+            html_content: content(),
+            text_content: content(),
+        };
+
         // Act
-        let outcome = email_client
-            .send_email(&email(), &subject(), &content(), &content())
-            .await;
+        let outcome = email_client.send_email(email).await;
 
         // Assert
         assert_that(&outcome).is_ok();
@@ -215,10 +227,15 @@ mod tests {
             .mount(&mock_server)
             .await;
 
+        let email = Email {
+            to: email_addr(),
+            subject: subject(),
+            html_content: content(),
+            text_content: content(),
+        };
+
         // Act
-        let outcome = email_client
-            .send_email(&email(), &subject(), &content(), &content())
-            .await;
+        let outcome = email_client.send_email(email).await;
 
         // Assert
         assert_that(&outcome).is_err();
@@ -251,10 +268,15 @@ mod tests {
             .mount(&mock_server)
             .await;
 
+        let email = Email {
+            to: email_addr(),
+            subject: subject(),
+            html_content: content(),
+            text_content: content(),
+        };
+
         // Act
-        let outcome = email_client
-            .send_email(&email(), &subject(), &content(), &content())
-            .await;
+        let outcome = email_client.send_email(email).await;
 
         assert_that(&outcome).is_err();
     }

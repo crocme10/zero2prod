@@ -6,8 +6,8 @@
 ///    let settings = Settings { ... }
 ///    let app = Application::build(settings).await?;
 ///    app.run_until_stopped().await?;
-use crate::email::Error as EmailError;
-use crate::email_client::EmailClient;
+use crate::email_service::Error as EmailError;
+use crate::email_service_impl::EmailClient;
 use crate::listener::{listen_with_host_port, Error as ListenerError};
 use crate::postgres::PostgresStorage;
 use crate::server;

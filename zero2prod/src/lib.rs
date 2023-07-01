@@ -1,7 +1,7 @@
 pub mod application;
 pub mod domain;
-pub mod email;
-pub mod email_client;
+pub mod email_service;
+pub mod email_service_impl;
 pub mod error;
 pub mod listener;
 pub mod opts;

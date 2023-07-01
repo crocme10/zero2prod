@@ -15,7 +15,7 @@ mod state;
 mod steps;
 mod utils;
 
-use zero2prod::email_client::EmailClient;
+use zero2prod::email_service_impl::EmailClient;
 use zero2prod::listener::listen_with_host_port;
 use zero2prod::postgres::PostgresStorage;
 use zero2prod::server;

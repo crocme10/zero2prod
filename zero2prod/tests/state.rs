@@ -8,7 +8,7 @@ use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use hyper::Error;
-use zero2prod::email_client::EmailClient;
+use zero2prod::email_service_impl::EmailClient;
 use zero2prod::opts::{Command, Opts};
 use zero2prod::postgres::PostgresStorage;
 use zero2prod_common::settings::Settings;

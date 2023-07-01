@@ -46,12 +46,15 @@ impl From<ErrorContext<String, reqwest::Error>> for Error {
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
-pub trait Email {
-    async fn send_email(
-        &self,
-        recipient: &SubscriberEmail,
-        subject: &str,
-        html_content: &str,
-        text_content: &str,
-    ) -> Result<(), Error>;
+pub trait EmailService {
+    async fn send_email(&self, email: Email) -> Result<(), Error>;
+}
+
+#[derive(Debug, Clone)]
+pub struct Email {
+    pub to: SubscriberEmail,
+    // from will be filled by the EmailService implementation.
+    pub subject: String,
+    pub html_content: String,
+    pub text_content: String,
 }

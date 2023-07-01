@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::domain::NewSubscription;
+use crate::email_service::Email;
 use crate::error::ApiError;
 use crate::server::AppState;
 
@@ -37,9 +38,17 @@ pub async fn subscriptions(
         r#"Welcome to our newsletter!\nVisit {} to confirm your subscription"#,
         confirmation_link
     );
+
+    let email = Email {
+        to: subscription.email,
+        subject: "Welcome".to_string(),
+        html_content,
+        text_content,
+    };
+
     state
         .email
-        .send_email(&subscription.email, "Welcome", &html_content, &text_content)
+        .send_email(email)
         .await
         .map_err(|err| ApiError::new_internal(format!("Cannot create new subscription: {err}")))?;
 
@@ -65,7 +74,7 @@ pub struct SubscriptionRequest {
 mod tests {
     use crate::{
         domain::{NewSubscription, SubscriberEmail},
-        email::MockEmail,
+        email_service::MockEmailService,
         routes::subscriptions::SubscriptionRequest,
         server::{AppState, ApplicationBaseUrl},
         storage::MockStorage,
@@ -121,10 +130,8 @@ mod tests {
             .with(eq(subscription))
             .return_once(|_| Ok(()));
 
-        let mut email_mock = MockEmail::new();
-        email_mock
-            .expect_send_email()
-            .return_once(|_, _, _, _| Ok(()));
+        let mut email_mock = MockEmailService::new();
+        email_mock.expect_send_email().return_once(|_| Ok(()));
 
         let state = AppState {
             storage: Arc::new(storage_mock),
@@ -157,11 +164,18 @@ mod tests {
             email: "bob@acme.inc".to_string(),
         };
 
-        let mut email_mock = MockEmail::new();
+        let mut email_mock = MockEmailService::new();
         email_mock
             .expect_send_email()
-            .withf(|recipient: &SubscriberEmail, _, html_content: &str, _| {
-                if *recipient != SubscriberEmail::parse("bob@acme.inc".to_string()).unwrap() {
+            .withf(|email: &Email| {
+                let Email {
+                    to,
+                    subject: _,
+                    html_content,
+                    text_content: _,
+                } = email;
+
+                if *to != SubscriberEmail::parse("bob@acme.inc".to_string()).unwrap() {
                     return false;
                 }
                 let confirmation_link = get_url_link(html_content);
@@ -171,7 +185,7 @@ mod tests {
                 }
                 true
             })
-            .return_once(|_, _, _, _| Ok(()));
+            .return_once(|_| Ok(()));
 
         // We also need a storage mock that returns 'Ok(())'
         let mut storage_mock = MockStorage::new();

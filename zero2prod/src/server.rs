@@ -9,7 +9,7 @@ use std::{fmt, net::TcpListener};
 use std::{fmt::Display, sync::Arc};
 use tower_http::trace::TraceLayer;
 
-use crate::email::Email;
+use crate::email_service::EmailService;
 use crate::routes::{health::health, subscriptions::subscriptions};
 use crate::storage::Storage;
 use zero2prod_common::err_context::ErrorContext;
@@ -46,7 +46,7 @@ impl From<ErrorContext<String, hyper::Error>> for Error {
 pub fn new(
     listener: TcpListener,
     storage: Arc<dyn Storage + Send + Sync>,
-    email: Arc<dyn Email + Send + Sync>,
+    email: Arc<dyn EmailService + Send + Sync>,
     base_url: String,
 ) -> AppServer {
     // Build app state
@@ -74,7 +74,7 @@ pub fn new(
 }
 
 pub type DynStorage = Arc<dyn Storage + Send + Sync>;
-pub type DynEmail = Arc<dyn Email + Send + Sync>;
+pub type DynEmail = Arc<dyn EmailService + Send + Sync>;
 
 #[derive(Clone)]
 pub struct AppState {
