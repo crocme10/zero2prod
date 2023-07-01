@@ -27,3 +27,13 @@ Feature: Integration
       |                  |                           |
       | bob              | not-an-email              |
 
+  @serial, @failure
+  Scenario: When the user calls the confirmation endpoint, we get a 200 Ok response
+    When the user subscribes with username "<username>" and email "<email>"
+     And the user calls the confirmation endpoint
+    Then the response is 200 OK
+
+    Examples:
+      | username         | email                     |
+      | bob              | bob@acme.com              |
+

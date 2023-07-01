@@ -1,35 +1,37 @@
 # Zero 2 Prod
 
-'Zero To Production in Rust' is a book by Luca Palmieri where he details his
-progress implementing a web application using Rust. It's a wonderful book, with
-lots of resources, tips and tricks. It has fostered lots of projects, and so its
-useful to browse through github and look at how developers have taken the book's
-initial code and choices and made changes.
+## Background
+
+[Zero To Production in Rust](https://www.zero2prod.com) is a book by Luca
+Palmieri where he details his progress implementing a web backend using Rust.
+It's a wonderful book, with lots of resources, tips and tricks. It has fostered
+lots of projects, and so its useful to browse through github and look at how
+developers have taken the book's initial code and choices and made changes.
 
 This is such a project, in which I have
-- relied on the work of Luca,
-- used bits and pieces in similar projects,
-- used my own experience and made a couple of departures
 
+- relied heavily on the work of Luca Palmieri for the structure and process,
+- incorporated bits and pieces in similar projects,
+- used my own experience to make a couple of departures
 
-| DIFFERENCE                         | MOTIVATION                                           |
-|------------------------------------|-----------------------------------------------       |
-| s / actix-web / axum / g           | [Motivation](/documentation/webserver.md)            |
-| cucumber / gherkin for integration | [Motivation](/documentation/cucumber.md)             |
-| anyhow > /dev/null                 | [Motivation](/documentation/error-handling.md)       |
-| 'generic' database executor        | [Motivation](/documentation/database.md)             |
-| Using xtask                        | [Description](/documentation/xtasks.md)              |
+| DIFFERENCE FROM ORIGINAL           | MOTIVATION                                               |
+| ---------------------------------- | -------------------------------------------------------- |
+| s / actix-web / axum / g           | [Motivation](/documentation/webserver.md)                |
+| cucumber / gherkin for integration | [Motivation](/documentation/cucumber.md)                 |
+| anyhow > /dev/null                 | [Motivation](/documentation/error-handling.md)           |
+| 'generic' database executor        | [Motivation](/documentation/database.md)                 |
+| Using xtask                        | [Description](/documentation/xtasks.md)                  |
 | Traits for improved testing        | [Motivation](/documentation/architecture-for-testing.md) |
-| s / claim / speculoos / g          | claim does not seem to be maintained                 |
-| Maybe opentelemetry?               |        |
-| Maybe frontend?                    |        |
+| s / claim / speculoos / g          | claim does not seem to be maintained                     |
+| Maybe opentelemetry?               |                                                          |
+| Maybe frontend?                    |                                                          |
 
 [![CI/CD Prechecks](https://github.com/crocme10/zero2prod/actions/workflows/general.yml/badge.svg)](https://github.com/crocme10/zero2prod/actions/workflows/general.yml)
 [![Security audit](https://github.com/crocme10/zero2prod/actions/workflows/audit.yml/badge.svg)](https://github.com/crocme10/zero2prod/actions/workflows/audit.yml)
 
-One to two paragraph statement about your product and what it does.
+## Introduction
 
-![](header.png)
+This project implements the backend of a newsletter website
 
 ## Installation
 
@@ -56,7 +58,7 @@ running database. So we have the choice,
 
 - either use sqlx's offline mode, to use a file in the source, `sqlx-data.json`
   in place of a running database,
-- or start the database.
+- or start the database before compiling the project.
 
 Let's go with the second option. We use
 [cargo xtask](https://github.com/matklad/cargo-xtask) to add automation tasks to
@@ -68,12 +70,13 @@ cargo xtask postgres
 ```
 
 This will take some time to build a part of the project (the common workspace)
-which does not depend on the database, and the xtask workspace. It will run this
-task. The database is configured with the files found in `./config/database`.
+which does not depend on the database (otherwise, it would fail because the
+database is not there yet), and the xtask workspace. The database is configured
+with the files found in `./config/database`.
 
 Now we should have a running database, we can compile the rest of the project.
-sqlx depends on the environment variable `DATABASE_URL`, whose value can be
-found at the last line of the previous command:
+sqlx knows about the database through the environment variable `DATABASE_URL`,
+whose value can be found at the last line of the previous command:
 
 for bash users:
 
@@ -83,8 +86,8 @@ export DATABASE_URL="postgres://postgres:password@localhost:5462/newsletter"
 
 or for fish users:
 
-```sh
-set DATABASE_URL="postgres://postgres:password@localhost:5462/newsletter"
+```fish
+set DATABASE_URL "postgres://postgres:password@localhost:5462/newsletter"
 ```
 
 Then compile zero2prod:
@@ -124,15 +127,14 @@ Environment variables use '**' to separate sections, and ZERO2PROD for the
 prefix. So to modify the database's name, which is the database.database_name
 key, we should set ZERO2PROD**DATABASE\_\_DATABASE_NAME=newsletter
 
-The server takes two command:
+The server takes two commands:
 
-- config to display the configuration as JSON
-- run to run the server.
+- **config**: to display the configuration as JSON
+- **run**: to run the server.
 
-In one terminal window, you monitor all tailwind:
 
 ```sh
-npx tailwindcss -i tailwind.css -o css/main.css
+npx ./target/debug/zero2prod -c ./config run
 ```
 
 ```sh
