@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use std::fmt;
+use uuid::Uuid;
 
 use crate::domain::NewSubscription;
 use zero2prod_common::err_context::ErrorContext;
@@ -67,6 +68,10 @@ pub trait Storage {
         &self,
         username: &str,
     ) -> Result<Option<Subscription>, Error>;
+
+    async fn get_subscriber_id_by_token(&self, token: &str) -> Result<Option<Uuid>, Error>;
+
+    async fn confirm_subscriber_by_id(&self, id: &Uuid) -> Result<(), Error>;
 }
 
 #[derive(Debug)]

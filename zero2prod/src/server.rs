@@ -10,7 +10,10 @@ use std::{fmt::Display, sync::Arc};
 use tower_http::trace::TraceLayer;
 
 use crate::email_service::EmailService;
-use crate::routes::{health::health, subscriptions::subscriptions};
+use crate::routes::{
+    health::health, subscription_confirmation::subscriptions_confirmation,
+    subscriptions::subscriptions,
+};
 use crate::storage::Storage;
 use zero2prod_common::err_context::ErrorContext;
 
@@ -59,7 +62,11 @@ pub fn new(
     // Routes that need to not have a session applied
     let router_no_session = Router::new()
         .route("/health", get(health))
-        .route("/subscriptions", post(subscriptions));
+        .route("/subscriptions", post(subscriptions))
+        .route(
+            "/subscriptions/confirmation",
+            post(subscriptions_confirmation),
+        );
 
     // Create a router that will contain and match all routes for the application
     let app = Router::new()

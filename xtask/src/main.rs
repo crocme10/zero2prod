@@ -21,7 +21,7 @@ fn try_main() -> Result<(), anyhow::Error> {
         Some("migrate") => migrate_postgres_db(),
         Some("postgres") => postgres_db(),
         // Some("redis") => xtask::tasks::database::setup_redis(),
-        Some("sqlxprepare") => sqlx_prepare(),
+        Some("prepare") => sqlx_prepare(),
         // Some("test") => xtest(),
         _ => print_help(),
     }
@@ -37,7 +37,7 @@ Tasks:
   ci              runs all necessary checks to avoid CI errors when git pushed
   coverage        runs test coverage analysis
   dist            builds application and man pages
-  sqlxprepare     runs the correct sqlx prepare command
+  prepare         runs the correct sqlx prepare command
   postgres        starts up a postgres docker container and runs migrations
   migrate         runs postgres database migrations
   redis           starts up a redis server

@@ -134,7 +134,6 @@ impl Storage for PostgresStorage {
         &self,
         username: &str,
     ) -> Result<Option<Subscription>, Error> {
-        tracing::info!("Fetching subscription by username {username}");
         let mut conn = self.exec.lock().await;
         let saved = sqlx::query!(
             r#"SELECT email, username, status::text FROM subscriptions WHERE username = $1"#,
@@ -150,6 +149,34 @@ impl Storage for PostgresStorage {
             status: rec.status.unwrap_or_default(),
         }))
     }
+
+    #[tracing::instrument(name = "Fetching a subscriber id by token in postgres")]
+    async fn get_subscriber_id_by_token(&self, token: &str) -> Result<Option<Uuid>, Error> {
+        let mut conn = self.exec.lock().await;
+        let saved = sqlx::query!(
+            r#"SELECT subscriber_id FROM subscription_tokens WHERE subscription_token = $1"#,
+            token
+        )
+        .fetch_optional(&mut **conn)
+        .await
+        .context(format!("Could not get subscriber id for {token}"))?;
+        tracing::info!("saved: {saved:?}");
+        Ok(saved.map(|r| r.subscriber_id))
+    }
+
+    #[tracing::instrument(name = "Confirming a subscriber using his id")]
+    async fn confirm_subscriber_by_id(&self, id: &Uuid) -> Result<(), Error> {
+        let mut conn = self.exec.lock().await;
+        sqlx::query!(
+            r#"UPDATE subscriptions SET status = $1 WHERE id = $2"#,
+            SubscriptionStatus::Confirmed as SubscriptionStatus,
+            id
+        )
+        .execute(&mut **conn)
+        .await
+        .context(format!("Could not confirm subscriber by id {id}"))?;
+        Ok(())
+    }
 }
 
 #[derive(sqlx::Type)]
@@ -157,13 +184,5 @@ impl Storage for PostgresStorage {
 #[sqlx(rename_all = "snake_case")]
 enum SubscriptionStatus {
     PendingConfirmation,
+    Confirmed,
 }
-
-// impl<'c> FromRow<'c, PgRow> for Subscription {
-//     fn from_row(row: &'c PgRow) -> Result<Self, sqlx::Error> {
-//         Ok(Subscription {
-//             username: row.try_get(1)?,
-//             email: row.try_get(2)?,
-//         })
-//     }
-// }

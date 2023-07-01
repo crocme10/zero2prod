@@ -26,6 +26,49 @@
     },
     "query": "INSERT INTO subscriptions (id, email, username, subscribed_at, status) VALUES ($1, $2, $3, $4, $5)"
   },
+  "ad120337ee606be7b8d87238e2bb765d0da8ee61b1a3bc142414c4305ec5e17f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "subscriber_id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT subscriber_id FROM subscription_tokens WHERE subscription_token = $1"
+  },
+  "b2a611c60f4eaf89a19ca8f690c7a1acac8e74290764fb63b4a33aca2178f93a": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          {
+            "Custom": {
+              "kind": {
+                "Enum": [
+                  "pending_confirmation",
+                  "confirmed"
+                ]
+              },
+              "name": "subscription_status"
+            }
+          },
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE subscriptions SET status = $1 WHERE id = $2"
+  },
   "caa3e956bacd2e45c3caf0bd2b30e06bb65290b7f5e456944e890f8836e9bdb9": {
     "describe": {
       "columns": [

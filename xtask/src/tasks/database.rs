@@ -11,10 +11,25 @@ pub fn db_command() -> Result<(), anyhow::Error> {
 }
 
 pub fn sqlx_prepare() -> Result<(), anyhow::Error> {
-    // wait_for_postgres()?;
-    // check_sqlx_exists()?;
+    wait_for_postgres()?;
+    check_sqlx_exists()?;
 
-    println!("Not yet implemented.");
+    let settings = database_settings();
+
+    let sqlx_prepare = Command::new("cargo")
+        .current_dir(project_root().join("zero2prod"))
+        .env("DATABASE_URL", settings.connection_string())
+        .args(["sqlx", "prepare"])
+        .status();
+
+    let mv_sqlx_data = Command::new("mv")
+        .current_dir(project_root())
+        .args(["zero2prod/sqlx-data.json", "."])
+        .status();
+
+    if sqlx_prepare.is_err() || mv_sqlx_data.is_err() {
+        anyhow::bail!("there was a problem running preparing sqlx-data.json");
+    }
 
     Ok(())
 }
