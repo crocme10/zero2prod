@@ -2,7 +2,10 @@ use std::process::{Command, ExitStatus};
 
 use owo_colors::OwoColorize;
 
-use crate::{project_root, tasks::test::run_test};
+use crate::{
+    project_root,
+    tasks::test::{run_integration_test, run_unit_test},
+};
 
 pub fn ci() -> Result<(), anyhow::Error> {
     println!("Running `cargo check`...");
@@ -23,8 +26,11 @@ pub fn ci() -> Result<(), anyhow::Error> {
         .args(["build", "-p", "zero2prod"])
         .status()?;
 
-    println!("Running tests...");
-    let test = run_test()?;
+    println!("Running unit tests...");
+    let unit_test = run_unit_test()?;
+
+    println!("Running integration tests...");
+    let integration_test = run_integration_test()?;
 
     println!("Running `cargo deny`...");
     let audit = Command::new("cargo")
@@ -44,6 +50,7 @@ pub fn ci() -> Result<(), anyhow::Error> {
     // So we move it to that directory, update it, and then move it back to the
     // project's root.
     // TODO This might change with version v0.7.0, with the --workspace argument.
+    // FIXME This is covered in the xtask prepare.
     let mv_sqlx_data = Command::new("mv")
         .current_dir(project_root())
         .args(["sqlx-data.json", "zero2prod/"])
@@ -59,7 +66,8 @@ pub fn ci() -> Result<(), anyhow::Error> {
     print_error_with_status_code("cargo check", check);
     print_error_with_status_code("cargo clippy", clippy);
     print_error_with_status_code("cargo build", build);
-    print_error_with_status_code("tests", test);
+    print_error_with_status_code("unit tests", unit_test);
+    print_error_with_status_code("integration tests", integration_test);
     print_error_with_status_code("cargo deny", audit);
     print_error_with_status_code("cargo fmt", fmt);
     print_error_with_status_code("mv sqlx-data.json zero2prod/", mv_sqlx_data);
