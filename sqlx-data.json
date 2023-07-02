@@ -1,5 +1,17 @@
 {
   "db": "PostgreSQL",
+  "2eb5b57eebcbb31598d4937840ad8196b058650353d92d892e24df49625c1340": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM subscription_tokens WHERE subscriber_id = $1"
+  },
   "7196bf11c9311399eb7c1f0540c3cb35e7ba5fe2f68f0ead38012861f5d165ac": {
     "describe": {
       "columns": [],
@@ -25,6 +37,19 @@
       }
     },
     "query": "INSERT INTO subscriptions (id, email, username, subscribed_at, status) VALUES ($1, $2, $3, $4, $5)"
+  },
+  "8331e19e367a63b0c2112d1d8c048dd1a5f0eaa49d265d407a6ffd9469f127ce": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "INSERT INTO subscription_tokens (subscription_token, subscriber_id) VALUES ($1, $2)"
   },
   "ad120337ee606be7b8d87238e2bb765d0da8ee61b1a3bc142414c4305ec5e17f": {
     "describe": {

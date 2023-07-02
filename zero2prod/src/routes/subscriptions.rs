@@ -1,12 +1,13 @@
 use axum::extract::{Json, State};
 use axum_extra::extract::WithRejection;
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::NewSubscription;
+use crate::domain::{NewSubscription, SubscriberEmail};
 use crate::email_service::Email;
 use crate::error::ApiError;
-use crate::server::AppState;
+use crate::server::{AppState, ApplicationBaseUrl};
 
 /// POST handler for user subscriptions
 #[allow(clippy::unused_async)]
@@ -23,13 +24,35 @@ pub async fn subscriptions(
 ) -> Result<Json<SubscriptionsResp>, ApiError> {
     let subscription = NewSubscription::try_from(request).map_err(ApiError::new_bad_request)?;
 
-    state
+    let id = state
         .storage
         .create_subscription(&subscription)
         .await
         .map_err(|err| ApiError::new_internal(format!("Cannot create new subscription: {err}")))?;
 
-    let confirmation_link = format!("{}/subscription/confirmation", state.base_url);
+    let token = generate_subscription_token();
+
+    state
+        .storage
+        .store_confirmation_token(&id, &token)
+        .await
+        .map_err(|err| ApiError::new_internal(format!("Cannot create new subscription: {err}")))?;
+    let email = create_confirmation_email(&state.base_url, &subscription.email);
+
+    state
+        .email
+        .send_email(email)
+        .await
+        .map_err(|err| ApiError::new_internal(format!("Cannot create new subscription: {err}")))?;
+
+    let resp = SubscriptionsResp {
+        status: "OK".to_string(),
+    };
+    Ok(Json(resp))
+}
+
+fn create_confirmation_email(url: &ApplicationBaseUrl, to: &SubscriberEmail) -> Email {
+    let confirmation_link = format!("{}/subscription/confirmation", url);
     let html_content = format!(
         r#"Welcome to our newsletter!<br/> Click <a href="{}">here</a> to confirm your subscription"#,
         confirmation_link
@@ -39,24 +62,12 @@ pub async fn subscriptions(
         confirmation_link
     );
 
-    let email = Email {
-        to: subscription.email,
+    Email {
+        to: to.clone(),
         subject: "Welcome".to_string(),
         html_content,
         text_content,
-    };
-
-    state
-        .email
-        .send_email(email)
-        .await
-        .map_err(|err| ApiError::new_internal(format!("Cannot create new subscription: {err}")))?;
-
-    tracing::debug!("Done");
-    let resp = SubscriptionsResp {
-        status: "OK".to_string(),
-    };
-    Ok(Json(resp))
+    }
 }
 
 /// This is what we return to the user in response to the subscription request.
@@ -67,10 +78,20 @@ pub struct SubscriptionsResp {
     pub status: String,
 }
 
+/// This is the information sent by the user to request a subscription.
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SubscriptionRequest {
     pub username: String,
     pub email: String,
+}
+
+/// Generates a token (32 Alphanumeric String)
+fn generate_subscription_token() -> String {
+    let mut rng = thread_rng();
+    std::iter::repeat_with(|| rng.sample(Alphanumeric))
+        .map(char::from)
+        .take(32)
+        .collect()
 }
 
 #[cfg(test)]
@@ -142,11 +163,17 @@ mod tests {
 
         let subscription = NewSubscription::try_from(request.clone()).unwrap();
 
+        let subscriber_id = Uuid::new_v4();
         let mut storage_mock = MockStorage::new();
         storage_mock
             .expect_create_subscription()
             .with(eq(subscription))
-            .return_once(|_| Ok(()));
+            .return_once(move |_| Ok(subscriber_id));
+
+        storage_mock
+            .expect_store_confirmation_token()
+            .withf(move |id: &Uuid, _token: &str| id == &subscriber_id)
+            .return_once(|_, _| Ok(()));
 
         let mut email_mock = MockEmailService::new();
         email_mock.expect_send_email().return_once(|_| Ok(()));
@@ -212,11 +239,16 @@ mod tests {
             })
             .return_once(|_| Ok(()));
 
+        let subscriber_id = Uuid::new_v4();
         // We also need a storage mock that returns 'Ok(())'
         let mut storage_mock = MockStorage::new();
         storage_mock
             .expect_create_subscription()
-            .return_once(|_| Ok(()));
+            .return_once(move |_| Ok(subscriber_id));
+        storage_mock
+            .expect_store_confirmation_token()
+            .withf(move |id: &Uuid, _token: &str| id == &subscriber_id)
+            .return_once(|_, _| Ok(()));
 
         let state = AppState {
             storage: Arc::new(storage_mock),
