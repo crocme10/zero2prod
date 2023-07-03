@@ -1,18 +1,18 @@
 use cucumber::World;
 use reqwest::Response;
+use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 use wiremock::MockServer;
+use once_cell::sync::Lazy;
 
 use zero2prod::application::{Application, Error};
 use zero2prod::email_service::EmailService;
 use zero2prod::opts::{Command, Opts};
 use zero2prod::storage::Storage;
 use zero2prod_common::settings::Settings;
-
-use once_cell::sync::Lazy;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
 /// The TestWorld contains both the context for every tests
@@ -21,23 +21,9 @@ use zero2prod::telemetry::{get_subscriber, init_subscriber};
 #[derive(World, Debug)]
 #[world(init = Self::new)]
 pub struct TestWorld {
-    // pub settings: Settings,
     pub app: TestApp,
     pub resp: Option<Response>,
-    // pub handle: Option<JoinHandle<Result<(), Error>>>,
 }
-
-// impl fmt::Debug for TestWorld {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         f.debug_struct("TestWorld")
-//             .field("settings", &self.settings)
-//             .field("storage", &self.storage)
-//             .field("email", &self.email)
-//             .field("resp", &self.resp)
-//             .field("handle", &self.handle)
-//             .finish()
-//     }
-// }
 
 impl TestWorld {
     /// Creates a new TestWorld, using a 'testing' configuration.
@@ -45,6 +31,25 @@ impl TestWorld {
         let app = spawn_app().await;
 
         TestWorld { app, resp: None }
+    }
+}
+
+pub struct TestApp {
+    pub address: String,
+    pub port: u16,
+    pub storage: Arc<dyn Storage + Send + Sync>,
+    pub email_server: MockServer,
+    pub email_client: Arc<dyn EmailService + Send + Sync>,
+    pub api_client: reqwest::Client,
+    pub server_handle: Option<JoinHandle<Result<(), Error>>>,
+}
+
+impl fmt::Debug for TestApp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TestApp")
+            .field("address", &self.address)
+            .field("port", &self.port)
+            .finish()
     }
 }
 
@@ -73,7 +78,7 @@ pub async fn spawn_app() -> TestApp {
     let email_server = MockServer::start().await;
 
     // We use the email mock server's address in the configuration.
-    // This syntax is what would be used on the command line to set the
+    // This syntax is what would be used on the command line to override the
     // email service's url.
     let override_email_server_url = format!("email_client.server_url='{}'", email_server.uri());
 
@@ -99,7 +104,7 @@ pub async fn spawn_app() -> TestApp {
         .expect("getting email client")
         .listener(settings.network.clone())
         .expect("getting listener")
-        .url(settings.network.host);
+        .url("http://127.0.0.1".to_string());
 
     // Before building the app, we extract a copy of storage and email.
     let storage = builder.storage.clone().unwrap();
@@ -123,26 +128,7 @@ pub async fn spawn_app() -> TestApp {
         email_server,
         api_client,
         email_client,
-        handle: Some(handle),
-    }
-}
-
-pub struct TestApp {
-    pub address: String,
-    pub port: u16,
-    pub storage: Arc<dyn Storage + Send + Sync>,
-    pub email_server: MockServer,
-    pub email_client: Arc<dyn EmailService + Send + Sync>,
-    pub api_client: reqwest::Client,
-    pub handle: Option<JoinHandle<Result<(), Error>>>,
-}
-
-impl fmt::Debug for TestApp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TestApp")
-            .field("address", &self.address)
-            .field("port", &self.port)
-            .finish()
+        server_handle: Some(handle),
     }
 }
 
@@ -171,25 +157,26 @@ impl TestApp {
             confirmation_link
         };
 
-        let html = get_link(body["HtmlBody"].as_str().unwrap());
-        let plain_text = get_link(body["TextBody"].as_str().unwrap());
+        let html = get_link(body["HtmlContent"].as_str().unwrap());
+        let text = get_link(body["TextContent"].as_str().unwrap());
 
-        ConfirmationLinks { html, plain_text }
+        ConfirmationLinks { html, text }
     }
 
     /// Send a post request to the subscriptions endpoint.
-    pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
+    pub async fn post_subscriptions(&self, map: HashMap<&str, String>) -> reqwest::Response {
+        let url = format!("{}/subscriptions", self.address);
         self.api_client
-            .post(&format!("{}/subscriptions", &self.address))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
+            .post(url)
+            .json(&map)
             .send()
             .await
             .expect("failed to execute request")
     }
 }
 
+#[derive(Debug)]
 pub struct ConfirmationLinks {
     pub html: reqwest::Url,
-    pub plain_text: reqwest::Url,
+    pub text: reqwest::Url,
 }

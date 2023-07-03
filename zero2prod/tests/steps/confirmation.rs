@@ -1,12 +1,19 @@
-use cucumber::when;
+use cucumber::then;
 
 use crate::state;
-use crate::utils::testing_url_for_endpoint;
 
-#[when(regex = r#"the user calls the confirmation endpoint"#)]
+#[then(regex = r#"the user receives an email with a confirmation link"#)]
 async fn confirm(world: &mut state::TestWorld) {
-    let url = testing_url_for_endpoint("subscription/confirmation");
-    let client = reqwest::Client::new();
-    let resp = client.get(url).send().await.expect("response");
-    world.resp = Some(resp);
+    let email_request = &world
+        .app
+        .email_server
+        .received_requests()
+        .await
+        .expect("get email server received requests")[0];
+    let confirmation_links = world
+        .app
+        .get_confirmation_links(email_request);
+    // FIXME Other features to assert
+    assert_eq!(confirmation_links.html.path(), "/subscriptions/confirmation");
+    assert!(confirmation_links.html.query().unwrap().starts_with("subscription_token"));
 }

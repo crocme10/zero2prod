@@ -12,7 +12,6 @@ use tracing_subscriber::{
 
 mod state;
 mod steps;
-mod utils;
 
 #[derive(cli::Args)] // re-export of `clap::Args`
 struct CustomOpts {
@@ -32,13 +31,17 @@ async fn main() {
         .max_concurrent_scenarios(1)
         .before(move |_feature, _rule, _scenario, world| {
             async {
+                // Abort the server if its running, and restart the app
+                if let Some(handle) = world.app.server_handle.take() {
+                    handle.abort();
+                }
                 world.app = state::spawn_app().await;
             }
             .boxed()
         })
         .after(move |_feature, _rule, _scenario, _event, world| {
             async {
-                let handle = world.unwrap().app.handle.take().expect("handle");
+                let handle = world.unwrap().app.server_handle.take().expect("handle");
                 handle.abort();
             }
             .boxed()

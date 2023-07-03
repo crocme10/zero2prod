@@ -10,7 +10,7 @@ Feature: Integration
     When the user subscribes with username "<username>" and email "<email>"
     Then the response is 200 OK
      And the database stored the username "<username>" and the email "<email>"
-     And the user receives an email with a confirmation link.
+     And the user receives an email with a confirmation link
 
     Examples:
       | username         | email                     |

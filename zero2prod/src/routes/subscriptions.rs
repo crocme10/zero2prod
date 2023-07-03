@@ -54,7 +54,7 @@ pub async fn subscriptions(
 
 /// This is a helper function to create an email sent to the subscriber,
 /// which contains a link he needs to use to confirm his subscription.
-/// the url is argument is that of the zero2prod server, and will be used
+/// the url argument is the URL of the zero2prod server, and will be used
 /// as the base for the confirmation link.
 fn create_confirmation_email(url: &ApplicationBaseUrl, to: &SubscriberEmail, token: &str) -> Email {
     let confirmation_link = format!(

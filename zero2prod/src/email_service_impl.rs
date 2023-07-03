@@ -14,6 +14,7 @@ pub struct EmailClient {
     // This is the client end of a connection to an email service API.
     http_client: Client,
     // This is the URL of the Email server
+    // TODO Maybe should be a URL instead of a string
     server_url: String,
     // This is the sender of the email sent to the end user.
     sender: SubscriberEmail,
