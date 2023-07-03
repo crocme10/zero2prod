@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::fmt;
 
-use zero2prod::application::{Application, Error as ApplicationError};
+use zero2prod::application::{ApplicationBuilder, Error as ApplicationError};
 use zero2prod::opts::{Command, Error as OptsError, Opts};
 use zero2prod::telemetry;
 use zero2prod_common::err_context::{ErrorContext, ErrorContextExt};
@@ -91,9 +91,10 @@ async fn main() -> Result<(), Error> {
             println!("{}", serde_json::to_string_pretty(&settings).unwrap());
         }
         Command::Run => {
-            let app = Application::new(settings)
+            let app = ApplicationBuilder::new(settings)
                 .await
-                .context("could not build application".to_string())?;
+                .context("could not build application".to_string())?
+                .build();
             app.run_until_stopped()
                 .await
                 .context("application runtime error".to_string())?;

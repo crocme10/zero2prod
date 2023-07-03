@@ -70,6 +70,7 @@ serial_test = "^2.0.0"
 speculoos = "^0.11.0"
 mockall = "^0.11.4"
 wiremock = "^0.5.19"
+once_cell = "^1.18.0"
 
 [lib]
 name = "zero2prod"

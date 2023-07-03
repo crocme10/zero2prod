@@ -7,6 +7,7 @@ use crate::error::ApiError;
 use crate::server::AppState;
 
 /// POST handler for user subscription confirmation
+///
 #[allow(clippy::unused_async)]
 #[tracing::instrument(
     name = "Confirming subscription with token"

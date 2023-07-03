@@ -37,7 +37,8 @@ pub async fn subscriptions(
         .store_confirmation_token(&id, &token)
         .await
         .map_err(|err| ApiError::new_internal(format!("Cannot create new subscription: {err}")))?;
-    let email = create_confirmation_email(&state.base_url, &subscription.email);
+
+    let email = create_confirmation_email(&state.base_url, &subscription.email, &token);
 
     state
         .email
@@ -51,8 +52,15 @@ pub async fn subscriptions(
     Ok(Json(resp))
 }
 
-fn create_confirmation_email(url: &ApplicationBaseUrl, to: &SubscriberEmail) -> Email {
-    let confirmation_link = format!("{}/subscription/confirmation", url);
+/// This is a helper function to create an email sent to the subscriber,
+/// which contains a link he needs to use to confirm his subscription.
+/// the url is argument is that of the zero2prod server, and will be used
+/// as the base for the confirmation link.
+fn create_confirmation_email(url: &ApplicationBaseUrl, to: &SubscriberEmail, token: &str) -> Email {
+    let confirmation_link = format!(
+        "{}/subscriptions/confirmation?subscription_token={}",
+        url, token
+    );
     let html_content = format!(
         r#"Welcome to our newsletter!<br/> Click <a href="{}">here</a> to confirm your subscription"#,
         confirmation_link
@@ -232,7 +240,8 @@ mod tests {
                 }
                 let confirmation_link = get_url_link(html_content);
                 println!("confirmation link: {confirmation_link}");
-                if confirmation_link != format!("{}/subscription/confirmation", base_url_clone) {
+                let confirmation_link_pattern = format!("{}/subscriptions/confirmation", base_url_clone);
+                if !confirmation_link.starts_with(&confirmation_link_pattern) {
                     return false;
                 }
                 true

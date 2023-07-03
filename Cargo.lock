@@ -3731,6 +3731,7 @@ dependencies = [
  "hyper",
  "linkify",
  "mockall",
+ "once_cell",
  "quickcheck",
  "quickcheck_macros",
  "rand 0.8.5",

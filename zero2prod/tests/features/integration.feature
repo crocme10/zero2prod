@@ -6,17 +6,18 @@ Feature: Integration
     Then the response is 200 OK
 
   @serial, @success
-  Scenario: When the user calls the subscriptions endpoint, we get a 200 Ok response
+  Scenario: Successful subscription
     When the user subscribes with username "<username>" and email "<email>"
     Then the response is 200 OK
      And the database stored the username "<username>" and the email "<email>"
+     And the user receives an email with a confirmation link.
 
     Examples:
       | username         | email                     |
       | bob              | bob@acme.com              |
 
   @serial, @failure
-  Scenario: When the user calls the subscriptions endpoint with invalid credentials, we get a 400 Bad Request response
+  Scenario: Subscription with invalid credentials
     When the user subscribes with username "<username>" and email "<email>"
     Then the response is 400 Bad Request
 
@@ -26,14 +27,4 @@ Feature: Integration
       | bob              |                           |
       |                  |                           |
       | bob              | not-an-email              |
-
-  @serial, @failure
-  Scenario: When the user calls the confirmation endpoint, we get a 200 Ok response
-    When the user subscribes with username "<username>" and email "<email>"
-     And the user calls the confirmation endpoint
-    Then the response is 200 OK
-
-    Examples:
-      | username         | email                     |
-      | bob              | bob@acme.com              |
 

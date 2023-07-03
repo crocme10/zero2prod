@@ -3,7 +3,6 @@ use cucumber::writer;
 use cucumber::WriterExt;
 use cucumber::{writer::Coloring, World as _};
 use futures::FutureExt;
-use std::sync::Arc;
 use tracing_subscriber::{
     filter::LevelFilter,
     fmt::format::{DefaultFields, Format},
@@ -14,12 +13,6 @@ use tracing_subscriber::{
 mod state;
 mod steps;
 mod utils;
-
-use zero2prod::email_service_impl::EmailClient;
-use zero2prod::listener::listen_with_host_port;
-use zero2prod::postgres::PostgresStorage;
-use zero2prod::server;
-// TODO See how to use telemetry within integration tests.
 
 #[derive(cli::Args)] // re-export of `clap::Args`
 struct CustomOpts {
@@ -39,47 +32,13 @@ async fn main() {
         .max_concurrent_scenarios(1)
         .before(move |_feature, _rule, _scenario, world| {
             async {
-                // We should be using the same code as in main, namely use
-                // Application::new(settings). But we need access to the storage, so that
-                // transaction can be dropped (and aborted) at the end of each scenario.
-                // So the following code is essentially what's happening inside the
-                // Application::new function.
-                let storage = Arc::new(
-                    PostgresStorage::new(world.settings.database.clone())
-                        .await
-                        .expect("Establishing a database connection"),
-                );
-
-                let email = Arc::new(
-                    EmailClient::new(world.settings.email_client.clone())
-                        .await
-                        .expect("Establishing an email service connection"),
-                );
-
-                let listener = listen_with_host_port(
-                    world.settings.network.host.as_str(),
-                    world.settings.network.port,
-                )
-                .expect(&format!(
-                    "Could not create listener for {}:{}",
-                    world.settings.network.host, world.settings.network.port
-                ));
-
-                let server = server::new(
-                    listener,
-                    storage.clone(),
-                    email,
-                    world.settings.network.host.clone(),
-                );
-                let handle = tokio::spawn(server);
-                world.handle = Some(handle);
-                world.storage = storage;
+                world.app = state::spawn_app().await;
             }
             .boxed()
         })
         .after(move |_feature, _rule, _scenario, _event, world| {
             async {
-                let handle = world.unwrap().handle.take().expect("handle");
+                let handle = world.unwrap().app.handle.take().expect("handle");
                 handle.abort();
             }
             .boxed()

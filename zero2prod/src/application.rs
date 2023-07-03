@@ -6,14 +6,17 @@
 ///    let settings = Settings { ... }
 ///    let app = Application::build(settings).await?;
 ///    app.run_until_stopped().await?;
-use crate::email_service::Error as EmailError;
+use crate::email_service::{EmailService, Error as EmailError};
 use crate::email_service_impl::EmailClient;
 use crate::listener::{listen_with_host_port, Error as ListenerError};
 use crate::postgres::PostgresStorage;
 use crate::server;
-use crate::storage::Error as StorageError;
+use crate::storage::{Error as StorageError, Storage};
+use std::net::TcpListener;
 use zero2prod_common::err_context::{ErrorContext, ErrorContextExt};
-use zero2prod_common::settings::Settings;
+use zero2prod_common::settings::{
+    DatabaseSettings, EmailClientSettings, NetworkSettings, Settings,
+};
 
 use std::fmt;
 use std::sync::Arc;
@@ -24,30 +27,87 @@ pub struct Application {
 }
 
 impl Application {
+    pub fn builder() -> ApplicationBuilder {
+        ApplicationBuilder::default()
+    }
+}
+
+#[derive(Default)]
+pub struct ApplicationBuilder {
+    pub storage: Option<Arc<dyn Storage + Send + Sync>>,
+    pub email: Option<Arc<dyn EmailService + Send + Sync>>,
+    pub listener: Option<TcpListener>,
+    pub url: Option<String>,
+}
+
+impl ApplicationBuilder {
     pub async fn new(settings: Settings) -> Result<Self, Error> {
+        let Settings {
+            network,
+            database,
+            email_client,
+            mode: _,
+        } = settings;
+        let builder = Self::default()
+            .storage(database)
+            .await?
+            .email(email_client)
+            .await?
+            .listener(network.clone())?
+            .url(network.host);
+        Ok(builder)
+    }
+
+    pub async fn storage(mut self, settings: DatabaseSettings) -> Result<Self, Error> {
         let storage = Arc::new(
-            PostgresStorage::new(settings.database)
+            PostgresStorage::new(settings)
                 .await
                 .context("Establishing a database connection".to_string())?,
         );
+        self.storage = Some(storage);
+        Ok(self)
+    }
 
+    pub async fn email(mut self, settings: EmailClientSettings) -> Result<Self, Error> {
         let email = Arc::new(
-            EmailClient::new(settings.email_client)
+            EmailClient::new(settings)
                 .await
                 .context("Establishing an email service connection".to_string())?,
         );
-
-        let listener = listen_with_host_port(settings.network.host.as_str(), settings.network.port)
-            .context(format!(
-                "Could not create listener for {}:{}",
-                settings.network.host, settings.network.port
-            ))?;
-
-        let port = listener.local_addr().unwrap().port();
-        let server = server::new(listener, storage, email, settings.network.host);
-        Ok(Self { port, server })
+        self.email = Some(email);
+        Ok(self)
     }
 
+    pub fn listener(mut self, settings: NetworkSettings) -> Result<Self, Error> {
+        let listener =
+            listen_with_host_port(settings.host.as_str(), settings.port).context(format!(
+                "Could not create listener for {}:{}",
+                settings.host, settings.port
+            ))?;
+        self.listener = Some(listener);
+        Ok(self)
+    }
+
+    pub fn url(mut self, url: String) -> Self {
+        self.url = Some(url);
+        self
+    }
+
+    pub fn build(self) -> Application {
+        let ApplicationBuilder {
+            storage,
+            email,
+            listener,
+            url,
+        } = self;
+        let listener = listener.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let server = server::new(listener, storage.unwrap(), email.unwrap(), url.unwrap());
+        Application { port, server }
+    }
+}
+
+impl Application {
     pub fn port(&self) -> u16 {
         self.port
     }

@@ -1,6 +1,5 @@
 use cucumber::{then, when};
 use std::collections::HashMap;
-use zero2prod::storage::Storage;
 
 use crate::state;
 use crate::utils::testing_url_for_endpoint;
@@ -19,6 +18,7 @@ async fn subscribes_full(world: &mut state::TestWorld, username: String, email: 
 #[then(regex = r#"the database stored the username "(\S+)" and the email "(\S+)""#)]
 async fn query_database(world: &mut state::TestWorld, username: String, email: String) {
     let subscription = world
+        .app
         .storage
         .get_subscription_by_username(&username)
         .await
