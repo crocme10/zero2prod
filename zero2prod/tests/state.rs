@@ -1,4 +1,5 @@
 use cucumber::World;
+use once_cell::sync::Lazy;
 use reqwest::Response;
 use std::collections::HashMap;
 use std::fmt;
@@ -6,14 +7,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 use wiremock::MockServer;
-use once_cell::sync::Lazy;
 
 use zero2prod::application::{Application, Error};
 use zero2prod::email_service::EmailService;
 use zero2prod::opts::{Command, Opts};
 use zero2prod::storage::Storage;
-use zero2prod_common::settings::Settings;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
+use zero2prod_common::settings::Settings;
 
 /// The TestWorld contains both the context for every tests
 /// and information that needs to be kept between steps of a

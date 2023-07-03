@@ -240,7 +240,8 @@ mod tests {
                 }
                 let confirmation_link = get_url_link(html_content);
                 println!("confirmation link: {confirmation_link}");
-                let confirmation_link_pattern = format!("{}/subscriptions/confirmation", base_url_clone);
+                let confirmation_link_pattern =
+                    format!("{}/subscriptions/confirmation", base_url_clone);
                 if !confirmation_link.starts_with(&confirmation_link_pattern) {
                     return false;
                 }
