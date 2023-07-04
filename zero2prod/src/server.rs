@@ -62,11 +62,11 @@ pub fn new(
     // Routes that need to not have a session applied
     let router_no_session = Router::new()
         .route("/health", get(health))
+        .route("/subscriptions", post(subscriptions))
         .route(
             "/subscriptions/confirmation",
             post(subscriptions_confirmation),
-        )
-        .route("/subscriptions", post(subscriptions));
+        );
 
     // Create a router that will contain and match all routes for the application
     let app = Router::new()

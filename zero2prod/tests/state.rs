@@ -109,7 +109,7 @@ pub async fn spawn_app() -> TestApp {
         .expect("getting email client")
         .listener(settings.application.clone())
         .expect("getting listener")
-        .url(settings.application.base_url);
+        .url(settings.application.base_url.clone());
 
     // Before building the app, we extract a copy of storage and email.
     let storage = builder.storage.clone().unwrap();
@@ -118,7 +118,7 @@ pub async fn spawn_app() -> TestApp {
     // Now build the app, and launch it.
     let app = builder.build();
     let port = app.port();
-    let address = format!("http://127.0.0.1:{}", app.port());
+    let address = format!("{}:{}", settings.application.base_url, app.port());
     let handle = tokio::spawn(app.run_until_stopped());
 
     let api_client = reqwest::Client::builder()

@@ -148,6 +148,46 @@ mod tests {
         // let body: Value = serde_json::from_slice(&body).unwrap();
         // assert_eq!(body, json!(&dummy_heroes));
     }
+
+    #[tokio::test]
+    async fn subscription_confirmation_with_invalid_token_should_return_unauthorized() {
+        // In this test, we use a MockStorage, and we expect that:
+        // - Storage::get_subscriber_id_by_token will get called (it returns None to simulate no
+        //   valid token was found)
+        // - Storage::confirm_subscriber_by_id never to get called, 
+
+        let token = 32.fake::<String>();
+        let mut storage_mock = MockStorage::new();
+        storage_mock
+            .expect_get_subscriber_id_by_token()
+            .with(eq(token.clone()))
+            .return_once(move |_| Ok(None));
+        storage_mock
+            .expect_confirm_subscriber_by_id()
+            .never()
+            .return_once(|_| Ok(()));
+
+        let email_mock = MockEmailService::new();
+
+        let state = AppState {
+            storage: Arc::new(storage_mock),
+            email: Arc::new(email_mock),
+            base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+        };
+
+        let app = subscriptions_confirmation_route().with_state(state);
+
+        let response = app
+            .oneshot(send_subscription_confirmation_request(
+                "/subscriptions/confirmation",
+                Some(token),
+            ))
+            .await
+            .expect("response");
+
+        // Check the response status code.
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
 }
 //
 //     #[tokio::test]

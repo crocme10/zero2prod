@@ -23,6 +23,9 @@ services:
     routes:
       - path: /
     envs:
+      - key: ZERO2PROD__APPLICATION_BASER_URL
+        scope: RUN_TIME
+        value: ${APP_URL}
       - key: ZERO2PROD__DATABASE__USERNAME
         scope: RUN_TIME
         value: ${newsletter.USERNAME}
