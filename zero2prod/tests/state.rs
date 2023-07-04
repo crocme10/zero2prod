@@ -23,6 +23,7 @@ use zero2prod_common::settings::Settings;
 pub struct TestWorld {
     pub app: TestApp,
     pub resp: Option<Response>,
+    pub confirmation_link: Option<reqwest::Url>,
 }
 
 impl TestWorld {
@@ -30,7 +31,11 @@ impl TestWorld {
     pub async fn new() -> Self {
         let app = spawn_app().await;
 
-        TestWorld { app, resp: None }
+        TestWorld {
+            app,
+            resp: None,
+            confirmation_link: None,
+        }
     }
 }
 

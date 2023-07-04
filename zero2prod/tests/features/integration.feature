@@ -9,7 +9,7 @@ Feature: Integration
   Scenario: Successful subscription
     When the user subscribes with username "<username>" and email "<email>"
     Then the response is 200 OK
-     And the database stored the username "<username>" and the email "<email>"
+     And the database stored the username "<username>" and the email "<email>" with status "pending_confirmation"
      And the user receives an email with a confirmation link
 
     Examples:
@@ -27,4 +27,17 @@ Feature: Integration
       | bob              |                           |
       |                  |                           |
       | bob              | not-an-email              |
+
+  @serial, @success
+  Scenario: Successful confirmation
+    When the user subscribes with username "<username>" and email "<email>"
+     And the user retrieves the confirmation link
+     And the user confirms his subscription with the confirmation link
+    Then the response is 200 OK
+     And the database stored the username "<username>" and the email "<email>" with status "confirmed"
+
+    Examples:
+      | username         | email                     |
+      | bob              | bob@acme.com              |
+
 

@@ -57,10 +57,7 @@ pub async fn subscriptions(
 /// the url argument is the URL of the zero2prod server, and will be used
 /// as the base for the confirmation link.
 fn create_confirmation_email(url: &ApplicationBaseUrl, to: &SubscriberEmail, token: &str) -> Email {
-    let confirmation_link = format!(
-        "{}/subscriptions/confirmation?subscription_token={}",
-        url, token
-    );
+    let confirmation_link = format!("{}/subscriptions/confirmation?token={}", url, token);
     let html_content = format!(
         r#"Welcome to our newsletter!<br/> Click <a href="{}">here</a> to confirm your subscription"#,
         confirmation_link

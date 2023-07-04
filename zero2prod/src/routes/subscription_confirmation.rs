@@ -1,5 +1,4 @@
-use axum::extract::{Json, State};
-use axum_extra::extract::WithRejection;
+use axum::extract::{Json, Query, State};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -7,7 +6,6 @@ use crate::error::ApiError;
 use crate::server::AppState;
 
 /// POST handler for user subscription confirmation
-///
 #[allow(clippy::unused_async)]
 #[tracing::instrument(
     name = "Confirming subscription with token"
@@ -18,8 +16,9 @@ use crate::server::AppState;
 )]
 pub async fn subscriptions_confirmation(
     State(state): State<AppState>,
-    WithRejection(Json(request), _): WithRejection<Json<SubscriptionConfirmationRequest>, ApiError>,
+    request: Query<SubscriptionConfirmationRequest>,
 ) -> Result<Json<SubscriptionConfirmationResp>, ApiError> {
+    let request = request.0;
     let id = state
         .storage
         .get_subscriber_id_by_token(&request.token)
@@ -56,7 +55,6 @@ pub struct SubscriptionConfirmationResp {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SubscriptionConfirmationRequest {
-    pub username: String,
     pub token: String,
 }
 
