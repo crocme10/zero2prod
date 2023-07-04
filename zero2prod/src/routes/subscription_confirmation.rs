@@ -154,7 +154,7 @@ mod tests {
         // In this test, we use a MockStorage, and we expect that:
         // - Storage::get_subscriber_id_by_token will get called (it returns None to simulate no
         //   valid token was found)
-        // - Storage::confirm_subscriber_by_id never to get called, 
+        // - Storage::confirm_subscriber_by_id never to get called,
 
         let token = 32.fake::<String>();
         let mut storage_mock = MockStorage::new();

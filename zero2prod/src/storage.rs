@@ -64,7 +64,12 @@ impl From<ErrorContext<String, sqlx::Error>> for Error {
 #[async_trait]
 pub trait Storage {
     /// Store a new subscription, and return the subscriber id.
-    async fn create_subscription(&self, subscription: &NewSubscription) -> Result<Uuid, Error>;
+    async fn create_subscription_and_store_token(
+        &self,
+        subscription: &NewSubscription,
+        token: &str,
+    ) -> Result<Uuid, Error>;
+
     async fn get_subscription_by_username(
         &self,
         username: &str,
@@ -74,13 +79,6 @@ pub trait Storage {
 
     /// Modify the status of the subscriber identified by id to 'confirmed'
     async fn confirm_subscriber_by_id(&self, id: &Uuid) -> Result<(), Error>;
-
-    /// Store a token in the susbcription tokens table.
-    async fn store_confirmation_token(
-        &self,
-        subscriber_id: &Uuid,
-        token: &str,
-    ) -> Result<(), Error>;
 
     /// Delete a previously stored token identified by a subscriber_id
     async fn delete_confirmation_token(&self, id: &Uuid) -> Result<(), Error>;

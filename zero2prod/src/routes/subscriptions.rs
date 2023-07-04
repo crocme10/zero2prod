@@ -24,17 +24,11 @@ pub async fn subscriptions(
 ) -> Result<Json<SubscriptionsResp>, ApiError> {
     let subscription = NewSubscription::try_from(request).map_err(ApiError::new_bad_request)?;
 
-    let id = state
-        .storage
-        .create_subscription(&subscription)
-        .await
-        .map_err(|err| ApiError::new_internal(format!("Cannot create new subscription: {err}")))?;
-
     let token = generate_subscription_token();
 
-    state
+    let _id = state
         .storage
-        .store_confirmation_token(&id, &token)
+        .create_subscription_and_store_token(&subscription, &token)
         .await
         .map_err(|err| ApiError::new_internal(format!("Cannot create new subscription: {err}")))?;
 
@@ -166,19 +160,16 @@ mod tests {
 
         let request = SubscriptionRequest { username, email };
 
-        let subscription = NewSubscription::try_from(request.clone()).unwrap();
+        let new_subscription = NewSubscription::try_from(request.clone()).unwrap();
 
         let subscriber_id = Uuid::new_v4();
         let mut storage_mock = MockStorage::new();
         storage_mock
-            .expect_create_subscription()
-            .with(eq(subscription))
-            .return_once(move |_| Ok(subscriber_id));
-
-        storage_mock
-            .expect_store_confirmation_token()
-            .withf(move |id: &Uuid, _token: &str| id == &subscriber_id)
-            .return_once(|_, _| Ok(()));
+            .expect_create_subscription_and_store_token()
+            .withf(move |subscription: &NewSubscription, _token: &str| {
+                subscription == &new_subscription
+            })
+            .return_once(move |_, _| Ok(subscriber_id));
 
         let mut email_mock = MockEmailService::new();
         email_mock.expect_send_email().return_once(|_| Ok(()));
@@ -250,12 +241,8 @@ mod tests {
         // We also need a storage mock that returns 'Ok(())'
         let mut storage_mock = MockStorage::new();
         storage_mock
-            .expect_create_subscription()
-            .return_once(move |_| Ok(subscriber_id));
-        storage_mock
-            .expect_store_confirmation_token()
-            .withf(move |id: &Uuid, _token: &str| id == &subscriber_id)
-            .return_once(|_, _| Ok(()));
+            .expect_create_subscription_and_store_token()
+            .return_once(move |_, _| Ok(subscriber_id));
 
         let state = AppState {
             storage: Arc::new(storage_mock),
@@ -286,15 +273,17 @@ mod tests {
 
         let request = SubscriptionRequest { username, email };
 
-        let subscription = NewSubscription::try_from(request.clone()).unwrap();
+        let new_subscription = NewSubscription::try_from(request.clone()).unwrap();
 
         // This mock storage returns an error which does not really makes
         // sense.
         let mut storage_mock = MockStorage::new();
         storage_mock
-            .expect_create_subscription()
-            .with(eq(subscription))
-            .return_once(|_| {
+            .expect_create_subscription_and_store_token()
+            .withf(move |subscription: &NewSubscription, _token: &str| {
+                subscription == &new_subscription
+            })
+            .return_once(|_, _| {
                 Err(StorageError::Database {
                     context: "subscription context".to_string(),
                     source: sqlx::Error::RowNotFound,

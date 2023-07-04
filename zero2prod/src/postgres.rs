@@ -110,7 +110,11 @@ pub async fn connect_with_options(config: &DatabaseSettings) -> Result<PgPool, E
 #[async_trait]
 impl Storage for PostgresStorage {
     #[tracing::instrument(name = "Storing a new subscription in postgres")]
-    async fn create_subscription(&self, subscription: &NewSubscription) -> Result<Uuid, Error> {
+    async fn create_subscription_and_store_token(
+        &self,
+        subscription: &NewSubscription,
+        token: &str,
+    ) -> Result<Uuid, Error> {
         let mut conn = self.exec.lock().await;
         let id = Uuid::new_v4();
         sqlx::query!(
@@ -127,6 +131,13 @@ impl Storage for PostgresStorage {
                 "Could not create new subscription for {}", subscription.username.as_ref()
                 ))?;
 
+        sqlx::query!(
+            r#"INSERT INTO subscription_tokens (subscription_token, subscriber_id) VALUES ($1, $2)"#,
+            token, id
+        )
+        .execute(&mut **conn)
+        .await
+        .context(format!("Could not store subscription token for subscriber id {id}"))?;
         Ok(id)
     }
 
@@ -176,19 +187,6 @@ impl Storage for PostgresStorage {
         .execute(&mut **conn)
         .await
         .context(format!("Could not confirm subscriber by id {id}"))?;
-        Ok(())
-    }
-
-    #[tracing::instrument(name = "Storing subscription token")]
-    async fn store_confirmation_token(&self, id: &Uuid, token: &str) -> Result<(), Error> {
-        let mut conn = self.exec.lock().await;
-        sqlx::query!(
-            r#"INSERT INTO subscription_tokens (subscription_token, subscriber_id) VALUES ($1, $2)"#,
-            token, id
-        )
-        .execute(&mut **conn)
-        .await
-        .context(format!("Could not store subscription token for subscriber id {id}"))?;
         Ok(())
     }
 
