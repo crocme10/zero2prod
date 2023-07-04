@@ -1,4 +1,5 @@
 use cucumber::{then, when};
+use speculoos::prelude::*;
 
 use crate::state;
 
@@ -46,4 +47,16 @@ async fn post_confirmation_link(world: &mut state::TestWorld) {
         .await
         .expect("failed to execute request");
     world.resp = Some(resp);
+}
+
+#[then(regex = r#"the user receives two confirmation emails"#)]
+async fn verify_two_confirmation_emails(world: &mut state::TestWorld) {
+    let emails = &world
+        .app
+        .email_server
+        .received_requests()
+        .await
+        .expect("get email server received requests");
+
+    assert_that(&emails.len()).is_equal_to(2);
 }

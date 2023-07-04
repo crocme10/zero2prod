@@ -4,7 +4,7 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::{NewSubscription, SubscriberEmail};
+use crate::domain::{NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus};
 use crate::email_service::Email;
 use crate::error::ApiError;
 use crate::server::{AppState, ApplicationBaseUrl};
@@ -24,26 +24,84 @@ pub async fn subscriptions(
 ) -> Result<Json<SubscriptionsResp>, ApiError> {
     let subscription = NewSubscription::try_from(request).map_err(ApiError::new_bad_request)?;
 
-    let token = generate_subscription_token();
-
-    let _id = state
+    match state
         .storage
-        .create_subscription_and_store_token(&subscription, &token)
+        .get_subscription_by_email(subscription.email.as_ref())
         .await
-        .map_err(|err| ApiError::new_internal(format!("Cannot create new subscription: {err}")))?;
+        .map_err(|err| ApiError::new_internal(format!("Cannot retrieve subscription: {err}")))?
+    {
+        None => {
+            tracing::info!("No prior subscription found");
+            let token = generate_subscription_token();
 
-    let email = create_confirmation_email(&state.base_url, &subscription.email, &token);
+            let subscription = state
+                .storage
+                .create_subscription_and_store_token(&subscription, &token)
+                .await
+                .map_err(|err| {
+                    ApiError::new_internal(format!("Cannot create new subscription: {err}"))
+                })?;
 
-    state
-        .email
-        .send_email(email)
-        .await
-        .map_err(|err| ApiError::new_internal(format!("Cannot create new subscription: {err}")))?;
+            let email = create_confirmation_email(&state.base_url, &subscription.email, &token);
 
-    let resp = SubscriptionsResp {
-        status: "OK".to_string(),
-    };
-    Ok(Json(resp))
+            state.email.send_email(email).await.map_err(|err| {
+                ApiError::new_internal(format!("Cannot create new subscription: {err}"))
+            })?;
+
+            let resp = SubscriptionsResp { subscription };
+            Ok(Json(resp))
+        }
+        Some(subscription) => {
+            // FIXME The logic here is probably not very secure. It's not taking the
+            // username into account, and more...
+            // Depending on the subscription's status:
+            // * if it is 'pending_confirmation', then we get the token, and send another
+            //   confirmation email
+            // * if it is 'confirmed', then we send an email 'already subscribed'
+            match subscription.status {
+                SubscriptionStatus::PendingConfirmation => {
+                    let token = state
+                        .storage
+                        .get_token_by_subscriber_id(&subscription.id)
+                        .await
+                        .map_err(|err| {
+                            ApiError::new_internal(format!("Cannot create new subscription: {err}"))
+                        })?;
+                    match token {
+                        None => Err(ApiError::new_internal(format!("Expected token"))),
+                        Some(token) => {
+                            let email = create_confirmation_email(
+                                &state.base_url,
+                                &subscription.email,
+                                &token,
+                            );
+
+                            state.email.send_email(email).await.map_err(|err| {
+                                ApiError::new_internal(format!(
+                                    "Cannot create new subscription: {err}"
+                                ))
+                            })?;
+                            let resp = SubscriptionsResp { subscription };
+                            Ok(Json(resp))
+                        }
+                    }
+                }
+                SubscriptionStatus::Confirmed => {
+                    let email = Email {
+                        to: subscription.email.clone(),
+                        subject: "Already Subscribed".to_string(),
+                        html_content: "You are already subscribed".to_string(),
+                        text_content: "You are already subscribed".to_string(),
+                    };
+                    state.email.send_email(email).await.map_err(|err| {
+                        ApiError::new_internal(format!("Cannot create new subscription: {err}"))
+                    })?;
+                    let resp = SubscriptionsResp { subscription };
+                    Ok(Json(resp))
+                }
+            }
+        }
+    }
 }
 
 /// This is a helper function to create an email sent to the subscriber,
@@ -74,7 +132,7 @@ fn create_confirmation_email(url: &ApplicationBaseUrl, to: &SubscriberEmail, tok
 /// information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubscriptionsResp {
-    pub status: String,
+    pub subscription: Subscription,
 }
 
 /// This is the information sent by the user to request a subscription.
@@ -109,7 +167,7 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
-        domain::{NewSubscription, SubscriberEmail},
+        domain::{NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus},
         email_service::MockEmailService,
         routes::subscriptions::SubscriptionRequest,
         server::{AppState, ApplicationBaseUrl},
@@ -162,14 +220,27 @@ mod tests {
 
         let new_subscription = NewSubscription::try_from(request.clone()).unwrap();
 
-        let subscriber_id = Uuid::new_v4();
+        let username = new_subscription.username.clone();
+        let email = new_subscription.email.clone();
+        let email_clone = email.clone();
         let mut storage_mock = MockStorage::new();
         storage_mock
             .expect_create_subscription_and_store_token()
             .withf(move |subscription: &NewSubscription, _token: &str| {
                 subscription == &new_subscription
             })
-            .return_once(move |_, _| Ok(subscriber_id));
+            .return_once(move |_, _| {
+                Ok(Subscription {
+                    id: Uuid::new_v4(),
+                    username,
+                    email,
+                    status: SubscriptionStatus::PendingConfirmation,
+                })
+            });
+        storage_mock
+            .expect_get_subscription_by_email()
+            .withf(move |email: &str| email == email_clone.as_ref())
+            .return_once(|_| Ok(None));
 
         let mut email_mock = MockEmailService::new();
         email_mock.expect_send_email().return_once(|_| Ok(()));
@@ -189,11 +260,6 @@ mod tests {
 
         // Check the response status code.
         assert_eq!(response.status(), StatusCode::OK);
-
-        // Check the response body.
-        // let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        // let body: Value = serde_json::from_slice(&body).unwrap();
-        // assert_eq!(body, json!(&dummy_heroes));
     }
 
     #[tokio::test]
@@ -209,6 +275,9 @@ mod tests {
             username,
             email: email_addr.clone(),
         };
+
+        let new_subscription = NewSubscription::try_from(request.clone()).unwrap();
+        let email_clone = new_subscription.email.clone();
 
         let base_url = format!("http://{}", IPv4().fake::<String>());
         let base_url_clone = base_url.clone();
@@ -237,12 +306,23 @@ mod tests {
             })
             .return_once(|_| Ok(()));
 
-        let subscriber_id = Uuid::new_v4();
         // We also need a storage mock that returns 'Ok(())'
         let mut storage_mock = MockStorage::new();
         storage_mock
             .expect_create_subscription_and_store_token()
-            .return_once(move |_, _| Ok(subscriber_id));
+            .return_once(move |_, _| {
+                Ok(Subscription {
+                    id: Uuid::new_v4(),
+                    username: new_subscription.username,
+                    email: new_subscription.email,
+                    status: SubscriptionStatus::PendingConfirmation,
+                })
+            });
+
+        storage_mock
+            .expect_get_subscription_by_email()
+            .withf(move |email: &str| email == email_clone.as_ref())
+            .return_once(|_| Ok(None));
 
         let state = AppState {
             storage: Arc::new(storage_mock),
@@ -289,6 +369,9 @@ mod tests {
                     source: sqlx::Error::RowNotFound,
                 })
             });
+        storage_mock
+            .expect_get_subscription_by_email()
+            .return_once(|_| Ok(None));
 
         let mut email_mock = MockEmailService::new();
         email_mock.expect_send_email().return_once(|_| Ok(()));

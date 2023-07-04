@@ -76,7 +76,7 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 pub async fn spawn_app() -> TestApp {
     // Set up subscriber for logging, only first time per run.
     // Other times use existing subscriber.
-    Lazy::force(&TRACING);
+    // Lazy::force(&TRACING);
 
     // We are not using a real Email server, so we spawn a new wiremock server,
     // and then use this server's url in our configuration.
