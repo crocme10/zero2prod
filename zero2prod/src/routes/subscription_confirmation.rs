@@ -19,6 +19,7 @@ pub async fn subscriptions_confirmation(
     request: Query<SubscriptionConfirmationRequest>,
 ) -> Result<Json<SubscriptionConfirmationResp>, ApiError> {
     let request = request.0;
+    println!("Got token: {}", request.token);
     let id = state
         .storage
         .get_subscriber_id_by_token(&request.token)
@@ -58,104 +59,96 @@ pub struct SubscriptionConfirmationRequest {
     pub token: String,
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use axum::{
-//         body::Body,
-//         http::{header, Request, StatusCode},
-//         routing::{post, Router},
-//     };
-//     use fake::faker::internet::en::{IPv4, SafeEmail};
-//     use fake::faker::name::en::Name;
-//     // use fake::faker::lorem::en::{Paragraph, Sentence};
-//     use fake::Fake;
-//     use mockall::predicate::*;
-//     use std::sync::Arc;
-//     use tower::ServiceExt;
-//
-//     use crate::{
-//         domain::{NewSubscription, SubscriberEmail},
-//         email_service::MockEmailService,
-//         routes::subscriptions::SubscriptionRequest,
-//         server::{AppState, ApplicationBaseUrl},
-//         storage::{Error as StorageError, MockStorage},
-//     };
-//
-//     use super::*;
-//
-//     /// This is a helper function to build an App with axum.
-//     fn subscription_route() -> Router<AppState> {
-//         Router::new().route("/subscriptions", post(subscriptions))
-//     }
-//
-//     /// This is a helper function to build the content of the request
-//     /// to our subscription endpoint. Essentially, it wraps the content
-//     /// of the subscription request into a html request with the proper header.
-//     fn send_subscription_request(uri: &str, request: SubscriptionRequest) -> Request<Body> {
-//         Request::builder()
-//             .uri(uri)
-//             .header(header::CONTENT_TYPE, "application/json")
-//             .method("POST")
-//             .body(Body::from(
-//                 serde_json::to_string(&request).expect("request"),
-//             ))
-//             .unwrap()
-//     }
-//
-//     /// This is a helper function to extract a url from a text.
-//     /// It assumes that the text contains one and only one url.
-//     fn get_url_link(s: &str) -> String {
-//         let links: Vec<_> = linkify::LinkFinder::new()
-//             .links(s)
-//             .filter(|l| *l.kind() == linkify::LinkKind::Url)
-//             .collect();
-//         assert_eq!(links.len(), 1);
-//         links[0].as_str().to_owned()
-//     }
-//
-//     #[tokio::test]
-//     async fn subscription_confirmation_should_request_subscriber_info() {
-//         // In this test, we use a MockStorage, and we expect that
-//         // the subscription confirmation handler will trigger a call to
-//         // Storage::get_subscription_by_name.
-//
-//         let username = Name().fake::<String>();
-//         let email = SafeEmail().fake::<String>();
-//
-//         let request = SubscriptionRequest { username, email };
-//
-//         let subscription = NewSubscription::try_from(request.clone()).unwrap();
-//
-//         let mut storage_mock = MockStorage::new();
-//         storage_mock
-//             .expect_create_subscription()
-//             .with(eq(subscription))
-//             .return_once(|_| Ok(()));
-//
-//         let mut email_mock = MockEmailService::new();
-//         email_mock.expect_send_email().return_once(|_| Ok(()));
-//
-//         let state = AppState {
-//             storage: Arc::new(storage_mock),
-//             email: Arc::new(email_mock),
-//             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
-//         };
-//
-//         let app = subscription_route().with_state(state);
-//
-//         let response = app
-//             .oneshot(send_subscription_request("/subscriptions", request))
-//             .await
-//             .expect("response");
-//
-//         // Check the response status code.
-//         assert_eq!(response.status(), StatusCode::OK);
-//
-//         // Check the response body.
-//         // let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-//         // let body: Value = serde_json::from_slice(&body).unwrap();
-//         // assert_eq!(body, json!(&dummy_heroes));
-//     }
+#[cfg(test)]
+mod tests {
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+        routing::{post, Router},
+    };
+    use fake::Fake;
+    use mockall::predicate::*;
+    use std::sync::Arc;
+    use tower::ServiceExt;
+
+    use crate::{
+        email_service::MockEmailService,
+        server::{AppState, ApplicationBaseUrl},
+        storage::MockStorage,
+    };
+
+    use super::*;
+
+    /// This is a helper function to build an App with axum.
+    fn subscriptions_confirmation_route() -> Router<AppState> {
+        Router::new().route(
+            "/subscriptions/confirmation",
+            post(subscriptions_confirmation),
+        )
+    }
+
+    /// This is a helper function to build the content of the request
+    /// to our subscription confirmation endpoint. Essentially, it wraps the conten
+    /// of the subscription request into a html request with the proper header.
+    fn send_subscription_confirmation_request(uri: &str, token: Option<String>) -> Request<Body> {
+        let uri = format!(
+            "{}{}",
+            uri,
+            token.map(|t| format!("?token={}", t)).unwrap_or_default()
+        );
+        Request::builder()
+            .uri(uri)
+            .method("POST")
+            .body(Body::empty())
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn subscription_confirmation_should_request_subscriber_info() {
+        // In this test, we use a MockStorage, and we expect that
+        // the subscription confirmation handler will trigger a call to
+        // Storage::get_subscriber_id_by_token, and then use that id to confirm the
+        // subscriber.
+
+        let token = 32.fake::<String>();
+        let mut storage_mock = MockStorage::new();
+        let id = Uuid::new_v4();
+        storage_mock
+            .expect_get_subscriber_id_by_token()
+            .with(eq(token.clone()))
+            .return_once(move |_| Ok(Some(id.clone())));
+        storage_mock
+            .expect_confirm_subscriber_by_id()
+            .with(eq(id))
+            .return_once(|_| Ok(()));
+
+        let email_mock = MockEmailService::new();
+
+        let state = AppState {
+            storage: Arc::new(storage_mock),
+            email: Arc::new(email_mock),
+            base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+        };
+
+        let app = subscriptions_confirmation_route().with_state(state);
+
+        let response = app
+            .oneshot(send_subscription_confirmation_request(
+                "/subscriptions/confirmation",
+                Some(token),
+            ))
+            .await
+            .expect("response");
+
+        // Check the response status code.
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Check the response body.
+        // let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        // let body: Value = serde_json::from_slice(&body).unwrap();
+        // assert_eq!(body, json!(&dummy_heroes));
+    }
+}
 //
 //     #[tokio::test]
 //     async fn subscription_should_send_email_confirmation() {

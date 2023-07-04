@@ -107,9 +107,9 @@ pub async fn spawn_app() -> TestApp {
         .email(settings.email_client.clone())
         .await
         .expect("getting email client")
-        .listener(settings.network.clone())
+        .listener(settings.application.clone())
         .expect("getting listener")
-        .url("http://127.0.0.1".to_string());
+        .url(settings.application.base_url);
 
     // Before building the app, we extract a copy of storage and email.
     let storage = builder.storage.clone().unwrap();

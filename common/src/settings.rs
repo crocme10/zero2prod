@@ -32,10 +32,11 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NetworkSettings {
+pub struct ApplicationSettings {
     pub host: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
+    pub base_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -87,7 +88,7 @@ pub struct EmailClientSettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
-    pub network: NetworkSettings,
+    pub application: ApplicationSettings,
     pub database: DatabaseSettings,
     pub email_client: EmailClientSettings,
     pub mode: String,

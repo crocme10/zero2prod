@@ -15,7 +15,7 @@ use crate::storage::{Error as StorageError, Storage};
 use std::net::TcpListener;
 use zero2prod_common::err_context::{ErrorContext, ErrorContextExt};
 use zero2prod_common::settings::{
-    DatabaseSettings, EmailClientSettings, NetworkSettings, Settings,
+    ApplicationSettings, DatabaseSettings, EmailClientSettings, Settings,
 };
 
 use std::fmt;
@@ -43,7 +43,7 @@ pub struct ApplicationBuilder {
 impl ApplicationBuilder {
     pub async fn new(settings: Settings) -> Result<Self, Error> {
         let Settings {
-            network,
+            application,
             database,
             email_client,
             mode: _,
@@ -53,8 +53,8 @@ impl ApplicationBuilder {
             .await?
             .email(email_client)
             .await?
-            .listener(network.clone())?
-            .url(network.host);
+            .listener(application.clone())?
+            .url(application.base_url);
         Ok(builder)
     }
 
@@ -78,7 +78,7 @@ impl ApplicationBuilder {
         Ok(self)
     }
 
-    pub fn listener(mut self, settings: NetworkSettings) -> Result<Self, Error> {
+    pub fn listener(mut self, settings: ApplicationSettings) -> Result<Self, Error> {
         let listener =
             listen_with_host_port(settings.host.as_str(), settings.port).context(format!(
                 "Could not create listener for {}:{}",

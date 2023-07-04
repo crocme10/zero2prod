@@ -19,8 +19,8 @@ async fn health_check(world: &mut TestWorld) {
     };
     let settings: settings::Settings = opts.try_into().expect("Could not get settings");
     let url = format!(
-        "http://{}:{}/health",
-        settings.network.host, settings.network.port
+        "{}:{}/health",
+        settings.application.base_url, settings.application.port
     );
     let resp = reqwest::get(url).await.expect("response");
     world.resp = Some(resp);
