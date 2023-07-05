@@ -3975,7 +3975,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3995,7 +3995,7 @@ dependencies = [
 
 [[package]]
 name = "zero2prod"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "async-trait",
  "axum",
@@ -4039,7 +4039,7 @@ dependencies = [
 
 [[package]]
 name = "zero2prod-common"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "async-trait",
  "chrono",
