@@ -19,7 +19,6 @@ pub async fn subscriptions_confirmation(
     request: Query<SubscriptionConfirmationRequest>,
 ) -> Result<Json<SubscriptionConfirmationResp>, ApiError> {
     let request = request.0;
-    println!("Got token: {}", request.token);
     let id = state
         .storage
         .get_subscriber_id_by_token(&request.token)
