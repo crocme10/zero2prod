@@ -1,6 +1,19 @@
 # Deployment
 
-## Digital Ocean
+## Digital Ocean Kubernetes
+
+Because we're deploying multiple component to integrate both frontend and backend,
+I decided to change the original DO App Platform deployment, to a more complex one.
+
+Each service is a Docker container:
+
+* **core**: The backend rust application (a REST API)
+* **database**: The postgresql database
+* **web**: The static site
+* **frontend**: An Nginx router.
+
+
+## (historical) Digital Ocean App Platform
 
 The app is deployed on Digital Ocean (DO)'s' "App platform", in a continuous
 delivery setup. This means every time a push (TODO Validated / Tested ?) occurs
