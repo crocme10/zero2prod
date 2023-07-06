@@ -8,6 +8,8 @@ WORKDIR /home
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN USER=root cargo new zero2prod
+RUN USER=root cargo install --locked trunk
+RUN USER=root cargo install cargo-xtask
 
 WORKDIR /home/zero2prod
 
@@ -18,6 +20,7 @@ COPY . .
 # sqlx will instead use the sqlx-data.json from the `cargo sqlx prepare` statement.
 ENV SQLX_OFFLINE true
 
+RUN cargo xtask frontend
 RUN cargo build --release --bin zero2prod
 
 # Extract binary from build cache
@@ -37,6 +40,7 @@ ARG DEBIAN_VERSION
 
 COPY ./config /srv/zero2prod/etc/zero2prod
 COPY ./docker/zero2prod/entrypoint.sh /srv/zero2prod/bin/
+COPY ./dist /srv/zero2prod/var/http
 RUN chmod +x /srv/zero2prod/bin/entrypoint.sh
 RUN mkdir -p /srv/zero2prod/var/log
 COPY --from=builder /home/zero2prod/bin/zero2prod /srv/zero2prod/bin/zero2prod
