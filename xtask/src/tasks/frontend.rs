@@ -11,8 +11,8 @@ pub fn frontend() -> Result<(), anyhow::Error> {
 pub fn build_frontend() -> Result<ExitStatus, anyhow::Error> {
     let test = if check_trunk_exists().is_ok() {
         Command::new("trunk")
-            .current_dir(project_root())
-            .args(["build", "services/zero2prod-frontend/static/index.html", "-d", "./dist"])
+            .current_dir(project_root().join("services").join("zero2prod-frontend"))
+            .args(["build"])
             .status()?
     } else {
         anyhow::bail!("Unable to run trunk build. trunk is not available.");
