@@ -3,11 +3,17 @@
 use axum::{
     routing::{get, post, IntoMakeService, Router},
     Server,
+    http::{Response, StatusCode},
+    body::{boxed, Body},
 };
 use hyper::server::conn::AddrIncoming;
 use std::{fmt, net::TcpListener};
 use std::{fmt::Display, sync::Arc};
 use tower_http::trace::TraceLayer;
+use std::path::PathBuf;
+use tower_http::services::ServeDir;
+use tower::util::ServiceExt;
+use tokio::fs;
 
 use crate::email_service::EmailService;
 use crate::routes::{
@@ -51,6 +57,7 @@ pub fn new(
     storage: Arc<dyn Storage + Send + Sync>,
     email: Arc<dyn EmailService + Send + Sync>,
     base_url: String,
+    static_dir: PathBuf,
 ) -> AppServer {
     // Build app state
     let app_state = AppState {
@@ -69,8 +76,41 @@ pub fn new(
         );
 
     // Create a router that will contain and match all routes for the application
+    // and a fallback service that will serve the static directory
+    tracing::info!("Serving static: {}", static_dir.display());
     let app = Router::new()
         .merge(router_no_session)
+        .fallback_service(get(|req| async move {
+            match ServeDir::new(&static_dir).oneshot(req).await {
+                Ok(res) => {
+                    let status = res.status();
+                    match status {
+                        StatusCode::NOT_FOUND => {
+                            let index_path = PathBuf::from(&static_dir).join("index.html");
+                            let index_content = match fs::read_to_string(index_path).await {
+                                Err(_) => {
+                                    return Response::builder()
+                                        .status(StatusCode::NOT_FOUND)
+                                        .body(boxed(Body::from("index file not found")))
+                                        .unwrap()
+                                }
+                                Ok(index_content) => index_content,
+                            };
+
+                            Response::builder()
+                                .status(StatusCode::OK)
+                                .body(boxed(Body::from(index_content)))
+                                .unwrap()
+                        }
+                        _ => res.map(boxed),
+                    }
+                }
+                Err(err) => Response::builder()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body(boxed(Body::from(format!("error: {err}"))))
+                    .expect("error response"),
+            }
+        }))
         .layer(TraceLayer::new_for_http())
         .with_state(app_state);
 

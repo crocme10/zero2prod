@@ -13,6 +13,7 @@ use crate::postgres::PostgresStorage;
 use crate::server;
 use crate::storage::{Error as StorageError, Storage};
 use std::net::TcpListener;
+use std::path::PathBuf;
 use zero2prod_common::err_context::{ErrorContext, ErrorContextExt};
 use zero2prod_common::settings::{
     ApplicationSettings, DatabaseSettings, EmailClientSettings, Settings,
@@ -38,6 +39,7 @@ pub struct ApplicationBuilder {
     pub email: Option<Arc<dyn EmailService + Send + Sync>>,
     pub listener: Option<TcpListener>,
     pub url: Option<String>,
+    pub static_dir: Option<PathBuf>,
 }
 
 impl ApplicationBuilder {
@@ -54,7 +56,9 @@ impl ApplicationBuilder {
             .email(email_client)
             .await?
             .listener(application.clone())?
-            .url(application.base_url);
+            .url(application.base_url)
+            .static_dir(application.static_dir);
+
         Ok(builder)
     }
 
@@ -93,16 +97,29 @@ impl ApplicationBuilder {
         self
     }
 
+    pub fn static_dir(mut self, static_dir: String) -> Self {
+        let path = PathBuf::from(&static_dir);
+        if path.is_absolute() {
+            self.static_dir = Some(path);
+        } else {
+            let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            root.push(&path);
+            self.static_dir = Some(root);
+        }
+        self
+    }
+
     pub fn build(self) -> Application {
         let ApplicationBuilder {
             storage,
             email,
             listener,
             url,
+            static_dir,
         } = self;
         let listener = listener.unwrap();
         let port = listener.local_addr().unwrap().port();
-        let server = server::new(listener, storage.unwrap(), email.unwrap(), url.unwrap());
+        let server = server::new(listener, storage.unwrap(), email.unwrap(), url.unwrap(), static_dir.unwrap());
         Application { port, server }
     }
 }
