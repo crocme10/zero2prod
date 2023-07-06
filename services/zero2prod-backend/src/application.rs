@@ -106,7 +106,9 @@ impl ApplicationBuilder {
             root.push(&path);
             root
         };
-        let path = path.canonicalize().context("Could not canonicalize static dir".to_string())?;
+        let path = path
+            .canonicalize()
+            .context("Could not canonicalize static dir".to_string())?;
         self.static_dir = Some(path);
         Ok(self)
     }
@@ -121,7 +123,13 @@ impl ApplicationBuilder {
         } = self;
         let listener = listener.unwrap();
         let port = listener.local_addr().unwrap().port();
-        let server = server::new(listener, storage.unwrap(), email.unwrap(), url.unwrap(), static_dir.unwrap());
+        let server = server::new(
+            listener,
+            storage.unwrap(),
+            email.unwrap(),
+            url.unwrap(),
+            static_dir.unwrap(),
+        );
         Application { port, server }
     }
 }

@@ -99,7 +99,9 @@ pub fn check_trunk_exists() -> Result<(), anyhow::Error> {
 
     match status {
         Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
-            anyhow::bail!("Error: 'trunk' is not found on the PATH. Please install it to continue.",);
+            anyhow::bail!(
+                "Error: 'trunk' is not found on the PATH. Please install it to continue.",
+            );
         }
         Err(e) => anyhow::bail!(format!("An unknown error occurred: {}", e)),
         _ => {}
@@ -107,5 +109,3 @@ pub fn check_trunk_exists() -> Result<(), anyhow::Error> {
 
     Ok(())
 }
-
-

@@ -1,13 +1,16 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use crate::pages::page_not_found::PageNotFound;
+use crate::components::backend::Backend;
 use crate::pages::home::Home;
+use crate::pages::page_not_found::PageNotFound;
 
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
     #[at("/")]
     Home,
+    #[at("/api")]
+    Backend,
     #[not_found]
     #[at("/404")]
     NotFound,
@@ -18,6 +21,9 @@ fn switch(routes: Route) -> Html {
     match routes {
         Route::Home => {
             html! { <Home/> }
+        }
+        Route::Backend => {
+            html! { <Backend /> }
         }
         Route::NotFound => {
             html! { <PageNotFound/> }

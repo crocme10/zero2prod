@@ -1,19 +1,19 @@
 /// This module holds the webserver specific details,
 /// in our case all (most?) the axum related code.
 use axum::{
+    body::{boxed, Body},
+    http::{Response, StatusCode},
     routing::{get, post, IntoMakeService, Router},
     Server,
-    http::{Response, StatusCode},
-    body::{boxed, Body},
 };
 use hyper::server::conn::AddrIncoming;
+use std::path::PathBuf;
 use std::{fmt, net::TcpListener};
 use std::{fmt::Display, sync::Arc};
-use tower_http::trace::TraceLayer;
-use std::path::PathBuf;
-use tower_http::services::ServeDir;
-use tower::util::ServiceExt;
 use tokio::fs;
+use tower::util::ServiceExt;
+use tower_http::services::ServeDir;
+use tower_http::trace::TraceLayer;
 
 use crate::email_service::EmailService;
 use crate::routes::{
