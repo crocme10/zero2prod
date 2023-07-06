@@ -57,7 +57,7 @@ impl ApplicationBuilder {
             .await?
             .listener(application.clone())?
             .url(application.base_url)
-            .static_dir(application.static_dir);
+            .static_dir(application.static_dir)?;
 
         Ok(builder)
     }
@@ -97,16 +97,18 @@ impl ApplicationBuilder {
         self
     }
 
-    pub fn static_dir(mut self, static_dir: String) -> Self {
+    pub fn static_dir(mut self, static_dir: String) -> Result<Self, Error> {
         let path = PathBuf::from(&static_dir);
-        if path.is_absolute() {
-            self.static_dir = Some(path);
+        let path = if path.is_absolute() {
+            path
         } else {
             let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             root.push(&path);
-            self.static_dir = Some(root);
-        }
-        self
+            root
+        };
+        let path = path.canonicalize().context("Could not canonicalize static dir".to_string())?;
+        self.static_dir = Some(path);
+        Ok(self)
     }
 
     pub fn build(self) -> Application {
@@ -155,6 +157,10 @@ pub enum Error {
         context: String,
         source: hyper::Error,
     },
+    Path {
+        context: String,
+        source: std::io::Error,
+    },
 }
 
 impl fmt::Display for Error {
@@ -171,6 +177,9 @@ impl fmt::Display for Error {
             }
             Error::Server { context, source } => {
                 write!(fmt, "Application Server Error: {context} | {source}")
+            }
+            Error::Path { context, source } => {
+                write!(fmt, "IO Error: {context} | {source}")
             }
         }
     }
@@ -208,6 +217,15 @@ impl From<ErrorContext<String, EmailError>> for Error {
 impl From<ErrorContext<String, hyper::Error>> for Error {
     fn from(err: ErrorContext<String, hyper::Error>) -> Self {
         Error::Server {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<String, std::io::Error>> for Error {
+    fn from(err: ErrorContext<String, std::io::Error>) -> Self {
+        Error::Path {
             context: err.0,
             source: err.1,
         }
