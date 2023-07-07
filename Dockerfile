@@ -15,11 +15,6 @@ WORKDIR /home/zero2prod
 
 COPY . .
 
-# Set sqlx to offline because we don't have access to
-# the database while compiling in this docker environment.
-# sqlx will instead use the sqlx-data.json from the `cargo sqlx prepare` statement.
-ENV SQLX_OFFLINE true
-
 RUN cargo xtask frontend
 RUN cargo build --release --bin zero2prod
 

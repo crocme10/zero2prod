@@ -44,24 +44,10 @@ pub fn ci() -> Result<(), anyhow::Error> {
         .args(["fmt"])
         .status()?;
 
-    println!("Running `cargo sqlx prepare --check -- --lib`...");
-    // The sqlx-data.json file is expected at the root of the project.
-    // But, for some reason, it seems to be generated from the zero2prod directory.
-    // So we move it to that directory, update it, and then move it back to the
-    // project's root.
-    // TODO This might change with version v0.7.0, with the --workspace argument.
-    // FIXME This is covered in the xtask prepare.
-    let mv_sqlx_data = Command::new("mv")
-        .current_dir(project_root())
-        .args(["sqlx-data.json", "zero2prod/"])
-        .status()?;
+    println!("Running `cargo sqlx prepare --workspace --check -- --lib`...");
     let sqlx_prep = Command::new("cargo")
         .current_dir(project_root().join("zero2prod"))
-        .args(["sqlx", "prepare", "--check", "--", "--lib"])
-        .status()?;
-    let mv_sqlx_data_back = Command::new("mv")
-        .current_dir(project_root())
-        .args(["zero2prod/sqlx-data.json", "."])
+        .args(["sqlx", "prepare", "--check", "--workspace"])
         .status()?;
     print_error_with_status_code("cargo check", check);
     print_error_with_status_code("cargo clippy", clippy);
@@ -70,9 +56,7 @@ pub fn ci() -> Result<(), anyhow::Error> {
     print_error_with_status_code("integration tests", integration_test);
     print_error_with_status_code("cargo deny", audit);
     print_error_with_status_code("cargo fmt", fmt);
-    print_error_with_status_code("mv sqlx-data.json zero2prod/", mv_sqlx_data);
     print_error_with_status_code("cargo sqlx prepare", sqlx_prep);
-    print_error_with_status_code("mv zero2prod/sqlx-data.json .", mv_sqlx_data_back);
 
     println!(
         "CI checks complete. Consider running `cargo xtask coverage`.\

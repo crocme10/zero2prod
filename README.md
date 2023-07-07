@@ -56,8 +56,8 @@ git clone https://github.com/crocme10/zero2prod
 The source for zero2prod uses sqlx, which makes compiles time checks against a
 running database. So we have the choice,
 
-- either use sqlx's offline mode, to use a file in the source, `sqlx-data.json`
-  in place of a running database,
+- either use sqlx's offline mode (requires to run `cargo sqlx prepare` ahead of
+  the compilation)
 - or start the database before compiling the project.
 
 Let's go with the second option. We use
@@ -131,7 +131,6 @@ The server takes two commands:
 
 - **config**: to display the configuration as JSON
 - **run**: to run the server.
-
 
 ```sh
 npx ./target/debug/zero2prod -c ./config run
