@@ -3,14 +3,17 @@ use yew_router::prelude::*;
 
 use crate::components::backend::Backend;
 use crate::pages::home::Home;
+use crate::pages::subscription::Subscription;
 use crate::pages::page_not_found::PageNotFound;
 
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
     #[at("/")]
     Home,
-    #[at("/api")]
-    Backend,
+    #[at("/api/*path")]
+    Backend { path: String },
+    #[at("/subscription")]
+    Subscription,
     #[not_found]
     #[at("/404")]
     NotFound,
@@ -22,8 +25,11 @@ fn switch(routes: Route) -> Html {
         Route::Home => {
             html! { <Home/> }
         }
-        Route::Backend => {
-            html! { <Backend /> }
+        Route::Backend { path }=> {
+            html! { <Backend path={path.clone()}/> }
+        }
+        Route::Subscription => {
+            html! { <Subscription /> }
         }
         Route::NotFound => {
             html! { <PageNotFound/> }
@@ -33,7 +39,7 @@ fn switch(routes: Route) -> Html {
 
 #[function_component(Main)]
 pub fn app() -> Html {
-    //wasm_logger::init(wasm_logger::Config::default());
+    wasm_logger::init(wasm_logger::Config::default());
     html! {
         <BrowserRouter>
             <Switch<Route> render={switch} />

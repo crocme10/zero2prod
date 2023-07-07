@@ -2,8 +2,13 @@ use gloo_net::http::Request;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
+#[derive(Properties, Clone, Eq, PartialEq)]
+pub struct BackendProps {
+    pub path: String
+}
+
 #[function_component(Backend)]
-pub fn zero2prod_server() -> Html {
+pub fn backend( BackendProps { path: _ }: &BackendProps) -> Html {
     let data = use_state(|| None);
 
     // Request `/api/hello` once
