@@ -1,13 +1,11 @@
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::Serialize;
-use zero2prod_common::err_context::ErrorContextExt;
+use common::err_context::ErrorContextExt;
+use common::settings::EmailClientSettings;
 
 use crate::domain::SubscriberEmail;
 use crate::email_service::{Email, EmailService, Error};
-
-// use zero2prod_common::err_context::ErrorContextExt;
-use zero2prod_common::settings::EmailClientSettings;
 
 #[derive(Debug, Clone)]
 pub struct EmailClient {
@@ -97,7 +95,7 @@ mod tests {
     use wiremock::matchers::{any, header, header_exists, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
-    use zero2prod_common::settings::EmailClientSettings;
+    use common::settings::EmailClientSettings;
 
     // Used by wiremock to ensure that our request sent
     // to the email service has all the fields required.

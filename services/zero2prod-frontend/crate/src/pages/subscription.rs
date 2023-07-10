@@ -67,12 +67,12 @@ impl Component for Subscription {
                                         <div class="flex justify-start">
                                             <label class="block text-gray-500 font-bold my-4 flex items-center">
                                                 <input class="leading-loose text-pink-600 top-0" type="checkbox"/>
-                                                <span class="ml-2 text-sm py-2 text-gray-600 text-left">{"Accept the"}
+                                                <span class="ml-2 text-sm py-2 text-gray-600 text-left">{"Accept the "}
                                                       <a href="#"
                                                          class="font-semibold text-black border-b-2 border-gray-200
                                                          hover:border-gray-500">
                                                          {"Terms and Conditions of the site"}
-                                                      </a>{"and"}
+                                                      </a>{" and "}
                                                       <a href="#"
                                                          class="font-semibold text-black border-b-2 border-gray-200
                                                          hover:border-gray-500">
@@ -93,5 +93,9 @@ impl Component for Subscription {
             </div>
         }
     }
+}
+
+pub async fn submit_subscription(username: &str, email: &str) -> Result<SubscriptionResp, JsValue> {
+
 }
 

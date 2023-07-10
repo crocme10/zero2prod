@@ -14,8 +14,8 @@ use crate::server;
 use crate::storage::{Error as StorageError, Storage};
 use std::net::TcpListener;
 use std::path::PathBuf;
-use zero2prod_common::err_context::{ErrorContext, ErrorContextExt};
-use zero2prod_common::settings::{
+use common::err_context::{ErrorContext, ErrorContextExt};
+use common::settings::{
     ApplicationSettings, DatabaseSettings, EmailClientSettings, Settings,
 };
 

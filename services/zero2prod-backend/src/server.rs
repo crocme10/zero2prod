@@ -21,7 +21,7 @@ use crate::routes::{
     subscriptions::subscriptions,
 };
 use crate::storage::Storage;
-use zero2prod_common::err_context::ErrorContext;
+use common::err_context::ErrorContext;
 
 #[derive(Debug)]
 pub enum Error {

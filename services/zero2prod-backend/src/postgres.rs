@@ -6,8 +6,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
-use zero2prod_common::err_context::ErrorContextExt;
-use zero2prod_common::settings::DatabaseSettings;
+use common::err_context::ErrorContextExt;
+use common::settings::DatabaseSettings;
 
 use crate::domain::{
     NewSubscription, SubscriberEmail, SubscriberName, Subscription, SubscriptionStatus,
@@ -283,7 +283,7 @@ mod tests {
     use speculoos::prelude::*;
     use std::path::PathBuf;
     use std::sync::Arc;
-    use zero2prod_common::settings::Settings;
+    use common::settings::Settings;
 
     use crate::{
         domain::NewSubscription,

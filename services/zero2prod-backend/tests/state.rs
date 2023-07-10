@@ -13,7 +13,7 @@ use zero2prod::email_service::EmailService;
 use zero2prod::opts::{Command, Opts};
 use zero2prod::storage::Storage;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
-use zero2prod_common::settings::Settings;
+use common::settings::Settings;
 
 /// The TestWorld contains both the context for every tests
 /// and information that needs to be kept between steps of a

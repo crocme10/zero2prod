@@ -4,8 +4,8 @@ use std::fmt;
 use zero2prod::application::{ApplicationBuilder, Error as ApplicationError};
 use zero2prod::opts::{Command, Error as OptsError, Opts};
 use zero2prod::telemetry;
-use zero2prod_common::err_context::{ErrorContext, ErrorContextExt};
-use zero2prod_common::settings::{Error as SettingsError, Settings};
+use common::err_context::{ErrorContext, ErrorContextExt};
+use common::settings::{Error as SettingsError, Settings};
 
 #[derive(Debug)]
 pub enum Error {

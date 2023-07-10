@@ -3,7 +3,7 @@ use std::fmt;
 use uuid::Uuid;
 
 use crate::domain::{NewSubscription, Subscription};
-use zero2prod_common::err_context::ErrorContext;
+use common::err_context::ErrorContext;
 
 #[derive(Debug)]
 pub enum Error {

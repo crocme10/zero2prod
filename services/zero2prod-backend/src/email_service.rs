@@ -2,7 +2,7 @@
 use crate::domain::SubscriberEmail;
 use async_trait::async_trait;
 use std::fmt;
-use zero2prod_common::err_context::ErrorContext;
+use common::err_context::ErrorContext;
 
 #[cfg(test)]
 use mockall::predicate::*;

@@ -1,8 +1,8 @@
 //use serde::{Deserialize, Serialize};
 use std::{env, fmt, path::PathBuf};
 
-use zero2prod_common::config;
-use zero2prod_common::settings;
+use common::config;
+use common::settings;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");

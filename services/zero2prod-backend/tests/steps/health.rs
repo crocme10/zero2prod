@@ -1,7 +1,7 @@
 use cucumber::when;
 use std::path::PathBuf;
 use zero2prod::opts;
-use zero2prod_common::settings;
+use common::settings;
 
 use crate::state::TestWorld;
 

@@ -3,7 +3,7 @@ use yew_router::prelude::*;
 
 use crate::components::backend::Backend;
 use crate::pages::home::Home;
-use crate::pages::subscription::Subscription;
+use crate::components::subscription::Subscription;
 use crate::pages::page_not_found::PageNotFound;
 
 #[derive(Clone, Routable, PartialEq)]

@@ -1,6 +1,6 @@
 use std::{env, process::Command, thread, time::Duration};
-use zero2prod_common::config::merge_configuration;
-use zero2prod_common::settings::{DatabaseSettings, Settings};
+use common::config::merge_configuration;
+use common::settings::{DatabaseSettings, Settings};
 
 use crate::{check_psql_exists, check_sqlx_exists, project_root};
 
@@ -113,7 +113,7 @@ pub fn migrate_postgres_db() -> Result<(), anyhow::Error> {
         .status();
 
     let migration_status2 = Command::new("sqlx")
-        .current_dir(project_root().join("zero2prod"))
+        .current_dir(project_root().join("services").join("zero2prod-backend"))
         .env("DATABASE_URL", settings.connection_string())
         .args(["migrate", "run"])
         .status();
