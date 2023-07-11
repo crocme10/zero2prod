@@ -101,7 +101,7 @@ where
             serde_json_err.column()
         ))
     } else {
-        ApiError::new_bad_request("Unknown error".to_string())
+        ApiError::new_bad_request(format!("Unknown error {err}"))
     }
 }
 

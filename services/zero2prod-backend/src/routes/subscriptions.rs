@@ -42,11 +42,11 @@ pub async fn subscriptions(
                     ApiError::new_internal(format!("Cannot create new subscription: {err}"))
                 })?;
 
-            let email = create_confirmation_email(&state.base_url, &subscription.email, &token);
+            let _email = create_confirmation_email(&state.base_url, &subscription.email, &token);
 
-            state.email.send_email(email).await.map_err(|err| {
-                ApiError::new_internal(format!("Cannot create new subscription: {err}"))
-            })?;
+            // state.email.send_email(email).await.map_err(|err| {
+            //     ApiError::new_internal(format!("Cannot create new subscription: {err}"))
+            // })?;
 
             let resp = SubscriptionsResp { subscription };
             Ok(Json(resp))
@@ -109,7 +109,7 @@ pub async fn subscriptions(
 /// the url argument is the URL of the zero2prod server, and will be used
 /// as the base for the confirmation link.
 fn create_confirmation_email(url: &ApplicationBaseUrl, to: &SubscriberEmail, token: &str) -> Email {
-    let confirmation_link = format!("{}/subscriptions/confirmation?token={}", url, token);
+    let confirmation_link = format!("{}/api/subscriptions/confirmation?token={}", url, token);
     let html_content = format!(
         r#"Welcome to our newsletter!<br/> Click <a href="{}">here</a> to confirm your subscription"#,
         confirmation_link
@@ -178,7 +178,7 @@ mod tests {
 
     /// This is a helper function to build an App with axum.
     fn subscription_route() -> Router<AppState> {
-        Router::new().route("/subscriptions", post(subscriptions))
+        Router::new().route("/api/subscriptions", post(subscriptions))
     }
 
     /// This is a helper function to build the content of the request
@@ -254,7 +254,7 @@ mod tests {
         let app = subscription_route().with_state(state);
 
         let response = app
-            .oneshot(send_subscription_request("/subscriptions", request))
+            .oneshot(send_subscription_request("/api/subscriptions", request))
             .await
             .expect("response");
 
@@ -298,7 +298,7 @@ mod tests {
                 let confirmation_link = get_url_link(html_content);
                 println!("confirmation link: {confirmation_link}");
                 let confirmation_link_pattern =
-                    format!("{}/subscriptions/confirmation", base_url_clone);
+                    format!("{}/api/subscriptions/confirmation", base_url_clone);
                 if !confirmation_link.starts_with(&confirmation_link_pattern) {
                     return false;
                 }
@@ -333,7 +333,7 @@ mod tests {
         let app = subscription_route().with_state(state);
 
         let response = app
-            .oneshot(send_subscription_request("/subscriptions", request))
+            .oneshot(send_subscription_request("/api/subscriptions", request))
             .await
             .expect("response");
 
@@ -385,7 +385,7 @@ mod tests {
         let app = subscription_route().with_state(state);
 
         let response = app
-            .oneshot(send_subscription_request("/subscriptions", request))
+            .oneshot(send_subscription_request("/api/subscriptions", request))
             .await
             .expect("response");
 
@@ -397,4 +397,34 @@ mod tests {
         // let body: Value = serde_json::from_slice(&body).unwrap();
         // assert_eq!(body, json!(&dummy_heroes));
     }
+
+    #[tokio::test]
+    async fn subscription_should_return_error_if_invalid_data() {
+
+        let username = Name().fake::<String>();
+        let email = SafeEmail().fake::<String>();
+
+        let request = SubscriptionRequest { username, email };
+
+        let storage_mock = MockStorage::new();
+
+        let email_mock = MockEmailService::new();
+
+        let state = AppState {
+            storage: Arc::new(storage_mock),
+            email: Arc::new(email_mock),
+            base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+        };
+
+        let app = subscription_route().with_state(state);
+
+        let response = app
+            .oneshot(send_subscription_request("/api/subscriptions", request))
+            .await
+            .expect("response");
+
+        // Check the response status code.
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
 }

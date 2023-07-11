@@ -44,7 +44,7 @@ tokio = { version = "^1.29.1", features = [
     "time"
   ] }
 tower = "^0.4.13"
-tower-http = { version = "^0.4.1", features = ["trace", "fs"] }
+tower-http = { version = "^0.4.1", features = ["trace", "fs", "cors"] }
 tracing = "^0.1.37"
 tracing-attributes = "^0.1.26"
 tracing-bunyan-formatter = "^0.3.7"

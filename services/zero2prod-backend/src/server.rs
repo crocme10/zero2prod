@@ -14,6 +14,7 @@ use tokio::fs;
 use tower::util::ServiceExt;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
+use tower_http::cors::CorsLayer;
 
 use crate::email_service::EmailService;
 use crate::routes::{
@@ -69,9 +70,9 @@ pub fn new(
     // Routes that need to not have a session applied
     let router_no_session = Router::new()
         .route("/health", get(health))
-        .route("/subscriptions", post(subscriptions))
+        .route("/api/subscriptions", post(subscriptions))
         .route(
-            "/subscriptions/confirmation",
+            "/api/subscriptions/confirmation",
             post(subscriptions_confirmation),
         );
 
@@ -111,6 +112,7 @@ pub fn new(
                     .expect("error response"),
             }
         }))
+        .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
         .with_state(app_state);
 
