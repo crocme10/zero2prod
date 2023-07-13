@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{HtmlInputElement, Request, RequestInit, RequestMode, Response};
@@ -8,41 +9,93 @@ use zero2prod_common::subscriptions::{SubscriptionRequest, SubscriptionsResp};
 use crate::app::Route;
 use crate::components::{FetchError, FetchState};
 
+// HTML / CSS after https://tailwindcomponents.com/component/register-form-with-password-validator-tailwind-css-alpine-js
+
 const SUBSCRIPTION_URL: &str = "http://localhost:8081/api/subscriptions";
 
 async fn submit_subscription(
     url: &'static str,
     request: SubscriptionRequest,
-) -> Result<SubscriptionsResp, FetchError> {
+) -> Result<SubscriptionsResp, Error> {
     let mut opts = RequestInit::new();
     opts.method("POST");
-    let value = serde_json::to_string(&request).unwrap();
-    // let value = serde_wasm_bindgen::to_value(&request)?;
-    opts.body(Some(&JsValue::from_str(&value)));
     //opts.mode(RequestMode::Cors); // FIXME Why Cors ?
 
-    let request = Request::new_with_str_and_init(url, &opts)?;
+    // FIXME Serializing and Deserializing so that the backend
+    // accepts this as JSON. I should just pass the value??
+    let value = serde_json::to_string(&request).unwrap();
+    opts.body(Some(&JsValue::from_str(&value)));
+
+    // let value = serde_wasm_bindgen::to_value(&request)?;
+
+    let request = Request::new_with_str_and_init(url, &opts).map_err(|err| Error {
+        status_code: 400,
+        description: "Could not build a request".to_string(),
+    })?;
     request
         .headers()
-        .set("Accept-Encoding", "gzip, deflate, br")?;
-    request.headers().set("Content-Type", "application/json")?;
-    request.headers().set("Accept", "application/json")?;
+        .set("Accept-Encoding", "gzip, deflate, br")
+        .map_err(|_| Error {
+            status_code: 400,
+            description: "Could not set header".to_string(),
+        })?;
+    request
+        .headers()
+        .set("Content-Type", "application/json")
+        .map_err(|_| Error {
+            status_code: 400,
+            description: "Could not set header".to_string(),
+        })?;
+    request
+        .headers()
+        .set("Accept", "application/json")
+        .map_err(|_| Error {
+            status_code: 400,
+            description: "Could not set header".to_string(),
+        })?;
     gloo_console::log!("Submitting request");
     let window = gloo::utils::window();
-    let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
-    let resp: Response = resp_value.dyn_into().unwrap();
+    let resp_value = JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .map_err(|_| Error {
+            status_code: 400,
+            description: "Could not fetch response".to_string(),
+        })?;
 
-    let value = JsFuture::from(resp.json()?).await?;
+    let resp: Response = resp_value.dyn_into().map_err(|_| Error {
+        status_code: 400,
+        description: "Could not cast response".to_string(),
+    })?;
 
-    let resp = serde_wasm_bindgen::from_value(value)?;
-    Ok(resp)
+    gloo_console::log!("resp");
+    let value = JsFuture::from(resp.json().map_err(|_| Error {
+        status_code: 400,
+        description: "Could not extract json from response".to_string(),
+    })?)
+    .await
+    .map_err(|_| Error {
+        status_code: 400,
+        description: "Could not turn Json to JsValue".to_string(),
+    })?;
+    gloo_console::log!("value");
+
+    let res: SubResp = serde_wasm_bindgen::from_value(value)
+    .map_err(|_| Error {
+        status_code: 400,
+        description: "Could not deserialize response".to_string(),
+    })?;
+    gloo_console::log!("serde_wasm_bindgen");
+
+    match res {
+        SubResp::Success(sub) => Ok(sub),
+        SubResp::Fail(err) => Err(err)
+    }
 }
 
 pub enum Msg {
     SetSubscriptionState(FetchState<SubscriptionsResp>),
     Submit,
     HoverIndex(usize),
-    // Home,
 }
 
 pub struct Subscription {
@@ -165,11 +218,11 @@ impl Component for Subscription {
                                     <label class="block text-gray-500 font-bold my-4 flex items-center">
                                         <input class="leading-loose text-pink-600 top-0" type="checkbox"/>
                                         <span class="ml-2 text-sm py-2 text-gray-600 text-left">{"Accept the "}
-                                              <a href="#"
-                                                 class="font-semibold text-black border-b-2 border-gray-200
+                                              <Link<Route> to={Route::TermsAndConditions}
+                                                 classes="font-semibold text-black border-b-2 border-gray-200
                                                  hover:border-gray-500">
                                                  {"Terms and Conditions of the site"}
-                                              </a>{" and "}
+                                              </Link<Route>>{" and "}
                                               <a href="#"
                                                  class="font-semibold text-black border-b-2 border-gray-200
                                                  hover:border-gray-500">
@@ -179,7 +232,7 @@ impl Component for Subscription {
                                 </div>
                                 <button
                                   onclick={ctx.link().callback(|_| Msg::Submit)}
-                                  class="mt-3 text-lg font-semibold bg-gray-800 w-fulltext-white
+                                  class="mt-3 text-lg font-semibold bg-gray-800 text-white
                                 rounded-lg px-6 py-3 block shadow-xl hover:text-white hover:bg-black">
                                    {"Register"}
                                 </button>
@@ -200,21 +253,57 @@ impl Component for Subscription {
             FetchState::Success(_data) => html! {
             <div class="w-full relative">
                 <div class="md:mt-6">
-                    <div class="text-center font-semibold text-black">
-                        {"Your subscription is pending confirmation"}
+                    <div class="text-center font-semibold text-black text-lg">
+                        {"Your subscription is"}<br/>{"pending confirmation"}
                     </div>
-                    <div class="text-center font-base text-black">
+                    <div class="text-center font-base text-black mt-8">
                         {"You will shortly receive an email ADDRESS with a link you need to follow in order to finalize your subscription"}
                     </div>
-                    <Link<Route> to={Route::Home}
-                      classes="mt-3 text-lg font-semibold bg-gray-800 w-fulltext-white
-                      rounded-lg px-6 py-3 block shadow-xl hover:text-white hover:bg-black">
-                       {"Home"}
-                    </Link<Route>>
+                    <div class="text-center font-base">
+                        <Link<Route> to={Route::Home}
+                          classes="mt-8 text-lg font-semibold bg-gray-800 text-white
+                          rounded-lg px-6 py-3 inline-block shadow-xl hover:text-white hover:bg-black">
+                           {"Home"}
+                        </Link<Route>>
+                    </div>
                 </div>
             </div>
             },
-            FetchState::Failed(err) => html! { err },
+            FetchState::Failed(err) => html! { 
+            <div class="w-full relative">
+                <div class="md:mt-6">
+                    <div class="text-center font-semibold text-black">
+                        {"An error occured while processing your subscription"}
+                    </div>
+                    <div class="text-center font-base text-black">
+                    {err.description.clone()}
+                    </div>
+                    <div class="text-center font-base">
+                        <Link<Route> to={Route::Home}
+                          classes="mt-3 text-lg font-semibold bg-gray-800 text-white
+                          rounded-lg px-6 py-3 block shadow-xl hover:text-white hover:bg-black">
+                           {"Home"}
+                        </Link<Route>>
+                    </div>
+                </div>
+            </div>
+            },
         }
     }
+}
+
+// FIXME This is common code, should be moved to zero2prod-common
+#[derive(Deserialize, Serialize, Debug)]
+pub struct Error {
+    pub status_code: u16,
+    pub description: String,
+}
+
+// This is an enum to properly catch a backend
+// response.
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(untagged)]
+pub enum SubResp {
+    Fail(Error),
+    Success(SubscriptionsResp),
 }

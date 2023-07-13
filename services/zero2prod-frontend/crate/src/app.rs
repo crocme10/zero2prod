@@ -4,7 +4,10 @@ use yew_router::prelude::*;
 use crate::components::backend::Backend;
 use crate::components::subscription::Subscription;
 use crate::pages::home::Home;
-use crate::pages::page_not_found::PageNotFound;
+use crate::pages::{
+    terms_and_conditions::TermsAndConditions,
+    page_not_found::PageNotFound
+};
 
 #[derive(Clone, Routable, PartialEq)]
 pub enum Route {
@@ -14,6 +17,8 @@ pub enum Route {
     Backend { path: String },
     #[at("/subscription")]
     Subscription,
+    #[at("/terms_and_conditions")]
+    TermsAndConditions,
     #[not_found]
     #[at("/404")]
     NotFound,
@@ -30,6 +35,9 @@ fn switch(routes: Route) -> Html {
         }
         Route::Subscription => {
             html! { <Subscription /> }
+        }
+        Route::TermsAndConditions => {
+            html! { <TermsAndConditions /> }
         }
         Route::NotFound => {
             html! { <PageNotFound/> }

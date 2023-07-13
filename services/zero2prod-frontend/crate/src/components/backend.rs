@@ -1,3 +1,4 @@
+// FIXME Replace gloo_net with web-sys
 use gloo_net::http::Request;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;

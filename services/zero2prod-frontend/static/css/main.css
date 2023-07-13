@@ -689,6 +689,10 @@ video {
   display:block
 }
 
+.inline-block{
+  display:inline-block
+}
+
 .flex{
   display:flex
 }
@@ -861,6 +865,11 @@ video {
 .text-pink-600{
   --tw-text-opacity:1;
   color:rgb(219 39 119 / var(--tw-text-opacity))
+}
+
+.text-white{
+  --tw-text-opacity:1;
+  color:rgb(255 255 255 / var(--tw-text-opacity))
 }
 
 .text-slate-900{

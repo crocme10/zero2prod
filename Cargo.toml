@@ -1,4 +1,11 @@
 [workspace]
 default-members = ["services/zero2prod-backend", "common"]
-members = ["services/zero2prod-backend", "xtask", "common", "services/zero2prod-common", "services/zero2prod-frontend/crate"]
+members = [
+  "services/zero2prod-backend",
+  "xtask",
+  "common",
+  "services/zero2prod-common",
+  "services/zero2prod-frontend/crate",
+  "services/zero2prod-fakeemail"
+]
 resolver = "2"

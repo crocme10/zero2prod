@@ -5,6 +5,7 @@ use wasm_bindgen::JsValue;
 pub mod backend;
 pub mod subscription;
 
+use subscription::Error as SubError;
 // From yew examples futures
 
 #[derive(Debug, Clone, PartialEq)]
@@ -36,5 +37,5 @@ pub enum FetchState<T> {
     NotFetching,
     Fetching,
     Success(T),
-    Failed(FetchError),
+    Failed(SubError),
 }
