@@ -45,7 +45,7 @@ pub async fn subscriptions(
             let _email = create_confirmation_email(&state.base_url, &subscription.email, &token);
 
             // state.email.send_email(email).await.map_err(|err| {
-            //     ApiError::new_internal(format!("Cannot create new subscription: {err}"))
+            //     ApiError::new_internal(format!("Cannot send confirmation email: {err}"))
             // })?;
 
             let resp = SubscriptionsResp { subscription };
@@ -400,7 +400,6 @@ mod tests {
 
     #[tokio::test]
     async fn subscription_should_return_error_if_invalid_data() {
-
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();
 
@@ -426,5 +425,4 @@ mod tests {
         // Check the response status code.
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
-
 }

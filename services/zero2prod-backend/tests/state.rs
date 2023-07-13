@@ -8,12 +8,12 @@ use std::sync::Arc;
 use tokio::task::JoinHandle;
 use wiremock::MockServer;
 
+use common::settings::Settings;
 use zero2prod::application::{Application, Error};
 use zero2prod::email_service::EmailService;
 use zero2prod::opts::{Command, Opts};
 use zero2prod::storage::Storage;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
-use common::settings::Settings;
 
 /// The TestWorld contains both the context for every tests
 /// and information that needs to be kept between steps of a

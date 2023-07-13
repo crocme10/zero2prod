@@ -1,8 +1,8 @@
 use async_trait::async_trait;
-use reqwest::Client;
-use serde::Serialize;
 use common::err_context::ErrorContextExt;
 use common::settings::EmailClientSettings;
+use reqwest::Client;
+use serde::Serialize;
 
 use crate::domain::SubscriberEmail;
 use crate::email_service::{Email, EmailService, Error};

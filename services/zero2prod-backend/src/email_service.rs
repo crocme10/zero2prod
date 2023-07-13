@@ -1,8 +1,8 @@
 /// Interface to a service for sending email.
 use crate::domain::SubscriberEmail;
 use async_trait::async_trait;
-use std::fmt;
 use common::err_context::ErrorContext;
+use std::fmt;
 
 #[cfg(test)]
 use mockall::predicate::*;

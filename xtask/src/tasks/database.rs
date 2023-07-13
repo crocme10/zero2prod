@@ -1,6 +1,6 @@
-use std::{env, process::Command, thread, time::Duration};
 use common::config::merge_configuration;
 use common::settings::{DatabaseSettings, Settings};
+use std::{env, process::Command, thread, time::Duration};
 
 use crate::{check_psql_exists, check_sqlx_exists, project_root};
 

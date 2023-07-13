@@ -12,9 +12,9 @@ use std::{fmt, net::TcpListener};
 use std::{fmt::Display, sync::Arc};
 use tokio::fs;
 use tower::util::ServiceExt;
+use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
-use tower_http::cors::CorsLayer;
 
 use crate::email_service::EmailService;
 use crate::routes::{

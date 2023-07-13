@@ -12,12 +12,10 @@ use crate::listener::{listen_with_host_port, Error as ListenerError};
 use crate::postgres::PostgresStorage;
 use crate::server;
 use crate::storage::{Error as StorageError, Storage};
+use common::err_context::{ErrorContext, ErrorContextExt};
+use common::settings::{ApplicationSettings, DatabaseSettings, EmailClientSettings, Settings};
 use std::net::TcpListener;
 use std::path::PathBuf;
-use common::err_context::{ErrorContext, ErrorContextExt};
-use common::settings::{
-    ApplicationSettings, DatabaseSettings, EmailClientSettings, Settings,
-};
 
 use std::fmt;
 use std::sync::Arc;

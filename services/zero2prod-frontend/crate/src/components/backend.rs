@@ -4,11 +4,11 @@ use yew::prelude::*;
 
 #[derive(Properties, Clone, Eq, PartialEq)]
 pub struct BackendProps {
-    pub path: String
+    pub path: String,
 }
 
 #[function_component(Backend)]
-pub fn backend( BackendProps { path: _ }: &BackendProps) -> Html {
+pub fn backend(BackendProps { path: _ }: &BackendProps) -> Html {
     let data = use_state(|| None);
 
     // Request `/api/hello` once

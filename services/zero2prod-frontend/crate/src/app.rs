@@ -2,12 +2,12 @@ use yew::prelude::*;
 use yew_router::prelude::*;
 
 use crate::components::backend::Backend;
-use crate::pages::home::Home;
 use crate::components::subscription::Subscription;
+use crate::pages::home::Home;
 use crate::pages::page_not_found::PageNotFound;
 
 #[derive(Clone, Routable, PartialEq)]
-enum Route {
+pub enum Route {
     #[at("/")]
     Home,
     #[at("/api/*path")]
@@ -25,7 +25,7 @@ fn switch(routes: Route) -> Html {
         Route::Home => {
             html! { <Home/> }
         }
-        Route::Backend { path }=> {
+        Route::Backend { path } => {
             html! { <Backend path={path.clone()}/> }
         }
         Route::Subscription => {
@@ -41,8 +41,14 @@ fn switch(routes: Route) -> Html {
 pub fn app() -> Html {
     wasm_logger::init(wasm_logger::Config::default());
     html! {
-        <BrowserRouter>
-            <Switch<Route> render={switch} />
-        </BrowserRouter>
+        <div class="container max-w-full mx-auto md:py-24 px-6">
+            <div class="max-w-sm mx-auto px-6">
+                <div class="relative flex flex-wrap">
+                    <BrowserRouter>
+                        <Switch<Route> render={switch} />
+                    </BrowserRouter>
+                </div>
+            </div>
+        </div>
     }
 }

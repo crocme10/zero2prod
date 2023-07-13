@@ -1,13 +1,13 @@
 use async_trait::async_trait;
 use chrono::Utc;
+use common::err_context::ErrorContextExt;
+use common::settings::DatabaseSettings;
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
-use common::err_context::ErrorContextExt;
-use common::settings::DatabaseSettings;
 
 use crate::domain::{
     NewSubscription, SubscriberEmail, SubscriberName, Subscription, SubscriptionStatus,
@@ -277,13 +277,13 @@ impl Storage for PostgresStorage {
 
 #[cfg(test)]
 mod tests {
+    use common::settings::Settings;
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::name::en::Name;
     use fake::Fake;
     use speculoos::prelude::*;
     use std::path::PathBuf;
     use std::sync::Arc;
-    use common::settings::Settings;
 
     use crate::{
         domain::NewSubscription,

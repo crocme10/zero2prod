@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use uuid::Uuid;
 
 /// This is what we return to the user in response to the subscription request.

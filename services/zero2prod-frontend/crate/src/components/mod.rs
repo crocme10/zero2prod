@@ -36,5 +36,5 @@ pub enum FetchState<T> {
     NotFetching,
     Fetching,
     Success(T),
-    Failed(FetchError)
+    Failed(FetchError),
 }
