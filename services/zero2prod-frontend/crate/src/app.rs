@@ -1,8 +1,11 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use crate::components::backend::Backend;
-use crate::components::subscription::Subscription;
+use crate::components::{
+    backend::Backend,
+    subscription::Subscription,
+    confirmation::Confirmation
+};
 use crate::pages::home::Home;
 use crate::pages::{
     terms_and_conditions::TermsAndConditions,
@@ -17,6 +20,8 @@ pub enum Route {
     Backend { path: String },
     #[at("/subscription")]
     Subscription,
+    #[at("/subscription/confirmation")]
+    Confirmation,
     #[at("/terms_and_conditions")]
     TermsAndConditions,
     #[not_found]
@@ -35,6 +40,9 @@ fn switch(routes: Route) -> Html {
         }
         Route::Subscription => {
             html! { <Subscription /> }
+        }
+        Route::Confirmation => {
+            html! { <Confirmation /> }
         }
         Route::TermsAndConditions => {
             html! { <TermsAndConditions /> }

@@ -48,6 +48,7 @@ pub async fn subscriptions_confirmation(
 /// This is what we return to the user in response to the subscription request.
 /// Currently this is just a placeholder, and it does not return any useful
 /// information.
+/// FIXME Share code with frontend
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubscriptionConfirmationResp {
     pub status: String,

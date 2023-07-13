@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{HtmlInputElement, Request, RequestInit, RequestMode, Response};
+use web_sys::{HtmlInputElement, Request, RequestInit, Response};
 use yew::{html, Component, Context, Html, NodeRef};
 use yew_router::prelude::*;
 use zero2prod_common::subscriptions::{SubscriptionRequest, SubscriptionsResp};
 
 use crate::app::Route;
-use crate::components::{FetchError, FetchState};
+use crate::components::{Error, FetchState};
 
 // HTML / CSS after https://tailwindcomponents.com/component/register-form-with-password-validator-tailwind-css-alpine-js
 
@@ -28,7 +28,7 @@ async fn submit_subscription(
 
     // let value = serde_wasm_bindgen::to_value(&request)?;
 
-    let request = Request::new_with_str_and_init(url, &opts).map_err(|err| Error {
+    let request = Request::new_with_str_and_init(url, &opts).map_err(|_| Error {
         status_code: 400,
         description: "Could not build a request".to_string(),
     })?;
@@ -79,8 +79,7 @@ async fn submit_subscription(
     })?;
     gloo_console::log!("value");
 
-    let res: SubResp = serde_wasm_bindgen::from_value(value)
-    .map_err(|_| Error {
+    let res: SubResp = serde_wasm_bindgen::from_value(value).map_err(|_| Error {
         status_code: 400,
         description: "Could not deserialize response".to_string(),
     })?;
@@ -88,7 +87,7 @@ async fn submit_subscription(
 
     match res {
         SubResp::Success(sub) => Ok(sub),
-        SubResp::Fail(err) => Err(err)
+        SubResp::Fail(err) => Err(err),
     }
 }
 
@@ -269,7 +268,7 @@ impl Component for Subscription {
                 </div>
             </div>
             },
-            FetchState::Failed(err) => html! { 
+            FetchState::Failed(err) => html! {
             <div class="w-full relative">
                 <div class="md:mt-6">
                     <div class="text-center font-semibold text-black">
@@ -290,13 +289,6 @@ impl Component for Subscription {
             },
         }
     }
-}
-
-// FIXME This is common code, should be moved to zero2prod-common
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Error {
-    pub status_code: u16,
-    pub description: String,
 }
 
 // This is an enum to properly catch a backend
