@@ -15,7 +15,7 @@ async fn verify_confirmation_link(world: &mut state::TestWorld) {
     // FIXME Other features to assert
     assert_eq!(
         confirmation_links.html.path(),
-        "/subscriptions/confirmation"
+        "/api/subscriptions/confirmation"
     );
     assert!(confirmation_links
         .html

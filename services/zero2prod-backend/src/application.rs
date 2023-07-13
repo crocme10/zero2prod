@@ -119,14 +119,14 @@ impl ApplicationBuilder {
             url,
             static_dir,
         } = self;
-        let listener = listener.unwrap();
-        let port = listener.local_addr().unwrap().port();
+        let listener = listener.expect("listener");
+        let port = listener.local_addr().expect("listener local addr").port();
         let server = server::new(
             listener,
-            storage.unwrap(),
-            email.unwrap(),
-            url.unwrap(),
-            static_dir.unwrap(),
+            storage.expect("storage"),
+            email.expect("email"),
+            url.expect("url"),
+            static_dir.expect("static dir"),
         );
         Application { port, server }
     }

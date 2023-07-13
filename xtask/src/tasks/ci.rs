@@ -11,19 +11,19 @@ pub fn ci() -> Result<(), anyhow::Error> {
     println!("Running `cargo check`...");
     let check = Command::new("cargo")
         .current_dir(project_root())
-        .args(["check", "-p", "zero2prod"])
+        .args(["check", "--all"])
         .status()?;
 
     println!("Running `cargo clippy`...");
     let clippy = Command::new("cargo")
         .current_dir(project_root())
-        .args(["clippy", "-p", "zero2prod"])
+        .args(["clippy", "--all"])
         .status()?;
 
     println!("Running `cargo build`...");
     let build = Command::new("cargo")
         .current_dir(project_root())
-        .args(["build", "-p", "zero2prod"])
+        .args(["build", "--all"])
         .status()?;
 
     println!("Running unit tests...");
@@ -46,9 +46,11 @@ pub fn ci() -> Result<(), anyhow::Error> {
 
     println!("Running `cargo sqlx prepare --workspace --check -- --lib`...");
     let sqlx_prep = Command::new("cargo")
-        .current_dir(project_root().join("zero2prod"))
+        .current_dir(project_root())
+        // .env("DATABASE_URL", settings.connection_string())
         .args(["sqlx", "prepare", "--check", "--workspace"])
         .status()?;
+
     print_error_with_status_code("cargo check", check);
     print_error_with_status_code("cargo clippy", clippy);
     print_error_with_status_code("cargo build", build);

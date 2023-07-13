@@ -12,6 +12,7 @@ async fn health_check(world: &mut TestWorld) {
     let opts = opts::Opts {
         config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("..")
+            .join("..")
             .join("config"),
         run_mode: Some("testing".to_string()),
         settings: vec![],
@@ -19,7 +20,7 @@ async fn health_check(world: &mut TestWorld) {
     };
     let settings: settings::Settings = opts.try_into().expect("Could not get settings");
     let url = format!(
-        "{}:{}/health",
+        "{}:{}/api/health",
         settings.application.base_url, settings.application.port
     );
     let resp = reqwest::get(url).await.expect("response");

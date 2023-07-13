@@ -300,6 +300,7 @@ mod tests {
         let opts = Opts {
             config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("..")
+                .join("..")
                 .join("config"),
             run_mode: Some("testing".to_string()),
             settings: vec![],
@@ -342,6 +343,7 @@ mod tests {
         // retrieve the subscriber id given the token.
         let opts = Opts {
             config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("..")
                 .join("..")
                 .join("config"),
             run_mode: Some("testing".to_string()),
@@ -386,6 +388,7 @@ mod tests {
         // which should be deleted from the subscription_token table.
         let opts = Opts {
             config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("..")
                 .join("..")
                 .join("config"),
             run_mode: Some("testing".to_string()),

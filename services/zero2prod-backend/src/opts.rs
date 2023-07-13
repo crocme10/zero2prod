@@ -102,6 +102,7 @@ mod tests {
         let opts = Opts {
             config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("..")
+                .join("..")
                 .join("config"),
             run_mode: None,
             settings: vec![],

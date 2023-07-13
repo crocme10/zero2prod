@@ -78,6 +78,7 @@ pub async fn spawn_app() -> TestApp {
     // Other times use existing subscriber.
     // Lazy::force(&TRACING);
 
+    tracing::info!("Spawning new app");
     // We are not using a real Email server, so we spawn a new wiremock server,
     // and then use this server's url in our configuration.
     let email_server = MockServer::start().await;
@@ -90,6 +91,7 @@ pub async fn spawn_app() -> TestApp {
     // Now build the command line arguments
     let opts = Opts {
         config_dir: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
             .join("..")
             .join("config"),
         run_mode: Some("testing".to_string()),
@@ -109,11 +111,17 @@ pub async fn spawn_app() -> TestApp {
         .expect("getting email client")
         .listener(settings.application.clone())
         .expect("getting listener")
-        .url(settings.application.base_url.clone());
+        .url(settings.application.base_url.clone())
+        .static_dir(settings.application.static_dir.clone())
+        .expect("getting static dir");
+
+    tracing::info!("Builder success");
 
     // Before building the app, we extract a copy of storage and email.
     let storage = builder.storage.clone().unwrap();
     let email_client = builder.email.clone().unwrap();
+
+    tracing::info!("storage and email success");
 
     // Now build the app, and launch it.
     let app = builder.build();
@@ -124,7 +132,9 @@ pub async fn spawn_app() -> TestApp {
     let api_client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .unwrap();
+        .expect("api client build");
+
+    tracing::info!("api_client success");
 
     TestApp {
         address,
@@ -170,7 +180,7 @@ impl TestApp {
 
     /// Send a post request to the subscriptions endpoint.
     pub async fn post_subscriptions(&self, map: HashMap<&str, String>) -> reqwest::Response {
-        let url = format!("{}/subscriptions", self.address);
+        let url = format!("{}/api/subscriptions", self.address);
         self.api_client
             .post(url)
             .json(&map)
