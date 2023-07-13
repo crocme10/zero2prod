@@ -3,6 +3,7 @@ use std::env;
 use xtask::tasks::ci::ci;
 use xtask::tasks::coverage::coverage;
 use xtask::tasks::database::{migrate_postgres_db, postgres_db, sqlx_prepare};
+use xtask::tasks::frontend::frontend;
 
 fn main() {
     if let Err(e) = try_main() {
@@ -16,6 +17,7 @@ fn try_main() -> Result<(), anyhow::Error> {
     match task.as_deref() {
         Some("ci") => ci(),
         Some("coverage") => coverage(),
+        Some("frontend") => frontend(),
         // Some("db") => db_command(),
         // Some("dist") => dist(),
         Some("migrate") => migrate_postgres_db(),

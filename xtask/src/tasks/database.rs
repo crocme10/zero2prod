@@ -1,6 +1,6 @@
+use common::config::merge_configuration;
+use common::settings::{DatabaseSettings, Settings};
 use std::{env, process::Command, thread, time::Duration};
-use zero2prod_common::config::merge_configuration;
-use zero2prod_common::settings::{DatabaseSettings, Settings};
 
 use crate::{check_psql_exists, check_sqlx_exists, project_root};
 
@@ -17,18 +17,13 @@ pub fn sqlx_prepare() -> Result<(), anyhow::Error> {
     let settings = database_settings();
 
     let sqlx_prepare = Command::new("cargo")
-        .current_dir(project_root().join("zero2prod"))
-        .env("DATABASE_URL", settings.connection_string())
-        .args(["sqlx", "prepare"])
-        .status();
-
-    let mv_sqlx_data = Command::new("mv")
         .current_dir(project_root())
-        .args(["zero2prod/sqlx-data.json", "."])
+        .env("DATABASE_URL", settings.connection_string())
+        .args(["sqlx", "prepare", "--workspace"])
         .status();
 
-    if sqlx_prepare.is_err() || mv_sqlx_data.is_err() {
-        anyhow::bail!("there was a problem running preparing sqlx-data.json");
+    if sqlx_prepare.is_err() {
+        anyhow::bail!("there was a problem preparing sqlx for offline usage");
     }
 
     Ok(())
@@ -118,7 +113,7 @@ pub fn migrate_postgres_db() -> Result<(), anyhow::Error> {
         .status();
 
     let migration_status2 = Command::new("sqlx")
-        .current_dir(project_root().join("zero2prod"))
+        .current_dir(project_root().join("services").join("zero2prod-backend"))
         .env("DATABASE_URL", settings.connection_string())
         .args(["migrate", "run"])
         .status();

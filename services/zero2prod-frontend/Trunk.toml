@@ -1,0 +1,11 @@
+[build]
+target = "static/index.html"
+dist = "../../dist"
+
+[[hooks]]
+stage = "pre_build"
+command = "tailwindcss"
+command_arguments = ["-i", "static/css/tailwind.css", "-o", "static/css/main.css"]
+
+[[proxy]]
+backend = "http://[::1]:8081/api/"
