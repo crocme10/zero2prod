@@ -51,8 +51,6 @@ Clone the repository:
 git clone https://github.com/crocme10/zero2prod
 ```
 
-### Compile from Source
-
 The source for zero2prod uses sqlx, which makes compiles time checks against a
 running database. So we have the choice,
 
@@ -123,9 +121,9 @@ is found.
 This configuration can be overriden with local configuration files, and with
 environment variables.
 
-Environment variables use '**' to separate sections, and ZERO2PROD for the
-prefix. So to modify the database's name, which is the database.database_name
-key, we should set ZERO2PROD**DATABASE\_\_DATABASE_NAME=newsletter
+Environment variables use `__` to separate sections, and ZERO2PROD for the
+prefix. So to modify the database's name, which is in the database section,
+we should set `ZERO2PROD\_\_DATABASE\_\_DATABASE_NAME=newsletter`
 
 The server takes two commands:
 
@@ -133,17 +131,17 @@ The server takes two commands:
 - **run**: to run the server.
 
 ```sh
-npx ./target/debug/zero2prod -c ./config run
+./target/debug/zero2prod -c ./config run
+```
+
+If you want to modify configuration, you can easily do that on the command line:
+
+```sh
+./target/debug/zero2prod -c ./config -s database.require_ssl=false -s application.port=8082 run
 ```
 
 ```sh
 curl --header "Content-Type: application/json" --request POST --data '{"username": "alice", "email": "alice@acme.inc"}' http://localhost:8082/subscriptions
-```
-
-In another terminal, you run
-
-```sh
-cargo leptos watch
 ```
 
 ## Development setup
@@ -163,12 +161,31 @@ cargo xtask ci
 
 ```
 
+## File Organization
+
+
+zero2prod/
+├─ services/
+│  ├─ zero2prod_backend/           backend server
+│  ├─ zero2prod_frontend/          frontend wasm
+│  ├─ zero2prod_common/            structures shared by backend and frontend
+│  ├─ zero2prod_fakeemail/         simple server to mock external email service.
+├─ config/                         configuration
+├─ docker/                         Dockerfiles and entrypoints
+├─ documentation/                  Additional documentation
+├─ common/                         code shared between xtask and services
+├─ xtask/                          tasks implementation.
+├─ dev.sh/                         script to start services 
+├─ spec.yaml/                      digital ocean deployment
+
 ## Release History
+
+- 0.0.4
 
 - 0.0.1
   - Work in progress
 
-## Meta
+## License
 
 Distributed under the MIT license. See `LICENSE` for more information.
 

@@ -1,10 +1,10 @@
-use axum::{response::IntoResponse, routing::post, Router, extract::Json};
+use axum::{extract::Json, response::IntoResponse, routing::post, Router};
 use clap::Parser;
+use serde::{Deserialize, Serialize};
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 use std::str::FromStr;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
-use serde::{Serialize, Deserialize};
 
 // Setup the command line interface with clap.
 #[derive(Parser, Debug)]
@@ -57,7 +57,12 @@ async fn main() {
 
 async fn email(Json(payload): Json<SendEmailRequest>) -> impl IntoResponse {
     let link = get_url_link(&payload.html_content);
-    log::info!("Sending an email from {} to {}, including a link {}", payload.from, payload.to, link);
+    log::info!(
+        "Sending an email from {} to {}, including a link {}",
+        payload.from,
+        payload.to,
+        link
+    );
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -78,5 +83,3 @@ fn get_url_link(s: &str) -> String {
     assert_eq!(links.len(), 1);
     links[0].as_str().to_owned()
 }
-
-

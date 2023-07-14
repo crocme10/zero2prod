@@ -1,6 +1,6 @@
 [package]
 name = "common"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 license = "MIT"
 readme = "README.md"
@@ -14,13 +14,13 @@ authors = [
 
 
 [dependencies]
-async-trait =  "^0.1.70"
+async-trait =  "^0.1.71"
 chrono = { version = "^0.4.26", features = [ "serde" ] }
-clap = { version = "^4.3.10", features = [ "derive" ] }
+clap = { version = "^4.3.11", features = [ "derive" ] }
 config = "^0.13.3"
-serde = { version = "^1.0.166", features = [ "derive" ] }
+serde = { version = "^1.0.171", features = [ "derive" ] }
 serde-aux = "^4.2.0"
-serde_json = "^1.0.100"
+serde_json = "^1.0.102"
 sqlx = { version = "^0.7.0", default-features= false, features = [
     "postgres",
     "runtime-tokio-rustls",

@@ -7,7 +7,7 @@ use yew_router::prelude::*;
 use zero2prod_common::subscriptions::{SubscriptionRequest, SubscriptionsResp};
 
 use crate::app::Route;
-use crate::components::{Error, FetchState};
+use crate::components::{FetchError, FetchState};
 
 // HTML / CSS after https://tailwindcomponents.com/component/register-form-with-password-validator-tailwind-css-alpine-js
 
@@ -16,40 +16,41 @@ const SUBSCRIPTION_URL: &str = "http://localhost:8081/api/subscriptions";
 async fn submit_subscription(
     url: &'static str,
     request: SubscriptionRequest,
-) -> Result<SubscriptionsResp, Error> {
+) -> Result<SubscriptionsResp, FetchError> {
     let mut opts = RequestInit::new();
     opts.method("POST");
     //opts.mode(RequestMode::Cors); // FIXME Why Cors ?
 
     // FIXME Serializing and Deserializing so that the backend
     // accepts this as JSON. I should just pass the value??
+    // FIXME Too much error code, should maybe use a context.
     let value = serde_json::to_string(&request).unwrap();
     opts.body(Some(&JsValue::from_str(&value)));
 
     // let value = serde_wasm_bindgen::to_value(&request)?;
 
-    let request = Request::new_with_str_and_init(url, &opts).map_err(|_| Error {
+    let request = Request::new_with_str_and_init(url, &opts).map_err(|_| FetchError {
         status_code: 400,
         description: "Could not build a request".to_string(),
     })?;
     request
         .headers()
         .set("Accept-Encoding", "gzip, deflate, br")
-        .map_err(|_| Error {
+        .map_err(|_| FetchError {
             status_code: 400,
             description: "Could not set header".to_string(),
         })?;
     request
         .headers()
         .set("Content-Type", "application/json")
-        .map_err(|_| Error {
+        .map_err(|_| FetchError {
             status_code: 400,
             description: "Could not set header".to_string(),
         })?;
     request
         .headers()
         .set("Accept", "application/json")
-        .map_err(|_| Error {
+        .map_err(|_| FetchError {
             status_code: 400,
             description: "Could not set header".to_string(),
         })?;
@@ -57,29 +58,29 @@ async fn submit_subscription(
     let window = gloo::utils::window();
     let resp_value = JsFuture::from(window.fetch_with_request(&request))
         .await
-        .map_err(|_| Error {
+        .map_err(|_| FetchError {
             status_code: 400,
             description: "Could not fetch response".to_string(),
         })?;
 
-    let resp: Response = resp_value.dyn_into().map_err(|_| Error {
+    let resp: Response = resp_value.dyn_into().map_err(|_| FetchError {
         status_code: 400,
         description: "Could not cast response".to_string(),
     })?;
 
     gloo_console::log!("resp");
-    let value = JsFuture::from(resp.json().map_err(|_| Error {
+    let value = JsFuture::from(resp.json().map_err(|_| FetchError {
         status_code: 400,
         description: "Could not extract json from response".to_string(),
     })?)
     .await
-    .map_err(|_| Error {
+    .map_err(|_| FetchError {
         status_code: 400,
         description: "Could not turn Json to JsValue".to_string(),
     })?;
     gloo_console::log!("value");
 
-    let res: SubResp = serde_wasm_bindgen::from_value(value).map_err(|_| Error {
+    let res: SubResp = serde_wasm_bindgen::from_value(value).map_err(|_| FetchError {
         status_code: 400,
         description: "Could not deserialize response".to_string(),
     })?;
@@ -296,6 +297,6 @@ impl Component for Subscription {
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(untagged)]
 pub enum SubResp {
-    Fail(Error),
+    Fail(FetchError),
     Success(SubscriptionsResp),
 }

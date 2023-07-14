@@ -2,7 +2,7 @@ use yew::{function_component, html, Html};
 
 #[function_component]
 pub fn TermsAndConditions() -> Html {
-    html! { 
+    html! {
         <div class="w-full relative">
             <div class="md:mt-6">
                 <div class="text-center font-semibold text-black">

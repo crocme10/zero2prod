@@ -520,7 +520,7 @@ checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
 
 [[package]]
 name = "common"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3024,9 +3024,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.100"
+version = "1.0.102"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f1e14e89be7aa4c4b78bdbdc9eb5bf8517829a600ae8eaa39a6e1d960b5185c"
+checksum = "b5062a995d481b2308b6064e9af76011f2921c35f97b0468811ed9f6cd91dfed"
 dependencies = [
  "itoa",
  "ryu",
@@ -4442,7 +4442,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4531,7 +4531,7 @@ dependencies = [
 
 [[package]]
 name = "zero2prod-backend"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "async-trait",
  "axum",
@@ -4575,7 +4575,7 @@ dependencies = [
 
 [[package]]
 name = "zero2prod-common"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "serde",
  "serde_json",
@@ -4584,7 +4584,7 @@ dependencies = [
 
 [[package]]
 name = "zero2prod-fakeemail"
-version = "0.1.0"
+version = "0.0.4"
 dependencies = [
  "axum",
  "axum-extra",
@@ -4601,7 +4601,7 @@ dependencies = [
 
 [[package]]
 name = "zero2prod-frontend"
-version = "0.1.0"
+version = "0.0.4"
 dependencies = [
  "console_error_panic_hook",
  "gloo",

@@ -1,16 +1,9 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use crate::components::{
-    backend::Backend,
-    subscription::Subscription,
-    confirmation::Confirmation
-};
+use crate::components::{backend::Backend, confirmation::Confirmation, subscription::Subscription};
 use crate::pages::home::Home;
-use crate::pages::{
-    terms_and_conditions::TermsAndConditions,
-    page_not_found::PageNotFound
-};
+use crate::pages::{page_not_found::PageNotFound, terms_and_conditions::TermsAndConditions};
 
 #[derive(Clone, Routable, PartialEq)]
 pub enum Route {
