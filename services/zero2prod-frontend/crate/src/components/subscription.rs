@@ -11,10 +11,11 @@ use crate::components::{FetchError, FetchState};
 
 // HTML / CSS after https://tailwindcomponents.com/component/register-form-with-password-validator-tailwind-css-alpine-js
 
-const SUBSCRIPTION_URL: &str = "http://localhost:8081/api/subscriptions";
-
+/// This function takes the subscription request obtained from the form fields,
+/// and submits the request to the backend. It then casts the JSON response
+/// from the backend into a SubscriptionResponse, or an error, which can be
+/// displayed to the user.
 async fn submit_subscription(
-    url: &'static str,
     request: SubscriptionRequest,
 ) -> Result<SubscriptionsResp, FetchError> {
     let mut opts = RequestInit::new();
@@ -27,9 +28,12 @@ async fn submit_subscription(
     let value = serde_json::to_string(&request).unwrap();
     opts.body(Some(&JsValue::from_str(&value)));
 
-    // let value = serde_wasm_bindgen::to_value(&request)?;
 
-    let request = Request::new_with_str_and_init(url, &opts).map_err(|_| FetchError {
+    let url = std::env!("Z2P_BACKEND_URL", "Z2P_BACKEND_URL should be set");
+
+    let url = format!("{}/api/subscriptions", &url);
+
+    let request = Request::new_with_str_and_init(&url, &opts).map_err(|_| FetchError {
         status_code: 400,
         description: "Could not build a request".to_string(),
     })?;
@@ -143,10 +147,6 @@ impl Component for Subscription {
                 self.state = new_state;
                 true
             }
-            // Msg::Home => {
-            //     self.state = new_state;
-            //     true
-            // }
             Msg::Submit => {
                 let username = &self.refs[0];
                 let email = &self.refs[1];
@@ -163,7 +163,7 @@ impl Component for Subscription {
                         email: email_value,
                     };
                     // TODO Validate subscription
-                    match submit_subscription(SUBSCRIPTION_URL, request).await {
+                    match submit_subscription(request).await {
                         Ok(resp) => Msg::SetSubscriptionState(FetchState::Success(resp)),
                         Err(err) => Msg::SetSubscriptionState(FetchState::Failed(err)),
                     }
@@ -180,16 +180,16 @@ impl Component for Subscription {
             FetchState::NotFetching => html! {
                 <div class="w-full relative">
                     <div class="md:mt-6">
-                        <div class="text-center font-semibold text-black">
+                        <div class="text-center font-text font-semibold text-black text-lg">
                             {"Register to Zero2Prod Newsletter"}
                         </div>
-                        <div class="text-center font-base text-black">
+                        <div class="mt-4 text-center font-text text-black">
                             {"Fill in the following details to register"}
                         </div>
                         <form class="mt-8">
                             <div class="mx-auto max-w-lg ">
                                 <div class="py-1">
-                                    <span class="px-1 text-sm text-gray-600">{"Username"}</span>
+                                    <span class="px-1 text-sm font-text text-gray-600">{"Username"}</span>
                                     <input
                                       ref={&self.refs[0]}
                                       placeholder="username"
@@ -202,7 +202,7 @@ impl Component for Subscription {
                                        focus:border-gray-600 focus:outline-none"/>
                                 </div>
                                 <div class="py-1">
-                                    <span class="px-1 text-sm text-gray-600">{"Email"}</span>
+                                    <span class="px-1 text-sm font-text text-gray-600">{"Email"}</span>
                                     <input
                                       ref={&self.refs[1]}
                                       placeholder="username@domain.com"
@@ -217,7 +217,7 @@ impl Component for Subscription {
                                 <div class="flex justify-start">
                                     <label class="block text-gray-500 font-bold my-4 flex items-center">
                                         <input class="leading-loose text-pink-600 top-0" type="checkbox"/>
-                                        <span class="ml-2 text-sm py-2 text-gray-600 text-left">{"Accept the "}
+                                        <span class="ml-2 text-sm py-2 text-gray-600 text-left font-text">{"Accept the "}
                                               <Link<Route> to={Route::TermsAndConditions}
                                                  classes="font-semibold text-black border-b-2 border-gray-200
                                                  hover:border-gray-500">
@@ -230,12 +230,19 @@ impl Component for Subscription {
                                         </span>
                                     </label>
                                 </div>
-                                <button
-                                  onclick={ctx.link().callback(|_| Msg::Submit)}
-                                  class="mt-3 text-lg font-semibold bg-gray-800 text-white
-                                rounded-lg px-6 py-3 block shadow-xl hover:text-white hover:bg-black">
-                                   {"Register"}
-                                </button>
+                                <div class="flex justify-between">
+                                    <button
+                                      onclick={ctx.link().callback(|_| Msg::Submit)}
+                                      class="mt-3 text-lg font-semibold bg-gray-800 text-white
+                                    rounded-lg px-6 py-3 block shadow-xl hover:text-white hover:bg-black">
+                                       {"Register"}
+                                    </button>
+                                    <Link<Route> to={Route::Home}
+                                      classes="mt-3 text-lg font-semibold bg-gray-800 text-white
+                                      rounded-lg px-6 py-3 inline-block shadow-xl hover:text-white hover:bg-black">
+                                       {"Cancel"}
+                                    </Link<Route>>
+                                </div>
                             </div>
                         </form>
                     </div>
@@ -253,10 +260,10 @@ impl Component for Subscription {
             FetchState::Success(_data) => html! {
             <div class="w-full relative">
                 <div class="md:mt-6">
-                    <div class="text-center font-semibold text-black text-lg">
+                    <div class="text-center font-text font-semibold text-black text-lg">
                         {"Your subscription is"}<br/>{"pending confirmation"}
                     </div>
-                    <div class="text-center font-base text-black mt-8">
+                    <div class="text-center font-text text-black mt-8">
                         {"You will shortly receive an email ADDRESS with a link you need to follow in order to finalize your subscription"}
                     </div>
                     <div class="text-center font-base">
@@ -272,16 +279,16 @@ impl Component for Subscription {
             FetchState::Failed(err) => html! {
             <div class="w-full relative">
                 <div class="md:mt-6">
-                    <div class="text-center font-semibold text-black">
-                        {"An error occured while processing your subscription"}
+                    <div class="text-center font-text font-semibold text-black text-lg">
+                        {"An error occured while"}<br/>{"processing your subscription"}
                     </div>
-                    <div class="text-center font-base text-black">
-                    {err.description.clone()}
+                    <div class="text-center font-text text-black mt-8">
+                        {err.description.clone()}
                     </div>
-                    <div class="text-center font-base">
+                    <div class="mt-8 text-center font-base">
                         <Link<Route> to={Route::Home}
                           classes="mt-3 text-lg font-semibold bg-gray-800 text-white
-                          rounded-lg px-6 py-3 block shadow-xl hover:text-white hover:bg-black">
+                          rounded-lg px-6 py-3 inline-block shadow-xl hover:text-white hover:bg-black">
                            {"Home"}
                         </Link<Route>>
                     </div>
