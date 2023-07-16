@@ -9,8 +9,8 @@ async fn check_stored_subscription(
     world: &mut state::TestWorld,
     status: String,
 ) {
-    let sub_req = world.sub_req.clone().expect("subscription request");
-    check_stored_subscription_for_username_email(world, sub_req.username, sub_req.email, status).await
+    let subscriber = world.subscribers.clone().pop().expect("subscriber");
+    check_stored_subscription_for_username_email(world, subscriber.username, subscriber.email, status).await
 }
 
 #[then(

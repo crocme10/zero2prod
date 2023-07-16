@@ -2,7 +2,6 @@ use cucumber::World;
 use fake::faker::internet::en::SafeEmail;
 use fake::faker::name::en::Name;
 use once_cell::sync::Lazy;
-use reqwest::Response;
 use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
@@ -20,7 +19,7 @@ use common::settings::Settings;
 use zero2prod::application::{Application, Error};
 use zero2prod::email_service::{Email, EmailService};
 use zero2prod::opts::{Command, Opts};
-use zero2prod::routes::subscriptions::SubscriptionRequest;
+// use zero2prod::routes::subscriptions::SubscriptionRequest;
 use zero2prod::storage::Storage;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
@@ -31,11 +30,13 @@ use zero2prod::telemetry::{get_subscriber, init_subscriber};
 #[world(init = Self::new)]
 pub struct TestWorld {
     pub app: TestApp,
-    // We store an optional response. The response can be set in
+    // We store an optional response's status code. The response, typically, can be set in
     // a 'when' step, and checked in a following 'then' step.
-    pub resp: Option<Response>,
-    pub sub_req: Option<SubscriptionRequest>,
-    pub confirmation_link: Option<reqwest::Url>,
+    pub status: Option<reqwest::StatusCode>,
+    // We store a representation of subscribers. This is not necessarily
+    // what is in storage, but it is used to keep track of information
+    // between steps.
+    pub subscribers: Vec<Subscriber>,
 }
 
 impl TestWorld {
@@ -45,10 +46,13 @@ impl TestWorld {
 
         TestWorld {
             app,
-            resp: None,
-            sub_req: None,
-            confirmation_link: None,
+            status: None,
+            subscribers: vec![],
         }
+    }
+
+    pub fn count_confirmed_subscribers(&self) -> usize {
+        self.subscribers.iter().filter(|subscriber| subscriber.status == "confirmed").count()
     }
 }
 
@@ -210,18 +214,21 @@ impl TestApp {
     }
 
     /// Register a random subscriber.
-    pub async fn register_new_subscriber(&self) -> SubscriptionRequest {
+    pub async fn register_random_subscriber(&self) -> SubscriptionResponse {
         // We draw random information to define the subscription.
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();
+        self.register_subscriber(username, email, 1).await
+    }
 
+    pub async fn register_subscriber(&self, username: String, email: String, expect: u64) -> SubscriptionResponse {
         // Then we setup the application email server so that it must
         // receive an email (the confirmation email sent to a new subscriber)
         let _mock_guard = Mock::given(path("/email"))
             .and(method("POST"))
             .respond_with(ResponseTemplate::new(200))
             .named("Register new subscriber")
-            .expect(1)
+            .expect(expect)
             .mount_as_scoped(&self.email_server)
             .await;
 
@@ -229,11 +236,18 @@ impl TestApp {
         let mut map = HashMap::new();
         map.insert("username", username.clone());
         map.insert("email", email.clone());
-        let _resp = self.post_subscriptions(map).await;
-
+        let resp = self.post_subscriptions(map).await;
         // Finally we return the subscription information so that
         // the caller can make something with it.
-        SubscriptionRequest { username, email }
+        SubscriptionResponse {
+            status: resp.status(),
+            subscriber: Subscriber {
+                username,
+                email,
+                status: "pending_confirmation".to_string(),
+                confirmation_link: None
+            }
+        }
     }
 }
 
@@ -241,4 +255,21 @@ impl TestApp {
 pub struct ConfirmationLinks {
     pub html: reqwest::Url,
     pub text: reqwest::Url,
+}
+
+
+#[derive(Debug, Clone)]
+pub struct Subscriber {
+    pub username: String,
+    pub email: String,
+    pub status: String,
+    pub confirmation_link: Option<reqwest::Url>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SubscriptionResponse {
+    // Note we can't store the response as it is not Clone.
+    // For now, just store the status code
+    pub status: reqwest::StatusCode,
+    pub subscriber: Subscriber,
 }

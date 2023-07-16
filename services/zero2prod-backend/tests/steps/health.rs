@@ -24,5 +24,5 @@ async fn health_check(world: &mut TestWorld) {
         settings.application.base_url, settings.application.port
     );
     let resp = reqwest::get(url).await.expect("response");
-    world.resp = Some(resp);
+    world.status = Some(resp.status());
 }

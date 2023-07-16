@@ -22,7 +22,7 @@ async fn verify_confirmation_link(world: &mut state::TestWorld) {
         .query()
         .unwrap()
         .starts_with("token"));
-    world.confirmation_link = Some(confirmation_links.html);
+    world.subscribers[0].confirmation_link = Some(confirmation_links.html);
 }
 
 #[when(regex = r#"the new subscriber retrieves the confirmation link"#)]
@@ -34,19 +34,21 @@ async fn store_confirmation_link(world: &mut state::TestWorld) {
         .await
         .expect("get email server received requests")[0];
     let confirmation_links = world.app.get_confirmation_links(email_request);
-    world.confirmation_link = Some(confirmation_links.html);
+    world.subscribers[0].confirmation_link = Some(confirmation_links.html);
 }
 
 #[when(regex = r#"the new subscriber confirms his subscription with the confirmation link"#)]
 async fn post_confirmation_link(world: &mut state::TestWorld) {
+    let confirmation_link = world.subscribers[0].confirmation_link.clone().unwrap();
     let resp = world
         .app
         .api_client
-        .post(world.confirmation_link.clone().unwrap())
+        .post(confirmation_link)
         .send()
         .await
         .expect("failed to execute request");
-    world.resp = Some(resp);
+    world.status = Some(resp.status());
+    world.subscribers[0].status = "confirmed".to_string();
 }
 
 #[then(regex = r#"the user receives two confirmation emails"#)]

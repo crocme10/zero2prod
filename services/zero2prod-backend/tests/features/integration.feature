@@ -7,7 +7,7 @@ Feature: Integration
 
   @serial, @success
   Scenario: Successful subscription
-    When the user subscribes with username "<username>" and email "<email>"
+    When a valid subscriber with username "<username>" and email "<email>" registers
     Then the response is 200 OK
      And the database stored the username "<username>" and the email "<email>" with status "pending_confirmation"
      And the new subscriber receives an email with a confirmation link
@@ -18,7 +18,7 @@ Feature: Integration
 
   @serial, @failure
   Scenario: Subscription with invalid credentials
-    When the user subscribes with username "<username>" and email "<email>"
+    When an invalid subscriber with username "<username>" and email "<email>" registers
     Then the response is 400 Bad Request
 
     Examples:
@@ -38,8 +38,8 @@ Feature: Integration
 
   @serial, @success
   Scenario: Double subscription
-    When the user subscribes with username "bob" and email "bob@acme.com"
-     And the user subscribes with username "bob" and email "bob@acme.com"
+    When a valid subscriber with username "bob" and email "bob@acme.com" registers
+     And a valid subscriber with username "bob" and email "bob@acme.com" registers
     Then the response is 200 OK
      And the user receives two confirmation emails
 

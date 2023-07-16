@@ -12,10 +12,12 @@ async fn notify_newsletter(world: &mut state::TestWorld) {
     // occured prior to this step).
     let _ = &world.app.email_server.reset().await;
 
+    let count_confirmed = u64::try_from(world.count_confirmed_subscribers()).unwrap();
     // Arrange the behaviour of the MockServer adding a Mock:
-    Mock::given(path("/foo"))
+    Mock::given(path("/email"))
         .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
+        .expect(count_confirmed)
         .mount(&world.app.email_server)
         .await;
 
@@ -27,7 +29,7 @@ async fn notify_newsletter(world: &mut state::TestWorld) {
     };
 
     let resp = world.app.send_newsletter(&newsletter).await;
-    world.resp = Some(resp);
+    world.status = Some(resp.status());
 }
 
 #[then(regex = r#"no newsletter are sent"#)]

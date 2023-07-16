@@ -1,32 +1,33 @@
 use cucumber::when;
-use std::collections::HashMap;
-use wiremock::{
-    matchers::{method, path},
-    Mock, ResponseTemplate,
-};
+use reqwest::StatusCode;
 
 use crate::state;
 
-#[when(regex = r#"the user subscribes with username "(\S*)" and email "(\S*)""#)]
-async fn subscribes_full(world: &mut state::TestWorld, username: String, email: String) {
-    // Arrange the behaviour of the MockServer adding a Mock:
-    // when it receives a POST request on '/email' it will respond with a 200.
-    Mock::given(method("POST"))
-        .and(path("/email"))
-        .respond_with(ResponseTemplate::new(200))
-        .mount(&world.app.email_server)
-        .await;
-
-    let mut map = HashMap::new();
-    map.insert("username", username);
-    map.insert("email", email);
-
-    let resp = world.app.post_subscriptions(map).await;
-    world.resp = Some(resp);
+// Note: I prepend the word 'subscriber' with 'valid' (or 'invalid'), so that I can set
+// expectations on the email server before knowing if the registration is valid or not.
+#[when(regex = r#"a valid subscriber with username "(\S*)" and email "(\S*)" registers"#)]
+async fn subscribes_valid(world: &mut state::TestWorld, username: String, email: String) {
+    let state::SubscriptionResponse { status, subscriber } = world.app.register_subscriber(username, email, 1).await;
+    world.status = Some(status);
+    if status == StatusCode::OK {
+        world.subscribers.push(subscriber);
+    }
 }
 
-#[when(regex = r#"a new subscriber registers"#)]
+#[when(regex = r#"an invalid subscriber with username "(\S*)" and email "(\S*)" registers"#)]
+async fn subscribes_invalid(world: &mut state::TestWorld, username: String, email: String) {
+    let state::SubscriptionResponse { status, subscriber } = world.app.register_subscriber(username, email, 0).await;
+    world.status = Some(status);
+    if status == StatusCode::OK {
+        world.subscribers.push(subscriber);
+    }
+}
+
+#[when("a new subscriber registers")]
 async fn register_random_subscriber(world: &mut state::TestWorld) {
-    let sub_req = world.app.register_new_subscriber().await;
-    world.sub_req = Some(sub_req);
+    let state::SubscriptionResponse { status, subscriber } = world.app.register_random_subscriber().await;
+    world.subscribers.push(subscriber);
+    if status == StatusCode::OK {
+        world.status = Some(status);
+    }
 }

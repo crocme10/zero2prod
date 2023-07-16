@@ -36,6 +36,7 @@ async fn main() {
                     handle.abort();
                 }
                 world.app = state::spawn_app().await;
+                world.subscribers.clear();
             }
             .boxed()
         })
