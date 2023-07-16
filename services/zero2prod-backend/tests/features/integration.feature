@@ -10,7 +10,7 @@ Feature: Integration
     When the user subscribes with username "<username>" and email "<email>"
     Then the response is 200 OK
      And the database stored the username "<username>" and the email "<email>" with status "pending_confirmation"
-     And the user receives an email with a confirmation link
+     And the new subscriber receives an email with a confirmation link
 
     Examples:
       | username         | email                     |
@@ -30,11 +30,11 @@ Feature: Integration
 
   @serial, @success
   Scenario: Successful confirmation
-    When the user subscribes with username "bob" and email "bob@acme.com"
-     And the user retrieves the confirmation link
-     And the user confirms his subscription with the confirmation link
+    When a new subscriber registers
+     And the new subscriber retrieves the confirmation link
+     And the new subscriber confirms his subscription with the confirmation link
     Then the response is 200 OK
-     And the database stored the username "bob" and the email "bob@acme.com" with status "confirmed"
+     And the database stored the username and the email with status "confirmed"
 
   @serial, @success
   Scenario: Double subscription
@@ -49,3 +49,11 @@ Feature: Integration
      And the admin notifies subscribers of a new issue of the newsletter
     Then no newsletter are sent
      And the response is 200 OK
+
+  @serial, @success
+  Scenario: Confirmed subscribers don't receive the newsletter.
+    When a new subscriber registers
+     And the new subscriber retrieves the confirmation link
+     And the new subscriber confirms his subscription with the confirmation link
+     And the admin notifies subscribers of a new issue of the newsletter
+    Then the new subscriber receives a notification of a new issue of the newsletter

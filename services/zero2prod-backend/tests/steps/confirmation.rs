@@ -3,7 +3,7 @@ use speculoos::prelude::*;
 
 use crate::state;
 
-#[then(regex = r#"the user receives an email with a confirmation link"#)]
+#[then(regex = r#"the new subscriber receives an email with a confirmation link"#)]
 async fn verify_confirmation_link(world: &mut state::TestWorld) {
     let email_request = &world
         .app
@@ -25,7 +25,7 @@ async fn verify_confirmation_link(world: &mut state::TestWorld) {
     world.confirmation_link = Some(confirmation_links.html);
 }
 
-#[when(regex = r#"the user retrieves the confirmation link"#)]
+#[when(regex = r#"the new subscriber retrieves the confirmation link"#)]
 async fn store_confirmation_link(world: &mut state::TestWorld) {
     let email_request = &world
         .app
@@ -37,7 +37,7 @@ async fn store_confirmation_link(world: &mut state::TestWorld) {
     world.confirmation_link = Some(confirmation_links.html);
 }
 
-#[when(regex = r#"the user confirms his subscription with the confirmation link"#)]
+#[when(regex = r#"the new subscriber confirms his subscription with the confirmation link"#)]
 async fn post_confirmation_link(world: &mut state::TestWorld) {
     let resp = world
         .app

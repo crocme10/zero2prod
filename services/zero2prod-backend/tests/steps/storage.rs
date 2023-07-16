@@ -3,9 +3,20 @@ use cucumber::then;
 use crate::state;
 
 #[then(
+    regex = r#"the database stored the username and the email with status "(\S+)""#
+)]
+async fn check_stored_subscription(
+    world: &mut state::TestWorld,
+    status: String,
+) {
+    let sub_req = world.sub_req.clone().expect("subscription request");
+    check_stored_subscription_for_username_email(world, sub_req.username, sub_req.email, status).await
+}
+
+#[then(
     regex = r#"the database stored the username "(\S+)" and the email "(\S+)" with status "(\S+)""#
 )]
-async fn query_subscription_status(
+async fn check_stored_subscription_for_username_email(
     world: &mut state::TestWorld,
     username: String,
     email: String,

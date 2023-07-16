@@ -1,6 +1,6 @@
 use cucumber::{then, when};
 use speculoos::prelude::*;
-use wiremock::{matchers::any, Mock, ResponseTemplate};
+use wiremock::{matchers::{path, method}, Mock, ResponseTemplate};
 
 use crate::state;
 use zero2prod::domain::subscriber_email::SubscriberEmail;
@@ -13,8 +13,8 @@ async fn notify_newsletter(world: &mut state::TestWorld) {
     let _ = &world.app.email_server.reset().await;
 
     // Arrange the behaviour of the MockServer adding a Mock:
-    // we expect that no request is fired
-    Mock::given(any())
+    Mock::given(path("/foo"))
+        .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .mount(&world.app.email_server)
         .await;
@@ -40,4 +40,16 @@ async fn no_request_to_email_server(world: &mut state::TestWorld) {
         .expect("get email server received requests");
 
     assert_that(&emails.len()).is_equal_to(0);
+}
+
+#[then(regex = r#"the new subscriber receives a notification of a new issue of the newsletter"#)]
+async fn one_request_to_email_server(world: &mut state::TestWorld) {
+    let emails = &world
+        .app
+        .email_server
+        .received_requests()
+        .await
+        .expect("get email server received requests");
+
+    assert_that(&emails.len()).is_equal_to(1);
 }
