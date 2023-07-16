@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use std::fmt;
 use uuid::Uuid;
 
-use crate::domain::{NewSubscription, Subscription};
+use crate::domain::{ConfirmedSubscriber, NewSubscription, Subscription};
 use common::err_context::ErrorContext;
 
 #[derive(Debug)]
@@ -90,4 +90,6 @@ pub trait Storage {
 
     /// Delete a previously stored token identified by a subscriber_id
     async fn delete_confirmation_token(&self, id: &Uuid) -> Result<(), Error>;
+
+    async fn get_confirmed_subscribers_email(&self) -> Result<Vec<ConfirmedSubscriber>, Error>;
 }

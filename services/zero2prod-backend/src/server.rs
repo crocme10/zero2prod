@@ -18,8 +18,8 @@ use tower_http::trace::TraceLayer;
 
 use crate::email_service::EmailService;
 use crate::routes::{
-    health::health, subscription_confirmation::subscriptions_confirmation,
-    subscriptions::subscriptions, newsletter::publish_newsletter,
+    health::health, newsletter::publish_newsletter,
+    subscription_confirmation::subscriptions_confirmation, subscriptions::subscriptions,
 };
 use crate::storage::Storage;
 use common::err_context::ErrorContext;

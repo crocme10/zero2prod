@@ -1,6 +1,9 @@
 use cucumber::{then, when};
 use speculoos::prelude::*;
-use wiremock::{matchers::{path, method}, Mock, ResponseTemplate};
+use wiremock::{
+    matchers::{method, path},
+    Mock, ResponseTemplate,
+};
 
 use crate::state;
 use zero2prod::domain::subscriber_email::SubscriberEmail;

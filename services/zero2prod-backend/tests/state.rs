@@ -52,7 +52,10 @@ impl TestWorld {
     }
 
     pub fn count_confirmed_subscribers(&self) -> usize {
-        self.subscribers.iter().filter(|subscriber| subscriber.status == "confirmed").count()
+        self.subscribers
+            .iter()
+            .filter(|subscriber| subscriber.status == "confirmed")
+            .count()
     }
 }
 
@@ -221,7 +224,12 @@ impl TestApp {
         self.register_subscriber(username, email, 1).await
     }
 
-    pub async fn register_subscriber(&self, username: String, email: String, expect: u64) -> SubscriptionResponse {
+    pub async fn register_subscriber(
+        &self,
+        username: String,
+        email: String,
+        expect: u64,
+    ) -> SubscriptionResponse {
         // Then we setup the application email server so that it must
         // receive an email (the confirmation email sent to a new subscriber)
         let _mock_guard = Mock::given(path("/email"))
@@ -245,8 +253,8 @@ impl TestApp {
                 username,
                 email,
                 status: "pending_confirmation".to_string(),
-                confirmation_link: None
-            }
+                confirmation_link: None,
+            },
         }
     }
 }
@@ -256,7 +264,6 @@ pub struct ConfirmationLinks {
     pub html: reqwest::Url,
     pub text: reqwest::Url,
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Subscriber {

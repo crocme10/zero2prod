@@ -10,7 +10,8 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::domain::{
-    NewSubscription, SubscriberEmail, SubscriberName, Subscription, SubscriptionStatus,
+    ConfirmedSubscriber, NewSubscription, SubscriberEmail, SubscriberName, Subscription,
+    SubscriptionStatus,
 };
 use crate::storage::{Error, Storage};
 
@@ -272,6 +273,27 @@ impl Storage for PostgresStorage {
             "Could not delete subscription token for subscriber id {id}"
         ))?;
         Ok(())
+    }
+
+    #[tracing::instrument(name = "Confirming subscriber")]
+    async fn get_confirmed_subscribers_email(&self) -> Result<Vec<ConfirmedSubscriber>, Error> {
+        let mut conn = self.exec.lock().await;
+        let saved = sqlx::query!(
+            r#"SELECT email FROM subscriptions WHERE status = $1"#,
+            SubscriptionStatus::Confirmed as SubscriptionStatus,
+        )
+        .fetch_all(&mut **conn)
+        .await
+        .context(format!("Could not get a list of confirmed subscribers"))?;
+        saved
+            .into_iter()
+            .map(|r| {
+                match SubscriberEmail::try_from(r.email) {
+                    Ok(email) => Ok(ConfirmedSubscriber { email }),
+                    Err(err) => Err(Error::Validation { context: err })
+                }
+            })
+            .collect()
     }
 }
 

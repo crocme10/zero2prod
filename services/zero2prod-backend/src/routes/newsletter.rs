@@ -3,6 +3,8 @@ use axum_extra::extract::WithRejection;
 use serde::Deserialize;
 use uuid::Uuid;
 
+use crate::domain::SubscriberEmail;
+use crate::email_service::Email;
 use crate::error::ApiError;
 use crate::server::AppState;
 
@@ -18,45 +20,66 @@ use crate::server::AppState;
 pub async fn publish_newsletter(
     State(state): State<AppState>,
     WithRejection(Json(request), _): WithRejection<Json<BodyData>, ApiError>,
-    ) -> Result<Json<()>, ApiError> {
+) -> Result<Json<()>, ApiError> {
+    let subscribers = state
+        .storage
+        .get_confirmed_subscribers_email()
+        .await
+        .map_err(|err| {
+            ApiError::new_internal(format!("Cannot retrieve confirmed subscribers: {err}"))
+        })?;
+
+    for subscriber in subscribers {
+        let email = create_newsletter_email(&subscriber.email, &request);
+        state.email.send_email(email).await.map_err(|err| {
+            ApiError::new_internal(format!("Cannot send newsletter email: {err}"))
+        })?;
+    }
     Ok(Json(()))
 }
 
-
 #[derive(Debug, Deserialize)]
 pub struct BodyData {
-    title: String,
-    content: Content,
+    pub title: String,
+    pub content: Content,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Content {
-    html: String,
-    text: String,
+    pub html: String,
+    pub text: String,
+}
+
+/// This is a helper function to create an email sent to the subscriber,
+/// which contains a link he needs to use to confirm his subscription.
+/// the url argument is the URL of the zero2prod server, and will be used
+/// as the base for the confirmation link.
+fn create_newsletter_email(to: &SubscriberEmail, newsletter: &BodyData) -> Email {
+    let BodyData { title, content } = newsletter.clone();
+    Email {
+        to: to.clone(),
+        subject: title.clone(),
+        html_content: content.html.clone(),
+        text_content: content.text.clone(),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use axum::{
         body::Body,
-        http::{header, Request, StatusCode},
+        http::{header, Request},
         routing::{post, Router},
     };
-    // use fake::faker::internet::en::{IPv4, SafeEmail};
-    // use fake::faker::name::en::Name;
-    // use fake::faker::lorem::en::{Paragraph, Sentence};
-    // use fake::Fake;
     use mockall::predicate::*;
+    use speculoos::prelude::*;
     use std::sync::Arc;
     use tower::ServiceExt;
-    use speculoos::prelude::*;
 
     use crate::{
-        domain::{NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus},
         email_service::MockEmailService,
-        routes::subscriptions::SubscriptionRequest,
         server::{AppState, ApplicationBaseUrl},
-        storage::{Error as StorageError, MockStorage},
+        storage::MockStorage,
     };
 
     use super::*;
@@ -77,7 +100,6 @@ mod tests {
             .body(Body::from(request.to_string()))
             .unwrap()
     }
-
 
     #[tokio::test]
     async fn newsletters_returns_400_for_invalid_data() {
@@ -100,11 +122,11 @@ mod tests {
                     }
                 }),
                 "missing title",
-                ),
-                (
-                    serde_json::json!({"title": "Newsletter!"}),
-                    "missing content",
-                    ),
+            ),
+            (
+                serde_json::json!({"title": "Newsletter!"}),
+                "missing content",
+            ),
         ];
         for (body, message) in test_cases {
             let app = newsletter_route().with_state(state.clone());
@@ -112,7 +134,9 @@ mod tests {
                 .oneshot(send_newsletter_request_from_json("/api/newsletter", body))
                 .await
                 .expect("Failed to execute request.");
-            assert_that(&response.status().as_u16()).named(message).is_equal_to(400);
+            assert_that(&response.status().as_u16())
+                .named(message)
+                .is_equal_to(400);
         }
     }
 }

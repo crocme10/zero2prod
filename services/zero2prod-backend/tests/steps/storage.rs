@@ -2,15 +2,16 @@ use cucumber::then;
 
 use crate::state;
 
-#[then(
-    regex = r#"the database stored the username and the email with status "(\S+)""#
-)]
-async fn check_stored_subscription(
-    world: &mut state::TestWorld,
-    status: String,
-) {
+#[then(regex = r#"the database stored the username and the email with status "(\S+)""#)]
+async fn check_stored_subscription(world: &mut state::TestWorld, status: String) {
     let subscriber = world.subscribers.clone().pop().expect("subscriber");
-    check_stored_subscription_for_username_email(world, subscriber.username, subscriber.email, status).await
+    check_stored_subscription_for_username_email(
+        world,
+        subscriber.username,
+        subscriber.email,
+        status,
+    )
+    .await
 }
 
 #[then(
