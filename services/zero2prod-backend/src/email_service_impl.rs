@@ -129,7 +129,7 @@ mod tests {
 
     /// Generate a random subscriber email
     fn email_addr() -> SubscriberEmail {
-        SubscriberEmail::parse(SafeEmail().fake()).unwrap()
+        SubscriberEmail::parse(SafeEmail().fake::<String>()).unwrap()
     }
 
     #[tokio::test]

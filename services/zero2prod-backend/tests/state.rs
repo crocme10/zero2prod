@@ -10,7 +10,7 @@ use wiremock::MockServer;
 
 use common::settings::Settings;
 use zero2prod::application::{Application, Error};
-use zero2prod::email_service::EmailService;
+use zero2prod::email_service::{Email, EmailService};
 use zero2prod::opts::{Command, Opts};
 use zero2prod::storage::Storage;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
@@ -186,7 +186,18 @@ impl TestApp {
             .json(&map)
             .send()
             .await
-            .expect("failed to execute request")
+            .expect("failed to post on subscriptions endpoint")
+    }
+
+    /// Send a newsletter
+    pub async fn send_newsletter(&self, email: &Email) -> reqwest::Response {
+        let url = format!("{}/api/newsletter", self.address);
+        self.api_client
+            .post(url)
+            .json(&email)
+            .send()
+            .await
+            .expect("failed to post on newsletter endpoint")
     }
 }
 

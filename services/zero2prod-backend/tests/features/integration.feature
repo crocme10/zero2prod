@@ -1,7 +1,7 @@
 Feature: Integration
 
   @serial
-  Scenario: When the user calls the health_check endpoint, we get a 200 Ok response
+  Scenario: Health Check
     When the user requests a health check
     Then the response is 200 OK
 
@@ -43,17 +43,9 @@ Feature: Integration
     Then the response is 200 OK
      And the user receives two confirmation emails
 
-  # @serial, @success
-  # For this test to pass, we have to make significant changes:
-  # Upon the first confirmation we delete the token.
-  # When we hit the link again, we only have the token, which is pretty useless,
-  # since its been deleted from the base.
-  # Scenario: Double confirmation
-  #   When the user subscribes with username "bob" and email "bob@acme.com"
-  #    And the user retrieves the confirmation link
-  #    And the user confirms his subscription with the confirmation link
-  #    And the user confirms his subscription with the confirmation link
-  #   Then the response is 200 OK
-
-# What happens if the subscription token is well-formatted but non-existent?
-# Add validation on the incoming token, we are currently passing the raw user
+  @serial, @success
+  Scenario: Unconfirmed subscribers don't receive the newsletter.
+    When the user subscribes with username "bob" and email "bob@acme.com"
+     And the admin notifies subscribers of a new issue of the newsletter
+    Then no newsletter are sent
+     And the response is 200 OK

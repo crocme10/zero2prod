@@ -29,7 +29,7 @@ fn switch(routes: Route) -> Html {
             html! { <Home/> }
         }
         Route::Backend { path } => {
-            html! { <Backend path={path.clone()}/> }
+            html! { <Backend path={path}/> }
         }
         Route::Subscription => {
             html! { <Subscription /> }

@@ -5,9 +5,10 @@ use validator::validate_email;
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {
-    pub fn parse(s: String) -> Result<SubscriberEmail, String> {
-        if validate_email(&s) {
-            Ok(Self(s))
+    pub fn parse<S: AsRef<str>>(s: S) -> Result<SubscriberEmail, String> {
+        let s = s.as_ref();
+        if validate_email(s) {
+            Ok(Self(s.to_string()))
         } else {
             Err(format!("{} is not a valid subscriber email.", s))
         }

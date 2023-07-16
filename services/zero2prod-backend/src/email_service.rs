@@ -2,6 +2,7 @@
 use crate::domain::SubscriberEmail;
 use async_trait::async_trait;
 use common::err_context::ErrorContext;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[cfg(test)]
@@ -50,7 +51,7 @@ pub trait EmailService {
     async fn send_email(&self, email: Email) -> Result<(), Error>;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Email {
     pub to: SubscriberEmail,
     // from will be filled by the EmailService implementation.

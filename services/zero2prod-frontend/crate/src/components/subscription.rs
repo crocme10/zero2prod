@@ -11,6 +11,8 @@ use crate::components::{FetchError, FetchState};
 
 // HTML / CSS after https://tailwindcomponents.com/component/register-form-with-password-validator-tailwind-css-alpine-js
 
+const Z2P_BACKEND_URL: &str = "http://localhost:8081";
+
 /// This function takes the subscription request obtained from the form fields,
 /// and submits the request to the backend. It then casts the JSON response
 /// from the backend into a SubscriptionResponse, or an error, which can be
@@ -28,10 +30,7 @@ async fn submit_subscription(
     let value = serde_json::to_string(&request).unwrap();
     opts.body(Some(&JsValue::from_str(&value)));
 
-
-    let url = std::env!("Z2P_BACKEND_URL", "Z2P_BACKEND_URL should be set");
-
-    let url = format!("{}/api/subscriptions", &url);
+    let url = format!("{}/api/subscriptions", Z2P_BACKEND_URL);
 
     let request = Request::new_with_str_and_init(&url, &opts).map_err(|_| FetchError {
         status_code: 400,
