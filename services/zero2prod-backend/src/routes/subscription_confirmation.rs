@@ -156,6 +156,8 @@ mod tests {
         //   valid token was found)
         // - Storage::confirm_subscriber_by_id never to get called,
 
+        // FIXME Automagick alert!
+        // 32 is the length of the token.
         let token = 32.fake::<String>();
         let mut storage_mock = MockStorage::new();
         storage_mock

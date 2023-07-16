@@ -19,7 +19,7 @@ use tower_http::trace::TraceLayer;
 use crate::email_service::EmailService;
 use crate::routes::{
     health::health, subscription_confirmation::subscriptions_confirmation,
-    subscriptions::subscriptions,
+    subscriptions::subscriptions, newsletter::publish_newsletter,
 };
 use crate::storage::Storage;
 use common::err_context::ErrorContext;
@@ -74,7 +74,8 @@ pub fn new(
         .route(
             "/api/subscriptions/confirmation",
             post(subscriptions_confirmation),
-        );
+        )
+        .route("/api/newsletter", post(publish_newsletter));
 
     // Create a router that will contain and match all routes for the application
     // and a fallback service that will serve the static directory

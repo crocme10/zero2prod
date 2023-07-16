@@ -24,3 +24,9 @@ async fn subscribes_full(world: &mut state::TestWorld, username: String, email: 
     let resp = world.app.post_subscriptions(map).await;
     world.resp = Some(resp);
 }
+
+#[when(regex = r#"a new subscriber registers"#)]
+async fn register_random_subscriber(world: &mut state::TestWorld) {
+    let sub_req = world.app.register_new_subscriber().await;
+    world.sub_req = Some(sub_req);
+}

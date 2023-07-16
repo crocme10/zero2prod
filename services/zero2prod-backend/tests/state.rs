@@ -1,4 +1,6 @@
 use cucumber::World;
+use fake::faker::internet::en::SafeEmail;
+use fake::faker::name::en::Name;
 use once_cell::sync::Lazy;
 use reqwest::Response;
 use std::collections::HashMap;
@@ -7,11 +9,18 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 use wiremock::MockServer;
+// use fake::faker::lorem::en::{Paragraph, Sentence};
+use fake::Fake;
+use wiremock::{
+    matchers::{method, path},
+    Mock, ResponseTemplate,
+};
 
 use common::settings::Settings;
 use zero2prod::application::{Application, Error};
 use zero2prod::email_service::{Email, EmailService};
 use zero2prod::opts::{Command, Opts};
+use zero2prod::routes::subscriptions::SubscriptionRequest;
 use zero2prod::storage::Storage;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
@@ -22,7 +31,10 @@ use zero2prod::telemetry::{get_subscriber, init_subscriber};
 #[world(init = Self::new)]
 pub struct TestWorld {
     pub app: TestApp,
+    // We store an optional response. The response can be set in
+    // a 'when' step, and checked in a following 'then' step.
     pub resp: Option<Response>,
+    pub sub_req: Option<SubscriptionRequest>,
     pub confirmation_link: Option<reqwest::Url>,
 }
 
@@ -34,6 +46,7 @@ impl TestWorld {
         TestWorld {
             app,
             resp: None,
+            sub_req: None,
             confirmation_link: None,
         }
     }
@@ -79,8 +92,10 @@ pub async fn spawn_app() -> TestApp {
     // Lazy::force(&TRACING);
 
     tracing::info!("Spawning new app");
-    // We are not using a real Email server, so we spawn a new wiremock server,
+    // We are not using a real Email server, so we spawn a wiremock server,
     // and then use this server's url in our configuration.
+    // We don't attach any expectation yet to that MockServer, this will
+    // be done later when executing steps.
     let email_server = MockServer::start().await;
 
     // We use the email mock server's address in the configuration.
@@ -115,13 +130,9 @@ pub async fn spawn_app() -> TestApp {
         .static_dir(settings.application.static_dir.clone())
         .expect("getting static dir");
 
-    tracing::info!("Builder success");
-
     // Before building the app, we extract a copy of storage and email.
     let storage = builder.storage.clone().unwrap();
     let email_client = builder.email.clone().unwrap();
-
-    tracing::info!("storage and email success");
 
     // Now build the app, and launch it.
     let app = builder.build();
@@ -133,8 +144,6 @@ pub async fn spawn_app() -> TestApp {
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .expect("api client build");
-
-    tracing::info!("api_client success");
 
     TestApp {
         address,
@@ -198,6 +207,33 @@ impl TestApp {
             .send()
             .await
             .expect("failed to post on newsletter endpoint")
+    }
+
+    /// Register a random subscriber.
+    pub async fn register_new_subscriber(&self) -> SubscriptionRequest {
+        // We draw random information to define the subscription.
+        let username = Name().fake::<String>();
+        let email = SafeEmail().fake::<String>();
+
+        // Then we setup the application email server so that it must
+        // receive an email (the confirmation email sent to a new subscriber)
+        let _mock_guard = Mock::given(path("/email"))
+            .and(method("POST"))
+            .respond_with(ResponseTemplate::new(200))
+            .named("Register new subscriber")
+            .expect(1)
+            .mount_as_scoped(&self.email_server)
+            .await;
+
+        // Then we send the subscription information
+        let mut map = HashMap::new();
+        map.insert("username", username.clone());
+        map.insert("email", email.clone());
+        let _resp = self.post_subscriptions(map).await;
+
+        // Finally we return the subscription information so that
+        // the caller can make something with it.
+        SubscriptionRequest { username, email }
     }
 }
 

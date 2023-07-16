@@ -45,7 +45,7 @@ Feature: Integration
 
   @serial, @success
   Scenario: Unconfirmed subscribers don't receive the newsletter.
-    When the user subscribes with username "bob" and email "bob@acme.com"
+    When a new subscriber registers
      And the admin notifies subscribers of a new issue of the newsletter
     Then no newsletter are sent
      And the response is 200 OK
