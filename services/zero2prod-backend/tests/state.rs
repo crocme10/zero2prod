@@ -17,8 +17,9 @@ use wiremock::{
 
 use common::settings::Settings;
 use zero2prod::application::{Application, Error};
-use zero2prod::email_service::{Email, EmailService};
+use zero2prod::email_service::EmailService;
 use zero2prod::opts::{Command, Opts};
+use zero2prod::routes::newsletter::BodyData;
 // use zero2prod::routes::subscriptions::SubscriptionRequest;
 use zero2prod::storage::Storage;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
@@ -206,11 +207,11 @@ impl TestApp {
     }
 
     /// Send a newsletter
-    pub async fn send_newsletter(&self, email: &Email) -> reqwest::Response {
+    pub async fn send_newsletter(&self, newsletter: &BodyData) -> reqwest::Response {
         let url = format!("{}/api/newsletter", self.address);
         self.api_client
             .post(url)
-            .json(&email)
+            .json(&newsletter)
             .send()
             .await
             .expect("failed to post on newsletter endpoint")

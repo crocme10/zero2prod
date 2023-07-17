@@ -6,8 +6,7 @@ use wiremock::{
 };
 
 use crate::state;
-use zero2prod::domain::subscriber_email::SubscriberEmail;
-use zero2prod::email_service::Email;
+use zero2prod::routes::newsletter::{BodyData, Content};
 
 #[when(regex = r#"the admin notifies subscribers of a new issue of the newsletter"#)]
 async fn notify_newsletter(world: &mut state::TestWorld) {
@@ -24,15 +23,18 @@ async fn notify_newsletter(world: &mut state::TestWorld) {
         .mount(&world.app.email_server)
         .await;
 
-    let newsletter = Email {
-        to: SubscriberEmail::parse("bob@acme.com").unwrap(),
-        subject: "Issue 42".to_string(),
-        html_content: "<p>Newsletter body as HTML</p>".to_string(),
-        text_content: "Newsletter body as plain text".to_string(),
+    for _ in world.subscribers.clone() {
+        let data = BodyData {
+            title: "New Issue".to_string(),
+            content: Content {
+                html: "<p>Newsletter body as HTML</p>".to_string(),
+                text: "Newsletter body as plain text".to_string(),
+            }
+        };
+        // FIXME Note that the world.status will only be the status of the last subscriber!
+        let resp = world.app.send_newsletter(&data).await;
+        world.status = Some(resp.status());
     };
-
-    let resp = world.app.send_newsletter(&newsletter).await;
-    world.status = Some(resp.status());
 }
 
 #[then(regex = r#"no newsletter are sent"#)]

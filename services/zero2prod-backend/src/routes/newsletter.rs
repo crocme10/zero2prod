@@ -1,6 +1,6 @@
 use axum::extract::{Json, State};
 use axum_extra::extract::WithRejection;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 use crate::domain::SubscriberEmail;
@@ -38,13 +38,13 @@ pub async fn publish_newsletter(
     Ok(Json(()))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BodyData {
     pub title: String,
     pub content: Content,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Content {
     pub html: String,
     pub text: String,
