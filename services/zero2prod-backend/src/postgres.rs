@@ -287,11 +287,9 @@ impl Storage for PostgresStorage {
         .context(format!("Could not get a list of confirmed subscribers"))?;
         saved
             .into_iter()
-            .map(|r| {
-                match SubscriberEmail::try_from(r.email) {
-                    Ok(email) => Ok(ConfirmedSubscriber { email }),
-                    Err(err) => Err(Error::Validation { context: err })
-                }
+            .map(|r| match SubscriberEmail::try_from(r.email) {
+                Ok(email) => Ok(ConfirmedSubscriber { email }),
+                Err(err) => Err(Error::Validation { context: err }),
             })
             .collect()
     }

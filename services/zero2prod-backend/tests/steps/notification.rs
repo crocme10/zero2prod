@@ -29,12 +29,12 @@ async fn notify_newsletter(world: &mut state::TestWorld) {
             content: Content {
                 html: "<p>Newsletter body as HTML</p>".to_string(),
                 text: "Newsletter body as plain text".to_string(),
-            }
+            },
         };
         // FIXME Note that the world.status will only be the status of the last subscriber!
         let resp = world.app.send_newsletter(&data).await;
         world.status = Some(resp.status());
-    };
+    }
 }
 
 #[then(regex = r#"no newsletter are sent"#)]

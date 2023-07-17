@@ -1,6 +1,6 @@
 use axum::extract::{Json, State};
 use axum_extra::extract::WithRejection;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::domain::SubscriberEmail;
