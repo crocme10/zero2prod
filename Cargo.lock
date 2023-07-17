@@ -520,7 +520,7 @@ checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
 
 [[package]]
 name = "common"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "async-trait",
  "chrono",
@@ -4442,7 +4442,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4531,7 +4531,7 @@ dependencies = [
 
 [[package]]
 name = "zero2prod-backend"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "async-trait",
  "axum",
@@ -4575,7 +4575,7 @@ dependencies = [
 
 [[package]]
 name = "zero2prod-common"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -4584,7 +4584,7 @@ dependencies = [
 
 [[package]]
 name = "zero2prod-fakeemail"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "axum",
  "axum-extra",
@@ -4601,7 +4601,7 @@ dependencies = [
 
 [[package]]
 name = "zero2prod-frontend"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "console_error_panic_hook",
  "gloo",
