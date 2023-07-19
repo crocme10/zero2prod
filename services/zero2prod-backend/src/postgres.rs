@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use chrono::Utc;
 use common::err_context::ErrorContextExt;
 use common::settings::DatabaseSettings;
+use secrecy::ExposeSecret;
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
@@ -10,8 +11,8 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::domain::{
-    ConfirmedSubscriber, NewSubscription, SubscriberEmail, SubscriberName, Subscription,
-    SubscriptionStatus,
+    ConfirmedSubscriber, Credentials, NewSubscription, SubscriberEmail, SubscriberName,
+    Subscription, SubscriptionStatus,
 };
 use crate::storage::{Error, Storage};
 
@@ -292,6 +293,39 @@ impl Storage for PostgresStorage {
                 Err(err) => Err(Error::Validation { context: err }),
             })
             .collect()
+    }
+
+    #[tracing::instrument(name = "Validating Credentials")]
+    async fn validate_credentials(&self, credentials: &Credentials) -> Result<Uuid, Error> {
+        let mut conn = self.exec.lock().await;
+        let saved: Option<_> = sqlx::query!(
+            r#"SELECT id FROM users WHERE username = $1 AND password = $2"#,
+            credentials.username,
+            credentials.password.expose_secret()
+        )
+        .fetch_optional(&mut **conn)
+        .await
+        .context(format!("Could not validate credentials"))?;
+
+        saved.map(|r| r.id).ok_or_else(|| Error::Missing {
+            context: "Invalid Username or Password".to_string(),
+        })
+    }
+
+    #[tracing::instrument(name = "Validating Credentials")]
+    async fn create_user(&self, id: Uuid, credentials: &Credentials) -> Result<(), Error> {
+        let mut conn = self.exec.lock().await;
+        sqlx::query!(
+            r#"INSERT INTO users (id, username, password) VALUES ($1, $2, $3)"#,
+            id,
+            credentials.username,
+            credentials.password.expose_secret()
+        )
+        .execute(&mut **conn)
+        .await
+        .context(format!("Could not create credentials"))?;
+
+        Ok(())
     }
 }
 

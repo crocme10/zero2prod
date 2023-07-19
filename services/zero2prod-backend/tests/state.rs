@@ -1,15 +1,16 @@
 use cucumber::World;
 use fake::faker::internet::en::SafeEmail;
 use fake::faker::name::en::Name;
+use fake::locales::*;
 use fake::Fake;
 use once_cell::sync::Lazy;
 use reqwest::header;
-use secrecy::Secret;
 use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
+use uuid::Uuid;
 use wiremock::MockServer;
 use wiremock::{
     matchers::{method, path},
@@ -18,10 +19,10 @@ use wiremock::{
 
 use common::settings::Settings;
 use zero2prod::application::{Application, Error};
+use zero2prod::domain::{Credentials, C};
 use zero2prod::email_service::EmailService;
 use zero2prod::opts::{Command, Opts};
-use zero2prod::routes::newsletter::{BodyData, Credentials};
-// use zero2prod::routes::subscriptions::SubscriptionRequest;
+use zero2prod::routes::newsletter::BodyData;
 use zero2prod::storage::Storage;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
@@ -64,11 +65,18 @@ impl TestWorld {
 pub struct TestApp {
     pub address: String,
     pub port: u16,
+    // The interface to storage
     pub storage: Arc<dyn Storage + Send + Sync>,
+    // A Mock Server, so we don't have to use a real email server.
     pub email_server: MockServer,
+    // The interface to email
     pub email_client: Arc<dyn EmailService + Send + Sync>,
+    // The API to access the server.
     pub api_client: reqwest::Client,
+    // The server handle, so that it can be killed.
     pub server_handle: Option<JoinHandle<Result<(), Error>>>,
+    // A fake user, used to test authentication.
+    pub user: Option<Credentials>,
 }
 
 impl fmt::Debug for TestApp {
@@ -154,6 +162,13 @@ pub async fn spawn_app() -> TestApp {
         .build()
         .expect("api client build");
 
+    let credentials: Credentials = C(EN).fake();
+    let id = Uuid::new_v4();
+    storage
+        .create_user(id, &credentials)
+        .await
+        .expect("Create test user");
+
     TestApp {
         address,
         port,
@@ -162,6 +177,7 @@ pub async fn spawn_app() -> TestApp {
         api_client,
         email_client,
         server_handle: Some(handle),
+        user: Some(credentials),
     }
 }
 
@@ -210,16 +226,12 @@ impl TestApp {
     /// Send a newsletter
     pub async fn send_newsletter(&self, newsletter: &BodyData) -> reqwest::Response {
         let url = format!("{}/api/newsletter", self.address);
-        let credentials = Credentials {
-            username: "Bob".to_string(),
-            password: Secret::new("secret".to_string()),
-        };
         self.api_client
             .post(url)
             .json(&newsletter)
             .header(
                 header::AUTHORIZATION,
-                format!("Basic {}", credentials.encode()),
+                format!("Basic {}", self.user.as_ref().expect("user").encode()),
             )
             .send()
             .await
@@ -267,6 +279,13 @@ impl TestApp {
             },
         }
     }
+
+    // pub async fn add_test_user(&mut self) {
+    //     let credentials: Credentials = C(EN).fake();
+    //     let id = Uuid::new_v4();
+    //     self.storage.create_user(id, &credentials).await.expect("Create test user");
+    //     self.user = Some(credentials);
+    // }
 }
 
 #[derive(Debug)]

@@ -1,19 +1,15 @@
 use axum::extract::{Json, State};
 use axum::http::status::StatusCode;
 use axum::response::{IntoResponse, Response};
-use base64::engine::general_purpose;
 use base64::{DecodeError, Engine};
-use fake::locales::Data;
-use fake::Dummy;
 use hyper::header::{self, HeaderMap, ToStrError};
-use rand::prelude::SliceRandom;
-use secrecy::{ExposeSecret, Secret};
+use secrecy::Secret;
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize, Serializer};
 use std::{fmt, string::FromUtf8Error};
 use uuid::Uuid;
 
-use crate::domain::SubscriberEmail;
+use crate::domain::{Credentials, SubscriberEmail};
 use crate::email_service::{Email, Error as EmailError};
 use crate::server::AppState;
 use crate::storage::Error as StorageError;
@@ -26,6 +22,8 @@ use common::err_context::{ErrorContext, ErrorContextExt};
     skip(state),
     fields(
         request_id = %Uuid::new_v4(),
+        username=tracing::field::Empty,
+        id=tracing::field::Empty,
     )
 )]
 pub async fn publish_newsletter(
@@ -33,7 +31,17 @@ pub async fn publish_newsletter(
     State(state): State<AppState>,
     Json(request): Json<BodyData>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let _credentials = basic_authentication(&headers)?;
+    let credentials = basic_authentication(&headers)?;
+
+    tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
+
+    let id = state
+        .storage
+        .validate_credentials(&credentials)
+        .await
+        .context("Could not validate credentials".to_string())?;
+
+    tracing::Span::current().record("id", &tracing::field::display(&id));
 
     let subscribers = state
         .storage
@@ -62,32 +70,6 @@ pub struct BodyData {
 pub struct Content {
     pub html: String,
     pub text: String,
-}
-
-#[derive(Debug)]
-pub struct Credentials {
-    pub username: String,
-    pub password: Secret<String>,
-}
-
-impl Credentials {
-    pub fn encode(&self) -> String {
-        let credentials = format!("{}:{}", self.username, self.password.expose_secret());
-        general_purpose::STANDARD.encode(credentials.as_bytes())
-    }
-}
-
-struct C<L>(pub L);
-
-impl<L: Data> Dummy<C<L>> for Credentials {
-    fn dummy_with_rng<R: rand::Rng + ?Sized>(_config: &C<L>, rng: &mut R) -> Self {
-        let username = *L::NAME_FIRST_NAME.choose(rng).unwrap();
-        let password = *L::LOREM_WORD.choose(rng).unwrap();
-        Credentials {
-            username: username.into(),
-            password: Secret::new(password.to_string()),
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -329,7 +311,7 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
-        domain::{ConfirmedSubscriber, SubscriberEmail},
+        domain::{ConfirmedSubscriber, Credentials, SubscriberEmail, C},
         email_service::MockEmailService,
         server::{AppState, ApplicationBaseUrl},
         storage::MockStorage,
@@ -450,6 +432,23 @@ mod tests {
             .expect_get_confirmed_subscribers_email()
             .return_once(move || Ok(vec![confirmed_subscriber]));
 
+        let credentials: Credentials = C(EN).fake();
+        let rhs = credentials.username.clone();
+
+        storage_mock
+            .expect_validate_credentials()
+            .withf(move |arg: &Credentials| {
+                let Credentials {
+                    username,
+                    password: _,
+                } = arg;
+                if *username != rhs {
+                    return false;
+                }
+                true
+            })
+            .return_once(|_| Ok(Uuid::new_v4()));
+
         let state = AppState {
             storage: Arc::new(storage_mock),
             email: Arc::new(email_mock),
@@ -457,7 +456,7 @@ mod tests {
         };
 
         let app = newsletter_route().with_state(state);
-        let credentials: Credentials = C(EN).fake();
+
         let body = BodyData {
             title: "Newsletter".to_string(),
             content: Content {

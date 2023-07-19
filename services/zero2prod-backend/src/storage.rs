@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use std::fmt;
 use uuid::Uuid;
 
-use crate::domain::{ConfirmedSubscriber, NewSubscription, Subscription};
+use crate::domain::{ConfirmedSubscriber, Credentials, NewSubscription, Subscription};
 use common::err_context::ErrorContext;
 
 #[derive(Debug)]
@@ -24,6 +24,9 @@ pub enum Error {
     Configuration {
         context: String,
     },
+    Missing {
+        context: String,
+    },
 }
 
 impl fmt::Display for Error {
@@ -40,6 +43,9 @@ impl fmt::Display for Error {
             }
             Error::Configuration { context } => {
                 write!(fmt, "Database Configuration: {context}")
+            }
+            Error::Missing { context } => {
+                write!(fmt, "Missing: {context}")
             }
         }
     }
@@ -92,4 +98,8 @@ pub trait Storage {
     async fn delete_confirmation_token(&self, id: &Uuid) -> Result<(), Error>;
 
     async fn get_confirmed_subscribers_email(&self) -> Result<Vec<ConfirmedSubscriber>, Error>;
+
+    async fn validate_credentials(&self, credentials: &Credentials) -> Result<Uuid, Error>;
+
+    async fn create_user(&self, id: Uuid, credentials: &Credentials) -> Result<(), Error>;
 }
