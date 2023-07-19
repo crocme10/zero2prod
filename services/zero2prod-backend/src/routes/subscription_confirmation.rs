@@ -1,9 +1,14 @@
 use axum::extract::{Json, Query, State};
-use serde::{Deserialize, Serialize};
+use axum::http::status::StatusCode;
+use axum::response::{IntoResponse, Response};
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Serialize, Serializer};
+use std::fmt;
 use uuid::Uuid;
 
-use crate::error::ApiError;
 use crate::server::AppState;
+use crate::storage::Error as StorageError;
+use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user subscription confirmation
 #[allow(clippy::unused_async)]
@@ -17,30 +22,27 @@ use crate::server::AppState;
 pub async fn subscriptions_confirmation(
     State(state): State<AppState>,
     request: Query<SubscriptionConfirmationRequest>,
-) -> Result<Json<SubscriptionConfirmationResp>, ApiError> {
+) -> Result<impl IntoResponse, impl IntoResponse> {
     let request = request.0;
-    let id = state
+    match state
         .storage
         .get_subscriber_id_by_token(&request.token)
         .await
-        .map_err(|err| ApiError::new_internal(format!("Cannot get subscriber by id: {err}")))?;
-
-    match id {
-        None => Err(ApiError::new_unauthorized(
-            "Could not confirm subscription".to_string(),
-        )),
+        .context("Could not get subscriber id by token".to_string())?
+    {
+        None => Err(Error::MissingToken {
+            context: "Expected token".to_string(),
+        }),
         Some(id) => {
             state
                 .storage
                 .confirm_subscriber_by_id_and_delete_token(&id)
                 .await
-                .map_err(|err| {
-                    ApiError::new_internal(format!("Cannot confirm subscriber by id: {err}"))
-                })?;
+                .context("Could not confirm subscriber".to_string())?;
             let resp = SubscriptionConfirmationResp {
                 status: "OK".to_string(),
             };
-            Ok(Json(resp))
+            Ok::<axum::Json<SubscriptionConfirmationResp>, Error>(Json(resp))
         }
     }
 }
@@ -57,6 +59,87 @@ pub struct SubscriptionConfirmationResp {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct SubscriptionConfirmationRequest {
     pub token: String,
+}
+
+#[derive(Debug)]
+pub enum Error {
+    MissingToken {
+        context: String,
+    },
+    Data {
+        context: String,
+        source: StorageError,
+    },
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::MissingToken { context } => {
+                write!(fmt, "Invalid Authentication Scheme: {context} ")
+            }
+            Error::Data { context, source } => {
+                write!(fmt, "Storage Error: {context} | {source}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+impl From<ErrorContext<String, StorageError>> for Error {
+    fn from(err: ErrorContext<String, StorageError>) -> Self {
+        Error::Data {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+/// FIXME This is an oversimplified serialization for the Error.
+/// I had to do this because some fields (source) where not 'Serialize'
+impl Serialize for Error {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Error", 1)?;
+        match self {
+            Error::MissingToken { context } => {
+                state.serialize_field("description", context)?;
+            }
+            Error::Data { context, source: _ } => {
+                state.serialize_field("description", context)?;
+            }
+        }
+        state.end()
+    }
+}
+
+impl IntoResponse for Error {
+    fn into_response(self) -> Response {
+        match self {
+            err @ Error::MissingToken { context: _ } => {
+                (
+                    // FIXME Not all Error leads to UNAUTHORIZED. Some are INTERNAL_ERROR, ...
+                    StatusCode::UNAUTHORIZED,
+                    serde_json::to_string(&err).unwrap(),
+                )
+                    .into_response()
+            }
+            err @ Error::Data {
+                context: _,
+                source: _,
+            } => {
+                (
+                    // FIXME Not all Error leads to UNAUTHORIZED. Some are INTERNAL_ERROR, ...
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    serde_json::to_string(&err).unwrap(),
+                )
+                    .into_response()
+            }
+        }
+    }
 }
 
 #[cfg(test)]

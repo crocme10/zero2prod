@@ -1,13 +1,17 @@
 use axum::extract::{Json, State};
-use axum_extra::extract::WithRejection;
+use axum::http::status::StatusCode;
+use axum::response::{IntoResponse, Response};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use serde::{Deserialize, Serialize};
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Serialize, Serializer};
+use std::fmt;
 use uuid::Uuid;
 
 use crate::domain::{NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus};
-use crate::email_service::Email;
-use crate::error::ApiError;
+use crate::email_service::{Email, Error as EmailError};
 use crate::server::{AppState, ApplicationBaseUrl};
+use crate::storage::Error as StorageError;
+use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user subscriptions
 #[allow(clippy::unused_async)]
@@ -20,15 +24,16 @@ use crate::server::{AppState, ApplicationBaseUrl};
 )]
 pub async fn subscriptions(
     State(state): State<AppState>,
-    WithRejection(Json(request), _): WithRejection<Json<SubscriptionRequest>, ApiError>,
-) -> Result<Json<SubscriptionsResp>, ApiError> {
-    let subscription = NewSubscription::try_from(request).map_err(ApiError::new_bad_request)?;
+    Json(request): Json<SubscriptionRequest>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    let subscription = NewSubscription::try_from(request)
+        .context("Could not get valid subscription".to_string())?;
 
     match state
         .storage
         .get_subscription_by_email(subscription.email.as_ref())
         .await
-        .map_err(|err| ApiError::new_internal(format!("Cannot retrieve subscription: {err}")))?
+        .context("Could not get subscription by email".to_string())?
     {
         None => {
             tracing::info!("No prior subscription found");
@@ -38,18 +43,18 @@ pub async fn subscriptions(
                 .storage
                 .create_subscription_and_store_token(&subscription, &token)
                 .await
-                .map_err(|err| {
-                    ApiError::new_internal(format!("Cannot create new subscription: {err}"))
-                })?;
+                .context("Could not create new subscription".to_string())?;
 
             let email = create_confirmation_email(&state.base_url, &subscription.email, &token);
 
-            state.email.send_email(email).await.map_err(|err| {
-                ApiError::new_internal(format!("Cannot send confirmation email: {err}"))
-            })?;
+            state
+                .email
+                .send_email(email)
+                .await
+                .context("Could not send confirmation email".to_string())?;
 
             let resp = SubscriptionsResp { subscription };
-            Ok(Json(resp))
+            Ok::<axum::Json<SubscriptionsResp>, Error>(Json(resp))
         }
         Some(subscription) => {
             // FIXME The logic here is probably not very secure. It's not taking the
@@ -60,15 +65,15 @@ pub async fn subscriptions(
             // * if it is 'confirmed', then we send an email 'already subscribed'
             match subscription.status {
                 SubscriptionStatus::PendingConfirmation => {
-                    let token = state
+                    match state
                         .storage
                         .get_token_by_subscriber_id(&subscription.id)
                         .await
-                        .map_err(|err| {
-                            ApiError::new_internal(format!("Cannot create new subscription: {err}"))
-                        })?;
-                    match token {
-                        None => Err(ApiError::new_internal(format!("Expected token"))),
+                        .context("Could not get token by subscriber's id".to_string())?
+                    {
+                        None => Err(Error::MissingToken {
+                            context: "Expected token".to_string(),
+                        }),
                         Some(token) => {
                             let email = create_confirmation_email(
                                 &state.base_url,
@@ -76,13 +81,13 @@ pub async fn subscriptions(
                                 &token,
                             );
 
-                            state.email.send_email(email).await.map_err(|err| {
-                                ApiError::new_internal(format!(
-                                    "Cannot create new subscription: {err}"
-                                ))
-                            })?;
+                            state
+                                .email
+                                .send_email(email)
+                                .await
+                                .context("Could not send confirmation email".to_string())?;
                             let resp = SubscriptionsResp { subscription };
-                            Ok(Json(resp))
+                            Ok::<axum::Json<SubscriptionsResp>, Error>(Json(resp))
                         }
                     }
                 }
@@ -93,11 +98,13 @@ pub async fn subscriptions(
                         html_content: "You are already subscribed".to_string(),
                         text_content: "You are already subscribed".to_string(),
                     };
-                    state.email.send_email(email).await.map_err(|err| {
-                        ApiError::new_internal(format!("Cannot create new subscription: {err}"))
-                    })?;
+                    state
+                        .email
+                        .send_email(email)
+                        .await
+                        .context("Could not send confirmation email".to_string())?;
                     let resp = SubscriptionsResp { subscription };
-                    Ok(Json(resp))
+                    Ok::<axum::Json<SubscriptionsResp>, Error>(Json(resp))
                 }
             }
         }
@@ -151,6 +158,126 @@ fn generate_subscription_token() -> String {
         .collect()
 }
 
+#[derive(Debug)]
+pub enum Error {
+    InvalidRequest {
+        context: String,
+        source: String,
+    },
+    MissingToken {
+        context: String,
+    },
+    Data {
+        context: String,
+        source: StorageError,
+    },
+    Email {
+        context: String,
+        source: EmailError,
+    },
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::InvalidRequest { context, source } => {
+                write!(fmt, "Invalid Request: {context} | {source}")
+            }
+            Error::MissingToken { context } => {
+                write!(fmt, "Invalid Authentication Scheme: {context} ")
+            }
+            Error::Data { context, source } => {
+                write!(fmt, "Storage Error: {context} | {source}")
+            }
+            Error::Email { context, source } => {
+                write!(fmt, "Email Error: {context} | {source}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+impl From<ErrorContext<String, String>> for Error {
+    fn from(err: ErrorContext<String, String>) -> Self {
+        Error::InvalidRequest {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<String, StorageError>> for Error {
+    fn from(err: ErrorContext<String, StorageError>) -> Self {
+        Error::Data {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<String, EmailError>> for Error {
+    fn from(err: ErrorContext<String, EmailError>) -> Self {
+        Error::Email {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+/// FIXME This is an oversimplified serialization for the Error.
+/// I had to do this because some fields (source) where not 'Serialize'
+impl Serialize for Error {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Error", 1)?;
+        match self {
+            Error::InvalidRequest { context, source: _ } => {
+                state.serialize_field("description", context)?;
+            }
+            Error::MissingToken { context } => {
+                state.serialize_field("description", context)?;
+            }
+            Error::Data { context, source: _ } => {
+                state.serialize_field("description", context)?;
+            }
+            Error::Email { context, source: _ } => {
+                state.serialize_field("description", context)?;
+            }
+        }
+        state.end()
+    }
+}
+
+impl IntoResponse for Error {
+    fn into_response(self) -> Response {
+        match self {
+            err @ Error::InvalidRequest { .. } => (
+                StatusCode::BAD_REQUEST,
+                serde_json::to_string(&err).unwrap(),
+            )
+                .into_response(),
+            err @ Error::MissingToken { .. } => (
+                StatusCode::UNAUTHORIZED,
+                serde_json::to_string(&err).unwrap(),
+            )
+                .into_response(),
+            err @ Error::Data { .. } => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                serde_json::to_string(&err).unwrap(),
+            )
+                .into_response(),
+            err @ Error::Email { .. } => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                serde_json::to_string(&err).unwrap(),
+            )
+                .into_response(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use axum::{
@@ -158,9 +285,10 @@ mod tests {
         http::{header, Request, StatusCode},
         routing::{post, Router},
     };
-    use fake::faker::internet::en::{IPv4, SafeEmail};
-    use fake::faker::name::en::Name;
-    // use fake::faker::lorem::en::{Paragraph, Sentence};
+    use fake::faker::{
+        internet::en::{IPv4, SafeEmail},
+        name::en::Name,
+    };
     use fake::Fake;
     use mockall::predicate::*;
     use std::sync::Arc;
@@ -391,11 +519,6 @@ mod tests {
 
         // Check the response status code.
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
-
-        // Check the response body.
-        // let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        // let body: Value = serde_json::from_slice(&body).unwrap();
-        // assert_eq!(body, json!(&dummy_heroes));
     }
 
     #[tokio::test]

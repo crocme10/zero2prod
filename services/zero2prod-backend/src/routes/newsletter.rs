@@ -1,39 +1,38 @@
 use axum::extract::{Json, State};
-use axum::response::{IntoResponse, Response};
 use axum::http::status::StatusCode;
-use axum_extra::extract::WithRejection;
+use axum::response::{IntoResponse, Response};
 use base64::engine::general_purpose;
 use base64::{DecodeError, Engine};
 use fake::locales::Data;
 use fake::Dummy;
-use hyper::header::{HeaderMap, ToStrError, self};
+use hyper::header::{self, HeaderMap, ToStrError};
 use rand::prelude::SliceRandom;
 use secrecy::{ExposeSecret, Secret};
-use serde::{Deserialize, Serialize, Serializer};
 use serde::ser::SerializeStruct;
+use serde::{Deserialize, Serialize, Serializer};
 use std::{fmt, string::FromUtf8Error};
 use uuid::Uuid;
 
 use crate::domain::SubscriberEmail;
-use crate::storage::Error as StorageError;
-use crate::email_service::{Error as EmailError, Email};
+use crate::email_service::{Email, Error as EmailError};
 use crate::server::AppState;
+use crate::storage::Error as StorageError;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for newsletter publishing
 #[allow(clippy::unused_async)]
 #[tracing::instrument(
-name = "Publishing a newsletter issue"
-skip(state),
-fields(
-    request_id = %Uuid::new_v4(),
-)
+    name = "Adding a new subscription"
+    skip(state),
+    fields(
+        request_id = %Uuid::new_v4(),
+    )
 )]
 pub async fn publish_newsletter(
     headers: HeaderMap,
     State(state): State<AppState>,
-    WithRejection(Json(request), _): WithRejection<Json<BodyData>, Error>,
-) -> Result<Json<()>, Error> {
+    Json(request): Json<BodyData>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
     let _credentials = basic_authentication(&headers)?;
 
     let subscribers = state
@@ -44,9 +43,13 @@ pub async fn publish_newsletter(
 
     for subscriber in subscribers {
         let email = create_newsletter_email(&subscriber.email, &request);
-        state.email.send_email(email).await.context("Cannot send newsletter email".to_string())?;
+        state
+            .email
+            .send_email(email)
+            .await
+            .context("Cannot send newsletter email".to_string())?;
     }
-    Ok(Json(()))
+    Ok::<axum::Json<()>, Error>(Json(()))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -62,13 +65,13 @@ pub struct Content {
 }
 
 #[derive(Debug)]
-struct Credentials {
+pub struct Credentials {
     pub username: String,
     pub password: Secret<String>,
 }
 
 impl Credentials {
-    fn encode(&self) -> String {
+    pub fn encode(&self) -> String {
         let credentials = format!("{}:{}", self.username, self.password.expose_secret());
         general_purpose::STANDARD.encode(credentials.as_bytes())
     }
@@ -210,25 +213,25 @@ impl Serialize for Error {
             Error::MissingHeader { context } => {
                 state.serialize_field("description", context)?;
             }
-            Error::InvalidAuthenticationString { context, source } => {
+            Error::InvalidAuthenticationString { context, source: _ } => {
                 state.serialize_field("description", context)?;
             }
             Error::InvalidAuthenticationScheme { context } => {
                 state.serialize_field("description", context)?;
             }
-            Error::Base64 { context, source } => {
+            Error::Base64 { context, source: _ } => {
                 state.serialize_field("description", context)?;
             }
-            Error::CredentialString { context, source } => {
+            Error::CredentialString { context, source: _ } => {
                 state.serialize_field("description", context)?;
             }
             Error::InvalidCredentials { context } => {
                 state.serialize_field("description", context)?;
             }
-            Error::Data { context, source } => {
+            Error::Data { context, source: _ } => {
                 state.serialize_field("description", context)?;
             }
-            Error::Email { context, source } => {
+            Error::Email { context, source: _ } => {
                 state.serialize_field("description", context)?;
             }
         }
@@ -241,13 +244,15 @@ impl IntoResponse for Error {
         (
             // FIXME Not all Error leads to UNAUTHORIZED. Some are INTERNAL_ERROR, ...
             StatusCode::UNAUTHORIZED,
-            [(header::CONTENT_TYPE, "application/json"), (header::WWW_AUTHENTICATE, r#"Basic realm="publish""#)],
+            [
+                (header::CONTENT_TYPE, "application/json"),
+                (header::WWW_AUTHENTICATE, r#"Basic realm="publish""#),
+            ],
             serde_json::to_string(&self).unwrap(),
         )
             .into_response()
     }
 }
-
 
 fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, Error> {
     // The header value, if present, must be a valid UTF8 string
@@ -401,7 +406,7 @@ mod tests {
                 .expect("Failed to execute request.");
             assert_that(&response.status().as_u16())
                 .named(message)
-                .is_equal_to(400);
+                .is_equal_to(422);
         }
     }
 

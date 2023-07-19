@@ -1,15 +1,16 @@
 use cucumber::World;
 use fake::faker::internet::en::SafeEmail;
 use fake::faker::name::en::Name;
+use fake::Fake;
 use once_cell::sync::Lazy;
+use reqwest::header;
+use secrecy::Secret;
 use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 use wiremock::MockServer;
-// use fake::faker::lorem::en::{Paragraph, Sentence};
-use fake::Fake;
 use wiremock::{
     matchers::{method, path},
     Mock, ResponseTemplate,
@@ -19,7 +20,7 @@ use common::settings::Settings;
 use zero2prod::application::{Application, Error};
 use zero2prod::email_service::EmailService;
 use zero2prod::opts::{Command, Opts};
-use zero2prod::routes::newsletter::BodyData;
+use zero2prod::routes::newsletter::{BodyData, Credentials};
 // use zero2prod::routes::subscriptions::SubscriptionRequest;
 use zero2prod::storage::Storage;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
@@ -209,9 +210,17 @@ impl TestApp {
     /// Send a newsletter
     pub async fn send_newsletter(&self, newsletter: &BodyData) -> reqwest::Response {
         let url = format!("{}/api/newsletter", self.address);
+        let credentials = Credentials {
+            username: "Bob".to_string(),
+            password: Secret::new("secret".to_string()),
+        };
         self.api_client
             .post(url)
             .json(&newsletter)
+            .header(
+                header::AUTHORIZATION,
+                format!("Basic {}", credentials.encode()),
+            )
             .send()
             .await
             .expect("failed to post on newsletter endpoint")
