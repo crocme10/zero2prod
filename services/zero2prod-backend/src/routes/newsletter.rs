@@ -523,4 +523,68 @@ mod tests {
         assert_that(&response.headers()["WWW-Authenticate"])
             .is_equal_to(HeaderValue::from_static(r#"Basic realm="publish""#))
     }
+
+    #[tokio::test]
+    async fn newsletter_should_reject_request_with_invalid_credentials() {
+        // In this test, we make sure that the newsletter handler does not call
+        // the EmailService::send_email nor the StorageService, because
+        // authorization criteria are not met
+
+        let mut email_mock = MockEmailService::new();
+        email_mock
+            .expect_send_email()
+            .never()
+            .return_once(|_| Ok(()));
+        let mut storage_mock = MockStorage::new();
+        storage_mock
+            .expect_get_confirmed_subscribers_email()
+            .never()
+            .return_once(|| Ok(vec![]));
+
+        let credentials: Credentials = CredentialsGenerator(EN).fake();
+        let rhs = credentials.username.clone();
+
+        storage_mock
+            .expect_validate_credentials()
+            .withf(move |arg: &Credentials| {
+                let Credentials {
+                    username,
+                    password: _,
+                } = arg;
+                if *username != rhs {
+                    return false;
+                }
+                true
+            })
+            .return_once(|_| Err(StorageError::InvalidUsernameOrPassword));
+
+        let state = AppState {
+            storage: Arc::new(storage_mock),
+            email: Arc::new(email_mock),
+            base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+        };
+
+        let app = newsletter_route().with_state(state);
+
+        let body = BodyData {
+            title: "Newsletter".to_string(),
+            content: Content {
+                html: "<p>Newsletter Content</p>".to_string(),
+                text: "Newsletter Content".to_string(),
+            },
+        };
+        let response = app
+            .oneshot(send_newsletter_request_from_json(
+                "/api/newsletter",
+                serde_json::to_value(body).expect("body to json value"),
+                Some(credentials),
+            ))
+            .await
+            .expect("response");
+
+        // Check the response status code.
+        assert_that(&response.status()).is_equal_to(StatusCode::UNAUTHORIZED);
+        assert_that(&response.headers()["WWW-Authenticate"])
+            .is_equal_to(HeaderValue::from_static(r#"Basic realm="publish""#))
+    }
 }
