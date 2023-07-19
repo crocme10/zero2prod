@@ -1,9 +1,12 @@
+use argon2::{
+    password_hash::SaltString, Algorithm, Argon2, Params, PasswordHash, PasswordHasher,
+    PasswordVerifier, Version,
+};
 use async_trait::async_trait;
 use chrono::Utc;
 use common::err_context::ErrorContextExt;
 use common::settings::DatabaseSettings;
-use secrecy::ExposeSecret;
-use sha3::Digest;
+use secrecy::{ExposeSecret, Secret};
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
@@ -280,6 +283,8 @@ impl Storage for PostgresStorage {
     #[tracing::instrument(name = "Confirming subscriber")]
     async fn get_confirmed_subscribers_email(&self) -> Result<Vec<ConfirmedSubscriber>, Error> {
         let mut conn = self.exec.lock().await;
+        //Create a fallback password hash to enforce doing the same amount
+        //of work whether we have a user account in the db or not.
         let saved = sqlx::query!(
             r#"SELECT email FROM subscriptions WHERE status = $1"#,
             SubscriptionStatus::Confirmed as SubscriptionStatus,
@@ -298,33 +303,79 @@ impl Storage for PostgresStorage {
 
     #[tracing::instrument(name = "Validating Credentials")]
     async fn validate_credentials(&self, credentials: &Credentials) -> Result<Uuid, Error> {
+        let Credentials { username, password } = credentials.clone();
+
+        let mut id = None;
+        let mut expected_password_hash = Secret::new(
+            "$argon2id$v=19$m=15000,t=2,p=1$\
+            gZiV/M1gPc22ElAH/Jh1Hw$\
+            CWOrkoo7oJBQ/iyh7uJ0LO2aLEfrHwTWllSAxT0zRno"
+                .to_string(),
+        );
+
+        if let Some((stored_user_id, stored_password_hash)) =
+            self.get_credentials(&username).await?
+        {
+            id = Some(stored_user_id);
+            expected_password_hash = stored_password_hash
+        }
+
+        tokio::task::spawn_blocking(move || {
+            tracing::info_span!("Verify password hash")
+                .in_scope(move || verify_password_hash(expected_password_hash, password))
+        })
+        .await
+        .map_err(|_| Error::Hasher {
+            context: "Could not spawn blocking task".to_string(),
+        })?
+        .map_err(|_| Error::InvalidUsernameOrPassword)?;
+
+        id.ok_or_else(|| Error::InvalidUsernameOrPassword)
+    }
+
+    #[tracing::instrument(name = "Getting Stored Credentials")]
+    async fn get_credentials(
+        &self,
+        username: &str,
+    ) -> Result<Option<(Uuid, Secret<String>)>, Error> {
         let mut conn = self.exec.lock().await;
-        let password_hash = sha3::Sha3_256::digest(credentials.password.expose_secret().as_bytes());
-        let password_hash = format!("{:x}", password_hash);
-        let saved: Option<_> = sqlx::query!(
-            r#"SELECT id FROM users WHERE username = $1 AND password_hash = $2"#,
-            credentials.username,
-            password_hash,
+        let row: Option<_> = sqlx::query!(
+            r#"
+            SELECT id, password_hash
+            FROM users
+            WHERE username = $1
+            "#,
+            username,
         )
         .fetch_optional(&mut **conn)
         .await
-        .context(format!("Could not validate credentials"))?;
+        .context("Could not retrieved credentials".to_string())?
+        .map(|row| (row.id, Secret::new(row.password_hash)));
 
-        saved.map(|r| r.id).ok_or_else(|| Error::Missing {
-            context: "Invalid Username or Password".to_string(),
-        })
+        Ok(row)
     }
 
-    #[tracing::instrument(name = "Validating Credentials")]
-    async fn create_user(&self, id: Uuid, credentials: &Credentials) -> Result<(), Error> {
+    #[tracing::instrument(name = "Storing Credentials")]
+    async fn store_credentials(&self, id: Uuid, credentials: &Credentials) -> Result<(), Error> {
         let mut conn = self.exec.lock().await;
-        let password_hash = sha3::Sha3_256::digest(credentials.password.expose_secret().as_bytes());
-        let password_hash = format!("{:x}", password_hash);
+        let Credentials { username, password } = credentials.clone();
+        let password_hash = tokio::task::spawn_blocking(move || {
+            tracing::info_span!("Compute password hash")
+                .in_scope(move || compute_password_hash(password))
+        })
+        .await
+        .map_err(|_| Error::Hasher {
+            context: "Could not spawn blocking task".to_string(),
+        })?
+        .map_err(|_| Error::Hasher {
+            context: "Could not compute password hash".to_string(),
+        })?;
+
         sqlx::query!(
             r#"INSERT INTO users (id, username, password_hash) VALUES ($1, $2, $3)"#,
             id,
-            credentials.username,
-            password_hash,
+            username,
+            password_hash.expose_secret(),
         )
         .execute(&mut **conn)
         .await
@@ -332,6 +383,45 @@ impl Storage for PostgresStorage {
 
         Ok(())
     }
+}
+
+#[tracing::instrument(
+    name = "Verify password hash"
+    skip(expected_password_hash, password_candidate)
+)]
+fn verify_password_hash(
+    expected_password_hash: Secret<String>,
+    password_candidate: Secret<String>,
+) -> Result<(), Error> {
+    let expected_password_hash = PasswordHash::new(expected_password_hash.expose_secret())
+        .map_err(|_| Error::Hasher {
+            context: "Could not compute password hash".to_string(),
+        })?;
+
+    Argon2::default()
+        .verify_password(
+            password_candidate.expose_secret().as_bytes(),
+            &expected_password_hash,
+        )
+        .map_err(|_| Error::InvalidUsernameOrPassword)?;
+    Ok(())
+}
+
+fn compute_password_hash(password: Secret<String>) -> Result<Secret<String>, Error> {
+    let salt = SaltString::generate(&mut rand::thread_rng());
+    let argon_params = Params::new(15000, 2, 1, None).map_err(|_| Error::Hasher {
+        context: "Hasher parameters".to_string(),
+    })?;
+
+    let hasher = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon_params);
+    let password_hash = hasher
+        .hash_password(password.expose_secret().as_bytes(), &salt)
+        .map_err(|_| Error::Hasher {
+            context: "Hasher password".to_string(),
+        })?
+        .to_string();
+
+    Ok(Secret::new(password_hash))
 }
 
 #[cfg(test)]

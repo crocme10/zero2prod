@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use secrecy::Secret;
 use std::fmt;
 use uuid::Uuid;
 
@@ -27,6 +28,10 @@ pub enum Error {
     Missing {
         context: String,
     },
+    Hasher {
+        context: String,
+    },
+    InvalidUsernameOrPassword,
 }
 
 impl fmt::Display for Error {
@@ -46,6 +51,12 @@ impl fmt::Display for Error {
             }
             Error::Missing { context } => {
                 write!(fmt, "Missing: {context}")
+            }
+            Error::Hasher { context } => {
+                write!(fmt, "Hasher Error: {context}")
+            }
+            Error::InvalidUsernameOrPassword => {
+                write!(fmt, "Invalid username or password")
             }
         }
     }
@@ -101,5 +112,10 @@ pub trait Storage {
 
     async fn validate_credentials(&self, credentials: &Credentials) -> Result<Uuid, Error>;
 
-    async fn create_user(&self, id: Uuid, credentials: &Credentials) -> Result<(), Error>;
+    async fn get_credentials(
+        &self,
+        username: &str,
+    ) -> Result<Option<(Uuid, Secret<String>)>, Error>;
+
+    async fn store_credentials(&self, id: Uuid, credentials: &Credentials) -> Result<(), Error>;
 }

@@ -192,9 +192,9 @@ pub async fn spawn_app() -> TestApp {
     let user: TestUser = TestUserGenerator(EN).fake();
 
     storage
-        .create_user(user.id, &user.credentials)
+        .store_credentials(user.id, &user.credentials)
         .await
-        .expect("Create test user");
+        .expect("Store credentials");
 
     TestApp {
         address,

@@ -5,7 +5,7 @@ use fake::Dummy;
 use rand::prelude::SliceRandom;
 use secrecy::{ExposeSecret, Secret};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Credentials {
     pub username: String,
     pub password: Secret<String>,
