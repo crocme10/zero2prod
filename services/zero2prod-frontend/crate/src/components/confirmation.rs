@@ -18,21 +18,18 @@ async fn submit_subscription_confirmation(url: &str) -> Result<String, FetchErro
     //opts.mode(RequestMode::Cors); // FIXME Why Cors ?
 
     let request = Request::new_with_str_and_init(url, &opts).map_err(|_| FetchError {
-        status_code: 400,
         description: "Could not build a request".to_string(),
     })?;
     request
         .headers()
         .set("Accept-Encoding", "gzip, deflate, br")
         .map_err(|_| FetchError {
-            status_code: 400,
             description: "Could not set header".to_string(),
         })?;
     request
         .headers()
         .set("Accept", "application/json")
         .map_err(|_| FetchError {
-            status_code: 400,
             description: "Could not set header".to_string(),
         })?;
     gloo_console::log!("Submitting confirmation request");
@@ -40,29 +37,24 @@ async fn submit_subscription_confirmation(url: &str) -> Result<String, FetchErro
     let resp_value = JsFuture::from(window.fetch_with_request(&request))
         .await
         .map_err(|_| FetchError {
-            status_code: 400,
             description: "Could not fetch response".to_string(),
         })?;
 
     let resp: Response = resp_value.dyn_into().map_err(|_| FetchError {
-        status_code: 400,
         description: "Could not cast response".to_string(),
     })?;
 
     gloo_console::log!("resp");
     let value = JsFuture::from(resp.json().map_err(|_| FetchError {
-        status_code: 400,
         description: "Could not extract json from response".to_string(),
     })?)
     .await
     .map_err(|_| FetchError {
-        status_code: 400,
         description: "Could not turn Json to JsValue".to_string(),
     })?;
     gloo_console::log!("value");
 
     let res: SubResp = serde_wasm_bindgen::from_value(value).map_err(|_| FetchError {
-        status_code: 400,
         description: "Could not deserialize response".to_string(),
     })?;
     gloo_console::log!("serde_wasm_bindgen");

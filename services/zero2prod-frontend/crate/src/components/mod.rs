@@ -14,17 +14,12 @@ pub mod subscription;
 // FIXME This is common code, should be moved to zero2prod-common
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct FetchError {
-    pub status_code: u16,
     pub description: String,
 }
 
 impl Display for FetchError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Fetch Error ({}): {}",
-            &self.status_code, &self.description
-        )
+        write!(f, "Fetch Error: {}", &self.description)
     }
 }
 
