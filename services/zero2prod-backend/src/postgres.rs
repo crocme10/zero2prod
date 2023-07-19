@@ -3,6 +3,7 @@ use chrono::Utc;
 use common::err_context::ErrorContextExt;
 use common::settings::DatabaseSettings;
 use secrecy::ExposeSecret;
+use sha3::Digest;
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
@@ -298,10 +299,12 @@ impl Storage for PostgresStorage {
     #[tracing::instrument(name = "Validating Credentials")]
     async fn validate_credentials(&self, credentials: &Credentials) -> Result<Uuid, Error> {
         let mut conn = self.exec.lock().await;
+        let password_hash = sha3::Sha3_256::digest(credentials.password.expose_secret().as_bytes());
+        let password_hash = format!("{:x}", password_hash);
         let saved: Option<_> = sqlx::query!(
-            r#"SELECT id FROM users WHERE username = $1 AND password = $2"#,
+            r#"SELECT id FROM users WHERE username = $1 AND password_hash = $2"#,
             credentials.username,
-            credentials.password.expose_secret()
+            password_hash,
         )
         .fetch_optional(&mut **conn)
         .await
@@ -315,11 +318,13 @@ impl Storage for PostgresStorage {
     #[tracing::instrument(name = "Validating Credentials")]
     async fn create_user(&self, id: Uuid, credentials: &Credentials) -> Result<(), Error> {
         let mut conn = self.exec.lock().await;
+        let password_hash = sha3::Sha3_256::digest(credentials.password.expose_secret().as_bytes());
+        let password_hash = format!("{:x}", password_hash);
         sqlx::query!(
-            r#"INSERT INTO users (id, username, password) VALUES ($1, $2, $3)"#,
+            r#"INSERT INTO users (id, username, password_hash) VALUES ($1, $2, $3)"#,
             id,
             credentials.username,
-            credentials.password.expose_secret()
+            password_hash,
         )
         .execute(&mut **conn)
         .await

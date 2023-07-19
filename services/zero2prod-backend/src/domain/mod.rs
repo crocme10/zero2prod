@@ -10,4 +10,4 @@ pub use new_subscription::NewSubscription;
 pub use subscriber_email::SubscriberEmail;
 pub use subscriber_name::SubscriberName;
 pub use subscription::{Subscription, SubscriptionStatus};
-pub use user_credentials::{Credentials, C};
+pub use user_credentials::{Credentials, CredentialsGenerator};

@@ -311,7 +311,7 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
-        domain::{ConfirmedSubscriber, Credentials, SubscriberEmail, C},
+        domain::{ConfirmedSubscriber, Credentials, CredentialsGenerator, SubscriberEmail},
         email_service::MockEmailService,
         server::{AppState, ApplicationBaseUrl},
         storage::MockStorage,
@@ -377,7 +377,7 @@ mod tests {
         for (body, message) in test_cases {
             let app = newsletter_route().with_state(state.clone());
             //let credentials = Faker.fake::<C>();
-            let credentials: Credentials = C(EN).fake();
+            let credentials: Credentials = CredentialsGenerator(EN).fake();
             let response = app
                 .oneshot(send_newsletter_request_from_json(
                     "/api/newsletter",
@@ -432,7 +432,7 @@ mod tests {
             .expect_get_confirmed_subscribers_email()
             .return_once(move || Ok(vec![confirmed_subscriber]));
 
-        let credentials: Credentials = C(EN).fake();
+        let credentials: Credentials = CredentialsGenerator(EN).fake();
         let rhs = credentials.username.clone();
 
         storage_mock

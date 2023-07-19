@@ -18,10 +18,14 @@ impl Credentials {
     }
 }
 
-pub struct C<L>(pub L);
+// FIXME Change name 'C'
+pub struct CredentialsGenerator<L>(pub L);
 
-impl<L: Data> Dummy<C<L>> for Credentials {
-    fn dummy_with_rng<R: rand::Rng + ?Sized>(_config: &C<L>, rng: &mut R) -> Self {
+impl<L: Data> Dummy<CredentialsGenerator<L>> for Credentials {
+    fn dummy_with_rng<R: rand::Rng + ?Sized>(
+        _config: &CredentialsGenerator<L>,
+        rng: &mut R,
+    ) -> Self {
         let username = *L::NAME_FIRST_NAME.choose(rng).unwrap();
         let password = *L::LOREM_WORD.choose(rng).unwrap();
         Credentials {

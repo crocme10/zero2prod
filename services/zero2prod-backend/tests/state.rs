@@ -1,10 +1,14 @@
 use cucumber::World;
 use fake::faker::internet::en::SafeEmail;
 use fake::faker::name::en::Name;
+use fake::locales::Data;
 use fake::locales::*;
+use fake::Dummy;
 use fake::Fake;
 use once_cell::sync::Lazy;
+use rand::prelude::SliceRandom;
 use reqwest::header;
+use secrecy::Secret;
 use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
@@ -19,7 +23,7 @@ use wiremock::{
 
 use common::settings::Settings;
 use zero2prod::application::{Application, Error};
-use zero2prod::domain::{Credentials, C};
+use zero2prod::domain::Credentials;
 use zero2prod::email_service::EmailService;
 use zero2prod::opts::{Command, Opts};
 use zero2prod::routes::newsletter::BodyData;
@@ -76,7 +80,28 @@ pub struct TestApp {
     // The server handle, so that it can be killed.
     pub server_handle: Option<JoinHandle<Result<(), Error>>>,
     // A fake user, used to test authentication.
-    pub user: Option<Credentials>,
+    pub user: Option<TestUser>,
+}
+
+pub struct TestUser {
+    pub id: Uuid,
+    pub credentials: Credentials,
+}
+
+pub struct TestUserGenerator<L>(pub L);
+
+impl<L: Data> Dummy<TestUserGenerator<L>> for TestUser {
+    fn dummy_with_rng<R: rand::Rng + ?Sized>(_config: &TestUserGenerator<L>, rng: &mut R) -> Self {
+        let username = *L::NAME_FIRST_NAME.choose(rng).unwrap();
+        let password = *L::LOREM_WORD.choose(rng).unwrap();
+        TestUser {
+            id: Uuid::new_v4(),
+            credentials: Credentials {
+                username: username.into(),
+                password: Secret::new(password.to_string()),
+            },
+        }
+    }
 }
 
 impl fmt::Debug for TestApp {
@@ -162,10 +187,12 @@ pub async fn spawn_app() -> TestApp {
         .build()
         .expect("api client build");
 
-    let credentials: Credentials = C(EN).fake();
-    let id = Uuid::new_v4();
+    // This is a user whose credentials are stored in the database, and it will be used
+    // to authorize the API calls that need to have valid credentials.
+    let user: TestUser = TestUserGenerator(EN).fake();
+
     storage
-        .create_user(id, &credentials)
+        .create_user(user.id, &user.credentials)
         .await
         .expect("Create test user");
 
@@ -177,7 +204,7 @@ pub async fn spawn_app() -> TestApp {
         api_client,
         email_client,
         server_handle: Some(handle),
-        user: Some(credentials),
+        user: Some(user),
     }
 }
 
@@ -231,7 +258,10 @@ impl TestApp {
             .json(&newsletter)
             .header(
                 header::AUTHORIZATION,
-                format!("Basic {}", self.user.as_ref().expect("user").encode()),
+                format!(
+                    "Basic {}",
+                    self.user.as_ref().expect("user").credentials.encode()
+                ),
             )
             .send()
             .await
