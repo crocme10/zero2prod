@@ -19,6 +19,7 @@ use crate::domain::{
     Subscription, SubscriptionStatus,
 };
 use crate::storage::{Error, Storage};
+use crate::telemetry::spawn_blocking_with_tracing;
 
 /// This is the executor type, which can be either a pool connection, or a transaction.
 /// This is the sort of generic solution that I have found which allows me to use
@@ -320,15 +321,12 @@ impl Storage for PostgresStorage {
             expected_password_hash = stored_password_hash
         }
 
-        tokio::task::spawn_blocking(move || {
-            tracing::info_span!("Verify password hash")
-                .in_scope(move || verify_password_hash(expected_password_hash, password))
-        })
-        .await
-        .map_err(|_| Error::Hasher {
-            context: "Could not spawn blocking task".to_string(),
-        })?
-        .map_err(|_| Error::InvalidUsernameOrPassword)?;
+        spawn_blocking_with_tracing(move || verify_password_hash(expected_password_hash, password))
+            .await
+            .map_err(|_| Error::Hasher {
+                context: "Could not spawn blocking task".to_string(),
+            })?
+            .map_err(|_| Error::InvalidUsernameOrPassword)?;
 
         id.ok_or_else(|| Error::InvalidUsernameOrPassword)
     }
@@ -359,17 +357,14 @@ impl Storage for PostgresStorage {
     async fn store_credentials(&self, id: Uuid, credentials: &Credentials) -> Result<(), Error> {
         let mut conn = self.exec.lock().await;
         let Credentials { username, password } = credentials.clone();
-        let password_hash = tokio::task::spawn_blocking(move || {
-            tracing::info_span!("Compute password hash")
-                .in_scope(move || compute_password_hash(password))
-        })
-        .await
-        .map_err(|_| Error::Hasher {
-            context: "Could not spawn blocking task".to_string(),
-        })?
-        .map_err(|_| Error::Hasher {
-            context: "Could not compute password hash".to_string(),
-        })?;
+        let password_hash = spawn_blocking_with_tracing(move || compute_password_hash(password))
+            .await
+            .map_err(|_| Error::Hasher {
+                context: "Could not spawn blocking task".to_string(),
+            })?
+            .map_err(|_| Error::Hasher {
+                context: "Could not compute password hash".to_string(),
+            })?;
 
         sqlx::query!(
             r#"INSERT INTO users (id, username, password_hash) VALUES ($1, $2, $3)"#,

@@ -18,7 +18,6 @@ impl Credentials {
     }
 }
 
-// FIXME Change name 'C'
 pub struct CredentialsGenerator<L>(pub L);
 
 impl<L: Data> Dummy<CredentialsGenerator<L>> for Credentials {
