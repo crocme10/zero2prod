@@ -16,3 +16,42 @@ If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has a
    1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
    2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
 2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+
+
+## Bootstrapping
+
+npm create vite@latest
+cd eval-v1
+npm install
+
+nvim Dockerfile
+docker build . -t a403/eval-v1
+docker run -p 49160:8080 -d a403/eval-v1:latest
+docker ps --all
+docker logs -t elated_lumiere
+docker stop elated_lumiere
+docker rm elated_lumiere
+
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+nvim tailwind.config.js
+nvim postcss.config.js
+nvim src/style.css
+ls src/assets/
+[copy fonts to src/assets/fonts]
+npm run dev
+git init
+git add .
+git commit -m "Baseline"
+
+npm install --save-dev @vue/eslint-config-typescript @rushstack/eslint-patch
+npm install --save-dev eslint eslint-plugin-vue
+npm install --save-dev eslint-config-prettier
+npm install --save-dev prettier
+cp ../vue-enterprise-boilerplate/.prettierrc.json .
+cp ../vue-enterprise-boilerplate/.eslintrc.cjs .
+nvim package.json
+nvim .eslintrc.cjs
+npm run lint
+git add .
+git commit -m "Add eslint"
