@@ -30,20 +30,30 @@
         <ul class="flex flex-wrap mb-4">
           <li class="flex-auto text-center">
             <a
-              class="block rounded py-3 px-4 transition hover:text-white text-white bg-blue-600"
+              class="block rounded py-3 px-4 transition"
               href="#"
+              @click.prevent = "tab = 'login'"
+              :class="{
+                'hover:text-white text-white bg-blue-600': tab === 'login',
+                'hover:text-blue-600': tab === 'register'
+              }"
               >Login</a
             >
           </li>
               <li class="flex-auto text-center">
                 <a class="block rounded py-3 px-4 transition" href="#"
+                  @click.prevent = "tab = 'register'"
+                  :class="{
+                  'hover:text-white text-white bg-blue-600': tab === 'register',
+                  'hover:text-blue-600': tab === 'login'
+                  }"
                   >Register</a
                 >
               </li>
         </ul>
 
         <!-- Login Form -->
-        <form>
+        <form v-show="tab === 'login'">
           <!-- Email -->
           <div class="mb-3">
             <label class="inline-block mb-2">Email</label>
@@ -70,7 +80,7 @@
           </button>
         </form>
         <!-- Registration Form -->
-        <form>
+        <form v-show="tab === 'register'">
           <!-- Name -->
           <div class="mb-3">
             <label class="inline-block mb-2">Name</label>
@@ -148,7 +158,7 @@
 </template>
 
 <script lang="ts">
-  import { defineComponent } from 'vue'
+  import { defineComponent, ref } from 'vue'
   import { useModalStore } from '../stores/modal'
   import { storeToRefs } from 'pinia'
 
@@ -157,8 +167,9 @@
       const store = useModalStore()
       const { hiddenClass } = storeToRefs(store)
       const toggleHidden = store.toggleHidden
-
+      const tab = ref("login")
       return {
+        tab,
         hiddenClass,
         toggleHidden
       }
