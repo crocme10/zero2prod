@@ -58,6 +58,46 @@
   font-weight: 800;
   src: url('./assets/fonts/FiraSans/FiraSans-ExtraBoldItalic.ttf');
 }
+@font-face {
+  font-family: 'FontAwesome';
+  /* src: url('../fonts/FontAwesome/fontawesome-free-6.4.0-web/webfonts/fa-regular-400.ttf'); */
+  /* FIXME: Why this ttf file does not work? */
+  src: url('./assets/fonts/FontAwesome/fontawesome-webfont.ttf');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FontAwesomeBrand';
+  /* FIXME: Why this ttf file does not work? */
+  src: url('./assets/fonts/FontAwesome/fontawesome-free-6.4.0-web/webfonts/fa-brands-400.ttf');
+  font-weight: 400;
+  font-style: normal;
+}
+
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+[class^="icon-"]:before,
+[class*=" icon-"]:before {
+  font-family: 'FontAwesome';
+  font-weight: 400;
+  font-style: normal;
+  display: inline-block;
+  text-decoration: inherit;
+}
+
+[class^="brand-"]:before,
+[class*=" brand-"]:before {
+  font-family: 'FontAwesomeBrand';
+  font-weight: 400;
+  font-style: normal;
+  display: inline-block;
+  text-decoration: inherit;
+}
+
+.icon-envelope:before {
+  content: "\f0e0";
+}
