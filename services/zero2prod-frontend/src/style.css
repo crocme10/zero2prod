@@ -101,3 +101,23 @@
 .icon-envelope:before {
   content: "\f0e0";
 }
+
+.icon-comments:before {
+  content: "\f086";
+}
+
+.icon-play:before {
+  content: "\f04b";
+}
+
+.icon-solid-circle:before {
+  content: "\f111";
+}
+
+.icon-solid-xmark:before {
+  content: "\f00d";
+}
+
+.icon-solid-headphones:before {
+  content: "\f025";
+}

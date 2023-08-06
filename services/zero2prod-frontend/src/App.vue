@@ -59,7 +59,7 @@
         <span class="card-title">Songs</span>
         <!-- Icon -->
         <i
-          class="fa fa-headphones-alt float-right text-green-400 text-xl"
+          class="icon-solid-headphones float-right text-green-400 text-xl"
           ></i>
       </div>
       <!-- Playlist -->
@@ -74,7 +74,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -89,7 +89,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -104,7 +104,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -119,7 +119,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -134,7 +134,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -149,7 +149,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -164,7 +164,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -179,7 +179,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -194,7 +194,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -209,7 +209,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -224,7 +224,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -239,7 +239,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -254,7 +254,7 @@
 
           <div class="text-gray-600 text-lg">
             <span class="comments">
-              <i class="fa fa-comments text-gray-600"></i>
+              <i class="icon-comments text-gray-600"></i>
               15
             </span>
           </div>
@@ -274,7 +274,7 @@
     <div class="flex flex-nowrap gap-4 items-center">
       <!-- Play/Pause Button -->
       <button type="button">
-        <i class="fa fa-play text-gray-500 text-xl"></i>
+        <i class="icon-play text-gray-500 text-xl"></i>
       </button>
       <!-- Current Position -->
       <div class="player-currenttime">00:00</div>
@@ -285,7 +285,7 @@
           class="absolute -top-2.5 -ml-2.5 text-gray-800 text-lg"
           style="left: 50%"
           >
-          <i class="fas fa-circle"></i>
+          <i class="icon-solid-circle"></i>
         </span>
         <!-- Player Progress Bar-->
         <span
@@ -322,7 +322,7 @@
           <p class="text-2xl font-bold">Your Account</p>
           <!-- Modal Close Button -->
           <div class="modal-close cursor-pointer z-50">
-            <i class="fas fa-times"></i>
+            <i class="icon-solid-xmark"></i>
           </div>
         </div>
 
