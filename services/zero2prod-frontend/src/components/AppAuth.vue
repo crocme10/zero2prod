@@ -80,6 +80,11 @@
             </button>
           </form>
           <!-- Registration Form -->
+          <div class="text-white text-center font-bold p-4 rounded mb-4"
+            v-if="registration_show_alert"
+            :class="registration_alert_variant"
+            >{{ registration_alert_message }}
+          </div>
           <form @submit="onSubmit">
             <!-- Name -->
             <div class="mb-3">
@@ -163,6 +168,7 @@
             <button
               type="submit"
               class="block w-full bg-purple-600 text-white py-1.5 px-3 rounded transition hover:bg-purple-700"
+              :disable="registration_pending"
             >
               Submit
             </button>
@@ -208,7 +214,16 @@ export default defineComponent({
     // Creates a submission handler
     // It validate all fields and doesn't call your function unless all fields are valid
     const onSubmit = handleSubmit((values) => {
-      alert(JSON.stringify(values, null, 2))
+      registration_show_alert.value =  true
+      registration_pending.value =  true
+      registration_alert_variant.value = "bg-blue-500"
+      registration_alert_message.value = "Please wait while we create your account"
+      setTimeout(() => {
+        console.log('Submitting')
+        console.log(JSON.stringify(values, null, 2))
+      }, 1000)
+      registration_alert_variant.value = "bg-green-500"
+      registration_alert_message.value = "Success, your account has been created!"
     })
 
     const name = defineInputBinds('name')
@@ -219,6 +234,11 @@ export default defineComponent({
     const country = defineInputBinds('country')
     const termsOfService = defineInputBinds('termsOfService')
 
+    const registration_pending = ref(false)
+    const registration_show_alert = ref(false)
+    const registration_alert_variant = ref("bg-blue-500")
+    const registration_alert_message = ref("Please wait while we create your account")
+    
     return {
       tab,
       hiddenClass,
@@ -231,7 +251,11 @@ export default defineComponent({
       password,
       passwordConfirmation,
       country,
-      termsOfService
+      termsOfService,
+      registration_pending,
+      registration_show_alert,
+      registration_alert_variant,
+      registration_alert_message
     }
   }
 })
