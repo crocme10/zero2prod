@@ -81,16 +81,83 @@
         </form>
         <!-- Registration Form -->
           <form @submit="onSubmit">
+            <!-- Name -->
+            <div class="mb-3">
+              <label class="inline-block mb-2">Name</label>
+              <input
+                type="text"
+                v-bind="name"
+                class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300
+                transition duration-500 focus:outline-none focus:border-black rounded"
+                placeholder="Enter Name" />
+                <div class="text-red-600">{{ errors.name }}</div>
+            </div>
+            <!-- Email -->
             <div class="mb-3">
               <label class="inline-block mb-2">Email</label>
               <input
-                type="text"
+                type="email"
                 v-bind="email"
                 class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300
                 transition duration-500 focus:outline-none focus:border-black rounded"
                 placeholder="Enter Email" />
                 <div class="text-red-600">{{ errors.email }}</div>
             </div>
+            <!-- Age -->
+            <div class="mb-3">
+              <label class="inline-block mb-2">Age</label>
+              <input
+                type="number"
+                v-bind="age"
+                class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300
+                transition duration-500 focus:outline-none focus:border-black rounded" />
+                <div class="text-red-600">{{ errors.age }}</div>
+            </div>
+            <!-- Password -->
+            <div class="mb-3">
+              <label class="inline-block mb-2">Password</label>
+              <input
+                type="password"
+                v-bind="password"
+                class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300
+                transition duration-500 focus:outline-none focus:border-black rounded"
+                placeholder="Password" />
+                <div class="text-red-600">{{ errors.password }}</div>
+            </div>
+            <!-- Confirm Password -->
+            <div class="mb-3">
+              <label class="inline-block mb-2">Confirm Password</label>
+              <input
+              type="password"
+              v-bind="passwordConfirmation"
+              class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300
+              transition duration-500 focus:outline-none focus:border-black rounded"
+              placeholder="Confirm Password" />
+                <div class="text-red-600">{{ errors.passwordConfirmation }}</div>
+            </div>
+            <!-- Country -->
+            <div class="mb-3">
+              <label class="inline-block mb-2">Country</label>
+              <select
+                v-bind="country"
+                class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300
+                transition duration-500 focus:outline-none focus:border-black rounded">
+                <option value="USA">USA</option>
+                <option value="Mexico">Mexico</option>
+                <option value="Germany">Germany</option>
+              </select>
+                <div class="text-red-600">{{ errors.country }}</div>
+            </div>
+            <!-- TOS -->
+            <div class="mb-3 pl-6">
+              <input
+                type="checkbox"
+                v-bind="termsOfService"
+                class="w-4 h-4 float-left -ml-6 mt-1 rounded" />
+                <label class="inline-block">Accept terms of service</label>
+                <div class="text-red-600">{{ errors.termsOfService }}</div>
+            </div>
+
             <button
               type="submit"
               class="block w-full bg-purple-600 text-white py-1.5 px-3 rounded
@@ -109,8 +176,7 @@
   import { useModalStore } from '../stores/modal'
   import { storeToRefs } from 'pinia'
   import { useForm } from 'vee-validate'
-  import { object, string } from 'yup'
-  // import { toTypedSchema } from '@vee-validate/yup'
+  import { object, string, number, boolean, ref as yupRef } from 'yup'
 
 
   export default defineComponent({
@@ -119,12 +185,32 @@
       const { hiddenClass } = storeToRefs(store)
       const toggleHidden = store.toggleHidden
 
-      const tab = ref("login")
+      const tab = ref("login") // The name of the tab opened by default.
 
       const { errors, handleSubmit, defineInputBinds } = useForm({
         validationSchema: object({
-          email: string().email().required(),
+          name: string().required('Please enter your name'),
+          email: string().email().required('Please enter your email'),
+          age: number().min(18).max(120).required('Please enter your age'),
+          password: string()
+            .required('Please Enter your password')
+            .matches(
+              /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/,
+              "Must Contain 8 Characters, One Uppercase, One Lowercase, One Number and one special case Character"
+            ),
+          passwordConfirmation: string().oneOf([yupRef('password')], "Passwords does not match"),
+          country: string().required(),
+          termsOfService: boolean().oneOf([true], "You must accept the terms and conditions")
         }),
+        initialValues: {
+          name: '',
+          email: '',
+          age: 0,
+          password: '',
+          passwordConfirmation: '',
+          country: '',
+          termsOfService: false
+        }
       })
       
       // Creates a submission handler
@@ -133,7 +219,13 @@
         alert(JSON.stringify(values, null, 2));
       })
       
-      const email = defineInputBinds('email');
+      const name = defineInputBinds('name')
+      const email = defineInputBinds('email')
+      const age = defineInputBinds('age')
+      const password = defineInputBinds('password')
+      const passwordConfirmation = defineInputBinds('passwordConfirmation')
+      const country = defineInputBinds('country')
+      const termsOfService = defineInputBinds('termsOfService')
 
       return {
         tab,
@@ -141,7 +233,13 @@
         toggleHidden,
         errors,
         onSubmit,
-        email
+        name,
+        email,
+        age,
+        password,
+        passwordConfirmation,
+        country,
+        termsOfService
       }
     }
   })
