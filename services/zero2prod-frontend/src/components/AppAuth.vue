@@ -216,10 +216,11 @@
         tos: 'required'
       }
 
-      const { handleSubmit } = useForm<RegisterForm>()
+      // const { handleSubmit } = useForm<RegisterForm>()
+      const { handleSubmit } = useForm()
 
       const register = handleSubmit((values) => {
-        console.log(values.toString())
+        alert(JSON.stringify(values, null, 2));
       })
 
       return {
