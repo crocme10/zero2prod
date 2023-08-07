@@ -81,8 +81,8 @@
 @tailwind components;
 @tailwind utilities;
 
-[class^="icon-regular"]:before,
-[class*=" icon-regular"]:before {
+[class^='icon-regular']:before,
+[class*=' icon-regular']:before {
   font-family: 'FontAwesome';
   font-weight: 400;
   font-style: normal;
@@ -90,8 +90,8 @@
   text-decoration: inherit;
 }
 
-[class^="icon-solid"]:before,
-[class*=" icon-solid"]:before {
+[class^='icon-solid']:before,
+[class*=' icon-solid']:before {
   font-family: 'FontAwesomeSolid';
   font-weight: 900;
   font-style: normal;
@@ -99,8 +99,8 @@
   text-decoration: inherit;
 }
 
-[class^="icon-brand"]:before,
-[class*=" icon-brand"]:before {
+[class^='icon-brand']:before,
+[class*=' icon-brand']:before {
   font-family: 'FontAwesomeBrand';
   font-weight: 400;
   font-style: normal;
@@ -109,25 +109,25 @@
 }
 
 .icon-regular-envelope:before {
-  content: "\f0e0";
+  content: '\f0e0';
 }
 
 .icon-solid-comments:before {
-  content: "\f086";
+  content: '\f086';
 }
 
 .icon-solid-play:before {
-  content: "\f04b";
+  content: '\f04b';
 }
 
 .icon-solid-circle:before {
-  content: "\f111";
+  content: '\f111';
 }
 
 .icon-solid-xmark:before {
-  content: "\f00d";
+  content: '\f00d';
 }
 
 .icon-solid-headphones:before {
-  content: "\f025";
+  content: '\f025';
 }

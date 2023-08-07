@@ -6,7 +6,7 @@ export const useModalStore = defineStore('modal', {
   }),
   getters: {
     hiddenClass(state): string {
-      return !state.isOpen ? "hidden": ""
+      return !state.isOpen ? 'hidden' : ''
     }
   },
   actions: {

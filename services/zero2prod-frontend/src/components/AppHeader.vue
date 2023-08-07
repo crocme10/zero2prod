@@ -2,7 +2,7 @@
   <header id="header" class="bg-gray-700">
     <nav class="container mx-auto flex justify-start items-center py-5 px-4">
       <!-- App Name -->
-      <a class="text-white font-bold uppercase text-2xl mr-4" href="#" >Music</a>
+      <a class="text-white font-bold uppercase text-2xl mr-4" href="#">Music</a>
 
       <div class="flex flex-grow items-center">
         <!-- Primary Navigation -->
@@ -21,16 +21,16 @@
 </template>
 
 <script lang="ts">
-  import { defineComponent } from 'vue'
-  import { useModalStore } from '../stores/modal'
+import { defineComponent } from 'vue'
+import { useModalStore } from '../stores/modal'
 
-  export default defineComponent({
-    setup() {
-      const store = useModalStore()
-      const toggleHidden = store.toggleHidden
-      return {
-        toggleHidden
-      }
+export default defineComponent({
+  setup() {
+    const store = useModalStore()
+    const toggleHidden = store.toggleHidden
+    return {
+      toggleHidden
     }
-  })
+  }
+})
 </script>

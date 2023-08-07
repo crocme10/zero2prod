@@ -1,6 +1,6 @@
 body {
-  font-family : FiraSans, sans-serif;
-  @apply bg-white dark:bg-gray-900
+  font-family: FiraSans, sans-serif;
+  @apply bg-white dark:bg-gray-900;
 }
 
 .navbar-active .hamburger div:first-child {
@@ -11,6 +11,6 @@ body {
   @apply -rotate-45 -translate-y-1;
 }
 
-.navbar-active div:first-child div:first-child div:last-child{
-  @apply block lg:flex
+.navbar-active div:first-child div:first-child div:last-child {
+  @apply block lg:flex;
 }
