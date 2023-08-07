@@ -1,19 +1,21 @@
 <template>
   <div>
-    <div class="text-white text-center font-bold p-4 rounded mb-4"
+    <div
+      class="text-white text-center font-bold p-4 rounded mb-4"
       v-if="registration_show_alert"
       :class="registration_alert_variant"
-      >{{ registration_alert_message }}
+    >
+      {{ registration_alert_message }}
     </div>
-      <form @submit="onSubmit">
-        <!-- Name -->
+    <form @submit="onSubmit">
+      <!-- Name -->
       <div class="mb-3">
         <label class="inline-block mb-2">Name</label>
         <input
-        type="text"
-        v-bind="name"
-        class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
-        placeholder="Enter Name"
+          type="text"
+          v-bind="name"
+          class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
+          placeholder="Enter Name"
         />
         <div class="text-red-600">{{ errors.name }}</div>
       </div>
@@ -21,10 +23,10 @@
       <div class="mb-3">
         <label class="inline-block mb-2">Email</label>
         <input
-        type="email"
-        v-bind="email"
-        class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
-        placeholder="Enter Email"
+          type="email"
+          v-bind="email"
+          class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
+          placeholder="Enter Email"
         />
         <div class="text-red-600">{{ errors.email }}</div>
       </div>
@@ -32,9 +34,9 @@
       <div class="mb-3">
         <label class="inline-block mb-2">Age</label>
         <input
-        type="number"
-        v-bind="age"
-        class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
+          type="number"
+          v-bind="age"
+          class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
         />
         <div class="text-red-600">{{ errors.age }}</div>
       </div>
@@ -42,10 +44,10 @@
       <div class="mb-3">
         <label class="inline-block mb-2">Password</label>
         <input
-        type="password"
-        v-bind="password"
-        class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
-        placeholder="Password"
+          type="password"
+          v-bind="password"
+          class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
+          placeholder="Password"
         />
         <div class="text-red-600">{{ errors.password }}</div>
       </div>
@@ -53,10 +55,10 @@
       <div class="mb-3">
         <label class="inline-block mb-2">Confirm Password</label>
         <input
-        type="password"
-        v-bind="passwordConfirmation"
-        class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
-        placeholder="Confirm Password"
+          type="password"
+          v-bind="passwordConfirmation"
+          class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
+          placeholder="Confirm Password"
         />
         <div class="text-red-600">{{ errors.passwordConfirmation }}</div>
       </div>
@@ -66,7 +68,7 @@
         <select
           v-bind="country"
           class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
-          >
+        >
           <option value="USA">USA</option>
           <option value="Mexico">Mexico</option>
           <option value="Germany">Germany</option>
@@ -76,10 +78,10 @@
       <!-- TOS -->
       <div class="mb-3 pl-6">
         <input
-        type="checkbox"
-        v-bind="termsOfService"
-        value="true"
-        class="w-4 h-4 float-left -ml-6 mt-1 rounded"
+          type="checkbox"
+          v-bind="termsOfService"
+          value="true"
+          class="w-4 h-4 float-left -ml-6 mt-1 rounded"
         />
         <label class="inline-block">Accept terms of service</label>
         <div class="text-red-600">{{ errors.termsOfService }}</div>
@@ -89,7 +91,7 @@
         type="submit"
         class="block w-full bg-purple-600 text-white py-1.5 px-3 rounded transition hover:bg-purple-700"
         :disable="registration_pending"
-        >
+      >
         Submit
       </button>
     </form>
@@ -103,7 +105,6 @@ import { object, string, number, bool, ref as yupRef } from 'yup'
 
 export default defineComponent({
   setup() {
-
     const { errors, handleSubmit, defineInputBinds } = useForm({
       validationSchema: object({
         name: string().required('Please enter your name'),
@@ -124,16 +125,16 @@ export default defineComponent({
     // Creates a submission handler
     // It validate all fields and doesn't call your function unless all fields are valid
     const onSubmit = handleSubmit((values) => {
-      registration_show_alert.value =  true
-      registration_pending.value =  true
-      registration_alert_variant.value = "bg-blue-500"
-      registration_alert_message.value = "Please wait while we create your account"
+      registration_show_alert.value = true
+      registration_pending.value = true
+      registration_alert_variant.value = 'bg-blue-500'
+      registration_alert_message.value = 'Please wait while we create your account'
       setTimeout(() => {
         console.log('Submitting')
         console.log(JSON.stringify(values, null, 2))
       }, 1000)
-      registration_alert_variant.value = "bg-green-500"
-      registration_alert_message.value = "Success, your account has been created!"
+      registration_alert_variant.value = 'bg-green-500'
+      registration_alert_message.value = 'Success, your account has been created!'
     })
 
     const name = defineInputBinds('name')
@@ -146,9 +147,9 @@ export default defineComponent({
 
     const registration_pending = ref(false)
     const registration_show_alert = ref(false)
-    const registration_alert_variant = ref("bg-blue-500")
-    const registration_alert_message = ref("Please wait while we create your account")
-    
+    const registration_alert_variant = ref('bg-blue-500')
+    const registration_alert_message = ref('Please wait while we create your account')
+
     return {
       errors,
       onSubmit,
