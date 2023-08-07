@@ -153,6 +153,7 @@
               <input
                 type="checkbox"
                 v-bind="termsOfService"
+                value="true"
                 class="w-4 h-4 float-left -ml-6 mt-1 rounded" />
                 <label class="inline-block">Accept terms of service</label>
                 <div class="text-red-600">{{ errors.termsOfService }}</div>
@@ -176,7 +177,7 @@
   import { useModalStore } from '../stores/modal'
   import { storeToRefs } from 'pinia'
   import { useForm } from 'vee-validate'
-  import { object, string, number, boolean, ref as yupRef } from 'yup'
+  import { object, string, number, bool, ref as yupRef } from 'yup'
 
 
   export default defineComponent({
@@ -200,17 +201,9 @@
             ),
           passwordConfirmation: string().oneOf([yupRef('password')], "Passwords does not match"),
           country: string().required(),
-          termsOfService: boolean().oneOf([true], "You must accept the terms and conditions")
-        }),
-        initialValues: {
-          name: '',
-          email: '',
-          age: 0,
-          password: '',
-          passwordConfirmation: '',
-          country: '',
-          termsOfService: false
-        }
+          termsOfService: bool().default(false)
+          .oneOf([true], "You must accept the terms of services")
+        })
       })
       
       // Creates a submission handler
