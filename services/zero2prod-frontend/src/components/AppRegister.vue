@@ -98,73 +98,61 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref } from 'vue'
+<script setup lang="ts">
+import { ref } from 'vue'
 import { useForm } from 'vee-validate'
 import { object, string, number, bool, ref as yupRef } from 'yup'
+import { useAuthStore } from '../stores/Auth'
 
-export default defineComponent({
-  setup() {
-    const { errors, handleSubmit, defineInputBinds } = useForm({
-      validationSchema: object({
-        name: string().required('Please enter your name'),
-        email: string().email().required('Please enter your email'),
-        age: number().min(18).max(120).required('Please enter your age'),
-        password: string()
-          .required('Please Enter your password')
-          .matches(
-            /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/,
-            'Must Contain 8 Characters, One Uppercase, One Lowercase, One Number and one special case Character'
-          ),
-        passwordConfirmation: string().oneOf([yupRef('password')], 'Passwords does not match'),
-        country: string().required(),
-        termsOfService: bool().default(false).oneOf([true], 'You must accept the terms of services')
-      })
-    })
-
-    // Creates a submission handler
-    // It validate all fields and doesn't call your function unless all fields are valid
-    const onSubmit = handleSubmit((values) => {
-      registration_show_alert.value = true
-      registration_pending.value = true
-      registration_alert_variant.value = 'bg-blue-500'
-      registration_alert_message.value = 'Please wait while we create your account'
-      setTimeout(() => {
-        console.log('Submitting')
-        console.log(JSON.stringify(values, null, 2))
-      }, 1000)
-      registration_alert_variant.value = 'bg-green-500'
-      registration_alert_message.value = 'Success, your account has been created!'
-    })
-
-    const name = defineInputBinds('name')
-    const email = defineInputBinds('email')
-    const age = defineInputBinds('age')
-    const password = defineInputBinds('password')
-    const passwordConfirmation = defineInputBinds('passwordConfirmation')
-    const country = defineInputBinds('country')
-    const termsOfService = defineInputBinds('termsOfService')
-
-    const registration_pending = ref(false)
-    const registration_show_alert = ref(false)
-    const registration_alert_variant = ref('bg-blue-500')
-    const registration_alert_message = ref('Please wait while we create your account')
-
-    return {
-      errors,
-      onSubmit,
-      name,
-      email,
-      age,
-      password,
-      passwordConfirmation,
-      country,
-      termsOfService,
-      registration_pending,
-      registration_show_alert,
-      registration_alert_variant,
-      registration_alert_message
-    }
-  }
+const { errors, handleSubmit, defineInputBinds } = useForm({
+  validationSchema: object({
+    name: string().required('Please enter your name'),
+    email: string().email().required('Please enter your email'),
+    age: number().min(18).max(120).required('Please enter your age'),
+    password: string()
+      .required('Please Enter your password')
+      .matches(
+        /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/,
+        'Must Contain 8 Characters, One Uppercase, One Lowercase, One Number and one special case Character'
+      ),
+    passwordConfirmation: string().oneOf([yupRef('password')], 'Passwords does not match'),
+    country: string().required(),
+    termsOfService: bool().default(false).oneOf([true], 'You must accept the terms of services')
+  })
 })
+
+const authStore = useAuthStore()
+// Creates a submission handler
+// It validate all fields and doesn't call your function unless all fields are valid
+const onSubmit = handleSubmit(async (values) => {
+  registration_show_alert.value = true
+  registration_pending.value = true
+  registration_alert_variant.value = 'bg-blue-500'
+  registration_alert_message.value = 'Please wait while we create your account'
+  console.log('AppRegister::handleSubmit')
+  console.log(JSON.stringify(values, null, 2))
+  let data = new Map<string, any>([
+    ['username', values.name ],
+    ['email', values.email ],
+    ['password', values.password]
+  ])
+  await authStore.register(data).then((rs: any) => {
+    console.log(rs)
+  })
+  registration_alert_variant.value = 'bg-green-500'
+  registration_alert_message.value = 'Success, your account has been created!'
+})
+
+const name = defineInputBinds('name')
+const email = defineInputBinds('email')
+const age = defineInputBinds('age')
+const password = defineInputBinds('password')
+const passwordConfirmation = defineInputBinds('passwordConfirmation')
+const country = defineInputBinds('country')
+const termsOfService = defineInputBinds('termsOfService')
+
+const registration_pending = ref(false)
+const registration_show_alert = ref(false)
+const registration_alert_variant = ref('bg-blue-500')
+const registration_alert_message = ref('Please wait while we create your account')
 </script>
