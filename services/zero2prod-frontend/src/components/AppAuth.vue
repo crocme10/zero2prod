@@ -80,15 +80,17 @@
           </button>
         </form>
         <!-- Registration Form -->
-        <form v-show="tab === 'register'">
+        <vee-form v-show="tab === 'register'" :validation-schema="schema">
           <!-- Name -->
           <div class="mb-3">
             <label class="inline-block mb-2">Name</label>
-            <input
-            type="text"
-            class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
-            placeholder="Enter Name"
-            />
+            <vee-field
+              type="text"
+              name="name"
+              class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition
+              duration-500 focus:outline-none focus:border-black rounded"
+              placeholder="Enter Name" />
+              <Error-Message class="text-red-600" name="name"/>
           </div>
           <!-- Email -->
           <div class="mb-3">
@@ -150,7 +152,7 @@
             >
             Submit
           </button>
-        </form>
+        </vee-form>
         </div>
       </div>
     </div>
@@ -162,14 +164,25 @@
   import { useModalStore } from '../stores/modal'
   import { storeToRefs } from 'pinia'
 
+  type RegisterForm = {
+    name: string,
+  }
+
   export default defineComponent({
     setup() {
       const store = useModalStore()
       const { hiddenClass } = storeToRefs(store)
       const toggleHidden = store.toggleHidden
+
       const tab = ref("login")
+
+      const schema: RegisterForm = {
+        name: 'required'
+      }
+
       return {
         tab,
+        schema,
         hiddenClass,
         toggleHidden
       }
