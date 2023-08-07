@@ -1,6 +1,6 @@
 import { App, Plugin } from 'vue'
 import { Form as VeeForm, Field as VeeField, defineRule, ErrorMessage } from 'vee-validate'
-import { required } from '@vee-validate/rules'
+import { required, min, max, alpha_spaces as alphaSpaces, email, min_value as minValue, max_value as maxValue, confirmed } from '@vee-validate/rules'
 
 export const VeeValidatePlugin: Plugin = {
   install(app: App) { 
@@ -9,5 +9,13 @@ export const VeeValidatePlugin: Plugin = {
     app.component('ErrorMessage', ErrorMessage)
 
     defineRule('required', required)
+    defineRule('min', min)
+    defineRule('max', max)
+    defineRule('alpha_spaces', alphaSpaces)
+    defineRule('email', email)
+    defineRule('min_value', minValue)
+    defineRule('max_value', maxValue)
+    defineRule('confirmed', confirmed)
+
   }
 }

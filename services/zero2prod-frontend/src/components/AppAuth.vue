@@ -80,71 +80,84 @@
           </button>
         </form>
         <!-- Registration Form -->
-        <vee-form v-show="tab === 'register'" :validation-schema="schema">
+        <vee-form v-show="tab === 'register'" :validation-schema="schema" @submit="register">
           <!-- Name -->
           <div class="mb-3">
             <label class="inline-block mb-2">Name</label>
             <vee-field
               type="text"
               name="name"
-              class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition
-              duration-500 focus:outline-none focus:border-black rounded"
+              class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300
+              transition duration-500 focus:outline-none focus:border-black rounded"
               placeholder="Enter Name" />
               <Error-Message class="text-red-600" name="name"/>
           </div>
           <!-- Email -->
           <div class="mb-3">
             <label class="inline-block mb-2">Email</label>
-            <input
-            type="email"
-            class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
-            placeholder="Enter Email"
-            />
+            <vee-field
+              type="email"
+              name="email"
+              class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300
+              transition duration-500 focus:outline-none focus:border-black rounded"
+              placeholder="Enter Email" />
+              <Error-Message class="text-red-600" name="email" />
           </div>
           <!-- Age -->
           <div class="mb-3">
             <label class="inline-block mb-2">Age</label>
-            <input
-            type="number"
-            class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
-            />
+            <vee-field
+              type="number"
+              name="age"
+              class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300
+              transition duration-500 focus:outline-none focus:border-black rounded" />
+              <Error-Message class="text-red-600" name="age" />
           </div>
           <!-- Password -->
           <div class="mb-3">
             <label class="inline-block mb-2">Password</label>
-            <input
-            type="password"
-            class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
-            placeholder="Password"
-            />
+            <vee-field
+              type="password"
+              name="password"
+              class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300
+              transition duration-500 focus:outline-none focus:border-black rounded"
+              placeholder="Password" />
+              <Error-Message class="text-red-600" name="password" />
           </div>
           <!-- Confirm Password -->
           <div class="mb-3">
             <label class="inline-block mb-2">Confirm Password</label>
-            <input
+            <vee-field
             type="password"
-            class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
-            placeholder="Confirm Password"
-            />
+            name="confirm_password"
+            class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300
+            transition duration-500 focus:outline-none focus:border-black rounded"
+            placeholder="Confirm Password" />
+              <Error-Message class="text-red-600" name="confirm_password" />
           </div>
           <!-- Country -->
           <div class="mb-3">
             <label class="inline-block mb-2">Country</label>
-            <select
-              class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
-              >
+            <vee-field
+              as="select"
+              name="country"
+              class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300
+              transition duration-500 focus:outline-none focus:border-black rounded">
               <option value="USA">USA</option>
               <option value="Mexico">Mexico</option>
               <option value="Germany">Germany</option>
-            </select>
+            </vee-field>
+              <Error-Message class="text-red-600" name="country" />
           </div>
           <!-- TOS -->
           <div class="mb-3 pl-6">
-            <input
-            type="checkbox"
-            class="w-4 h-4 float-left -ml-6 mt-1 rounded"
-            />
-            <label class="inline-block">Accept terms of service</label>
+            <vee-field
+              type="checkbox"
+              name="tos"
+              value="1"
+              class="w-4 h-4 float-left -ml-6 mt-1 rounded" />
+              <label class="inline-block">Accept terms of service</label>
+              <Error-Message class="text-red-600" name="tos" />
           </div>
           <button
             type="submit"
@@ -163,9 +176,26 @@
   import { defineComponent, ref } from 'vue'
   import { useModalStore } from '../stores/modal'
   import { storeToRefs } from 'pinia'
+  import { useForm } from "vee-validate"
 
-  type RegisterForm = {
+  type RegisterValidationRules = {
     name: string,
+    email: string,
+    age: string,
+    password: string,
+    confirm_password: string,
+    country: string,
+    tos: string
+  }
+
+  interface RegisterForm {
+    name: string,
+    email: string,
+    age: number,
+    password: string,
+    confirm_password: string,
+    country: string,
+    tos: boolean
   }
 
   export default defineComponent({
@@ -176,13 +206,26 @@
 
       const tab = ref("login")
 
-      const schema: RegisterForm = {
-        name: 'required'
+      const schema: RegisterValidationRules = {
+        name: 'required|min:3|max:100|alpha_spaces',
+        email: 'required|email',
+        age: 'required|min_value:18|max_value:130',
+        password: 'required|min:3',
+        confirm_password: 'confirmed:@password',
+        country: 'required',
+        tos: 'required'
       }
+
+      const { handleSubmit } = useForm<RegisterForm>()
+
+      const register = handleSubmit((values) => {
+        console.log(values.toString())
+      })
 
       return {
         tab,
         schema,
+        register,
         hiddenClass,
         toggleHidden
       }
