@@ -9,7 +9,6 @@ export const useAuthStore = defineStore('auth', {
   }),
   actions: {
     async register(data: Map<string, any>) {
-  
       console.log('AuthStore::register')
       console.log(JSON.stringify(data, null, 2))
 
@@ -24,7 +23,7 @@ export const useAuthStore = defineStore('auth', {
         throw new MyError('Failure, an unexpected error occured, please try again later.')
       }
 
-      if ( resp?.data.status === 'fail' ) {
+      if (resp?.data.status === 'fail') {
         // console.log('AuthStore::register error in resp')
         // console.log(JSON.stringify(resp?.data, null, 2))
 
@@ -36,7 +35,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     async login(data: Map<string, any>) {
-  
       console.log('AuthStore::login')
       console.log(JSON.stringify(data, null, 2))
 
@@ -51,7 +49,7 @@ export const useAuthStore = defineStore('auth', {
         throw new MyError('Failure, an unexpected error occured, please try again later.')
       }
 
-      if ( resp?.data.status === 'fail' ) {
+      if (resp?.data.status === 'fail') {
         // console.log('AuthStore::login error in resp')
         // console.log(JSON.stringify(resp?.data, null, 2))
 
@@ -63,7 +61,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     async authenticate() {
-  
       console.log('AuthStore::authenticate')
       let resp = null
       try {
@@ -76,7 +73,7 @@ export const useAuthStore = defineStore('auth', {
         return
       }
 
-      if ( resp?.data.status === 'fail' ) {
+      if (resp?.data.status === 'fail') {
         console.log('AuthStore::authenticate error in resp')
         console.log(JSON.stringify(resp?.data, null, 2))
         this.isLoggedIn = false
@@ -85,7 +82,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     async logout() {
-  
       console.log('AuthStore::logout')
       try {
         await AuthService.logout()

@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia';
+import { defineStore } from 'pinia'
 
 export const useCommonStore = defineStore('common', {
   state: () => ({}),
@@ -8,8 +8,7 @@ export const useCommonStore = defineStore('common', {
     },
     showErrorMess(message: String) {
       console.log(message)
-    },
+    }
   },
-  getters: {},
+  getters: {}
 })
-

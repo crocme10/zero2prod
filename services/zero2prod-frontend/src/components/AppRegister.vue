@@ -123,9 +123,9 @@ export default defineComponent({
         termsOfService: bool().default(false).oneOf([true], 'You must accept the terms of services')
       })
     })
-    
+
     const authStore = useAuthStore()
-    
+
     // Creates a submission handler
     // It validate all fields and doesn't call your function unless all fields are valid
     const onSubmit = handleSubmit(async (values) => {
@@ -134,8 +134,8 @@ export default defineComponent({
       registration_alert_variant.value = 'bg-blue-500'
       registration_alert_message.value = 'Please wait while we create your account'
       let data = new Map<string, any>([
-        ['username', values.name ],
-        ['email', values.email ],
+        ['username', values.name],
+        ['email', values.email],
         ['password', values.password]
       ])
       try {
@@ -146,7 +146,8 @@ export default defineComponent({
         if (error instanceof MyError) {
           registration_alert_message.value = error.message
         } else {
-          registration_alert_message.value = 'Failure, an unexpected error occured, please try again later.'
+          registration_alert_message.value =
+            'Failure, an unexpected error occured, please try again later.'
         }
         return
       }
@@ -154,7 +155,7 @@ export default defineComponent({
       registration_alert_message.value = 'Success, your account has been created!'
       window.location.reload()
     })
-    
+
     const name = defineInputBinds('name')
     const email = defineInputBinds('email')
     const age = defineInputBinds('age')
@@ -162,7 +163,7 @@ export default defineComponent({
     const passwordConfirmation = defineInputBinds('passwordConfirmation')
     const country = defineInputBinds('country')
     const termsOfService = defineInputBinds('termsOfService')
-    
+
     const registration_pending = ref(false)
     const registration_show_alert = ref(false)
     const registration_alert_variant = ref('bg-blue-500')
@@ -181,7 +182,7 @@ export default defineComponent({
       registration_alert_variant,
       registration_alert_message,
       onSubmit,
-      errors,
+      errors
     }
   }
 })

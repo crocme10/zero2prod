@@ -79,7 +79,7 @@ export default defineComponent({
     const store = useModalStore()
     const { hiddenClass } = storeToRefs(store)
     const toggleHidden = store.toggleHidden
-    
+
     const tab = ref('login') // The name of the tab opened by default.
 
     return {

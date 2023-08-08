@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from 'axios'
 import LocalStorage from '../utils/LocalStorage'
 // import { ResponseData } from '../types/Response'
 // import { useCommonStore } from '../stores/Common'
@@ -11,7 +11,7 @@ const axiosInstance = axios.create({
 export default axiosInstance
 
 axiosInstance.interceptors.request.use(
-  config => {
+  (config) => {
     config.headers!['Accept'] = 'application/json'
     config.headers!['Content-Type'] = 'application/json'
     const token = LocalStorage.getToken()
@@ -23,7 +23,7 @@ axiosInstance.interceptors.request.use(
     }
     return config
   },
-  error => {
+  (error) => {
     return Promise.reject(error)
   }
 )
@@ -40,4 +40,4 @@ axiosInstance.interceptors.request.use(
 //     return Promise.reject(error)
 //   }
 // )
-// 
+//

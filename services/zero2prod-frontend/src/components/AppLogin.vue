@@ -66,7 +66,7 @@ export default defineComponent({
       login_alert_variant.value = 'bg-blue-500'
       login_alert_message.value = 'Please wait while we create your account'
       let data = new Map<string, any>([
-        ['email', values.email ],
+        ['email', values.email],
         ['password', values.password]
       ])
       try {
@@ -77,7 +77,8 @@ export default defineComponent({
         if (error instanceof MyError) {
           login_alert_message.value = error.message
         } else {
-          login_alert_message.value = 'Failure, an unexpected error occured, please try again later.'
+          login_alert_message.value =
+            'Failure, an unexpected error occured, please try again later.'
         }
         return
       }

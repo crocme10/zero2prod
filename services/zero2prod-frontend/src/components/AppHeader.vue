@@ -8,12 +8,17 @@
         <!-- Primary Navigation -->
         <ul class="flex flex-row mt-1">
           <!-- Navigation Links -->
-          <li>
+          <li v-if="!isLoggedIn">
             <a class="px-2 text-white" href="#" @click.prevent="toggleHidden">Login / Register</a>
           </li>
-          <li>
-            <a class="px-2 text-white" href="#">Manage</a>
-          </li>
+          <template v-else>
+            <li>
+              <a class="px-2 text-white" href="#" @click.prevent="logout">Logout</a>
+            </li>
+            <li>
+              <a class="px-2 text-white" href="#">Manage</a>
+            </li>
+          </template>
         </ul>
       </div>
     </nav>
@@ -23,13 +28,22 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { useModalStore } from '../stores/modal'
+import { useAuthStore } from '../stores/Auth'
+import { storeToRefs } from 'pinia'
 
 export default defineComponent({
   setup() {
-    const store = useModalStore()
-    const toggleHidden = store.toggleHidden
+    const modalStore = useModalStore()
+    const toggleHidden = modalStore.toggleHidden
+
+    const authStore = useAuthStore()
+    const { isLoggedIn } = storeToRefs(authStore)
+    const logout = authStore.logout
+
     return {
-      toggleHidden
+      toggleHidden,
+      isLoggedIn,
+      logout
     }
   }
 })

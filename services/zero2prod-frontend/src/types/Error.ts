@@ -1,6 +1,6 @@
 export class MyError extends Error {
   constructor(message: string) {
-    super(message);
+    super(message)
     Object.setPrototypeOf(this, MyError.prototype)
   }
 }

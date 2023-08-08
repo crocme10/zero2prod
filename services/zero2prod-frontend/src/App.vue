@@ -278,7 +278,7 @@ import { useAuthStore } from './stores/Auth'
 export default defineComponent({
   components: {
     AppHeader,
-    AppAuth,
+    AppAuth
   },
   setup() {
     const store = useAuthStore()
@@ -294,5 +294,3 @@ export default defineComponent({
   }
 })
 </script>
-
-
