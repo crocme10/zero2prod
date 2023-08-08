@@ -1,32 +1,38 @@
 import { defineStore } from 'pinia'
 import LocalStorage from '../utils/LocalStorage'
 import AuthService from '../api/AuthService'
+import { MyError } from '../types/Error'
 
 export const useAuthStore = defineStore('auth', {
-  state: () => ({}),
+  state: () => ({
+    isLoggedIn: false
+  }),
   actions: {
     async register(data: Map<string, any>) {
+  
+      console.log('AuthStore::register')
+      console.log(JSON.stringify(data, null, 2))
+
+      let resp = null
       try {
-        console.log('AuthStore::register ' + data)
-        // FIXME Note: I'm not storing anything!
-        const res = await AuthService.register(data)
-        return res
+        resp = await AuthService.register(data)
+        // console.log(JSON.stringify(resp, null, 2))
       } catch (error) {
-        console.log(error)
-        return error
+        console.log('AuthStore::register error')
+        console.log(JSON.stringify(error, null, 2))
+
+        throw new MyError('Failure, an unexpected error occured, please try again later.')
       }
-    },
-    async login(data: Map<string, any>) {
-      try {
-        const res = await AuthService.login(data)
-        LocalStorage.setToken(res.data?.access_token)
-        return res
-      } catch (error) {
-        console.log(error)
+
+      if ( resp?.data.status === 'fail' ) {
+        console.log('AuthStore::register error in resp')
+        console.log(JSON.stringify(resp?.data, null, 2))
+
+        throw new MyError('Failure: ' + resp?.data.message)
+      } else {
+        console.log('AuthStore::register storing access token')
+        LocalStorage.setToken(resp.data?.token)
       }
-    },
-    logout() {
-      LocalStorage.removeToken()
     }
   }
 })
