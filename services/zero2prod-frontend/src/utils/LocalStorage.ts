@@ -6,7 +6,6 @@ const LocalStorage = {
     return localStorage.setItem(name, value)
   },
   setToken(value: string) {
-    console.log('set token: ' + value)
     return localStorage.setItem('jwt', value)
   },
   getToken() {

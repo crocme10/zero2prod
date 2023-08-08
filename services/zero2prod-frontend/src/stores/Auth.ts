@@ -35,6 +35,33 @@ export const useAuthStore = defineStore('auth', {
         this.isLoggedIn = true
       }
     },
+    async login(data: Map<string, any>) {
+  
+      console.log('AuthStore::login')
+      console.log(JSON.stringify(data, null, 2))
+
+      let resp = null
+      try {
+        resp = await AuthService.login(data)
+        // console.log(JSON.stringify(resp, null, 2))
+      } catch (error) {
+        // console.log('AuthStore::login error')
+        // console.log(JSON.stringify(error, null, 2))
+
+        throw new MyError('Failure, an unexpected error occured, please try again later.')
+      }
+
+      if ( resp?.data.status === 'fail' ) {
+        // console.log('AuthStore::login error in resp')
+        // console.log(JSON.stringify(resp?.data, null, 2))
+
+        throw new MyError('Failure: ' + resp?.data.message)
+      } else {
+        // console.log('AuthStore::login storing access token')
+        LocalStorage.setToken(resp.data?.token)
+        this.isLoggedIn = true
+      }
+    },
     async authenticate() {
   
       console.log('AuthStore::authenticate')
@@ -56,6 +83,20 @@ export const useAuthStore = defineStore('auth', {
       } else {
         this.isLoggedIn = true
       }
+    },
+    async logout() {
+  
+      console.log('AuthStore::logout')
+      try {
+        await AuthService.logout()
+      } catch (error) {
+        console.log('AuthStore::logout error')
+        console.log(JSON.stringify(error, null, 2))
+        return
+      }
+
+      LocalStorage.removeToken()
+      this.isLoggedIn = false
     }
   }
 })

@@ -45,6 +45,8 @@
 import { defineComponent, ref } from 'vue'
 import { useForm } from 'vee-validate'
 import { object, string } from 'yup'
+import { useAuthStore } from '../stores/Auth'
+import { MyError } from '../types/Error'
 
 export default defineComponent({
   setup() {
@@ -55,19 +57,33 @@ export default defineComponent({
       })
     })
 
+    const authStore = useAuthStore()
     // Creates a submission handler
     // It validate all fields and doesn't call your function unless all fields are valid
-    const onSubmit = handleSubmit((values) => {
+    const onSubmit = handleSubmit(async (values) => {
       login_show_alert.value = true
       login_pending.value = true
       login_alert_variant.value = 'bg-blue-500'
       login_alert_message.value = 'Please wait while we create your account'
-      setTimeout(() => {
-        console.log('Submitting')
-        console.log(JSON.stringify(values, null, 2))
-      }, 1000)
+      let data = new Map<string, any>([
+        ['email', values.email ],
+        ['password', values.password]
+      ])
+      try {
+        await authStore.login(data)
+      } catch (error) {
+        login_pending.value = false
+        login_alert_variant.value = 'bg-red-500'
+        if (error instanceof MyError) {
+          login_alert_message.value = error.message
+        } else {
+          login_alert_message.value = 'Failure, an unexpected error occured, please try again later.'
+        }
+        return
+      }
       login_alert_variant.value = 'bg-green-500'
-      login_alert_message.value = 'Success, your account has been created!'
+      login_alert_message.value = 'Success, you are now logged in'
+      window.location.reload()
     })
 
     const email = defineInputBinds('email')

@@ -133,17 +133,13 @@ export default defineComponent({
       registration_pending.value = true
       registration_alert_variant.value = 'bg-blue-500'
       registration_alert_message.value = 'Please wait while we create your account'
-      console.log('AppRegister::handleSubmit')
-      console.log(JSON.stringify(values, null, 2))
       let data = new Map<string, any>([
         ['username', values.name ],
         ['email', values.email ],
         ['password', values.password]
       ])
       try {
-        console.log('About to cal authstore register')
         await authStore.register(data)
-        console.log('Done calling authstore register')
       } catch (error) {
         registration_pending.value = false
         registration_alert_variant.value = 'bg-red-500'
@@ -156,6 +152,7 @@ export default defineComponent({
       }
       registration_alert_variant.value = 'bg-green-500'
       registration_alert_message.value = 'Success, your account has been created!'
+      window.location.reload()
     })
     
     const name = defineInputBinds('name')
