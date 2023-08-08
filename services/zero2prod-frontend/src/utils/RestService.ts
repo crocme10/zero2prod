@@ -1,7 +1,7 @@
-import http from '../plugins/Axios'
+import axiosInstance from '../plugins/Axios'
 
 export const Get = (apiUrl: string, query?: Map<string, any>) => {
-  return http({
+  return axiosInstance({
     method: 'GET',
     url: apiUrl,
     params: query ? Object.fromEntries(query) : null
@@ -9,7 +9,7 @@ export const Get = (apiUrl: string, query?: Map<string, any>) => {
 }
 
 export const Post = (apiUrl: string, data: Map<string, any>, query?: Map<string, any>) => {
-  return http({
+  return axiosInstance({
     method: 'POST',
     url: apiUrl,
     data: Object.fromEntries(data),
@@ -18,7 +18,7 @@ export const Post = (apiUrl: string, data: Map<string, any>, query?: Map<string,
 }
 
 export const Put = (apiUrl: string, data: Map<string, any>) => {
-  return http({
+  return axiosInstance({
     method: 'PUT',
     url: apiUrl,
     data: Object.fromEntries(data)
@@ -26,11 +26,10 @@ export const Put = (apiUrl: string, data: Map<string, any>) => {
 }
 
 export const Delete = (apiUrl: string, query?: Map<string, any>, data?: Map<string, any>) => {
-  return http({
+  return axiosInstance({
     method: 'DELETE',
     url: apiUrl,
     params: query ? Object.fromEntries(query) : null,
     data: data ? Object.fromEntries(data) : null
   })
 }
-

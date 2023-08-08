@@ -3,7 +3,11 @@ import LocalStorage from '../utils/LocalStorage'
 import { ResponseData } from '../types/Response'
 import { useCommonStore } from '../stores/Common'
 
-const axiosInstance = axios.create({ })
+const axiosInstance = axios.create({
+  validateStatus: (status) => {
+    return status >= 200 && status < 500
+  }
+})
 export default axiosInstance
 
 axiosInstance.interceptors.request.use(
@@ -26,6 +30,8 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
   response => {
+    console.log('AxiosInstance::response')
+    console.log(JSON.stringify(response, null, 2))
     const commonStore = useCommonStore()
     const _rs: ResponseData = new ResponseData(response.data)
     
@@ -35,6 +41,8 @@ axiosInstance.interceptors.response.use(
     return response
   },
   error => {
+    console.log('AxiosInstance::error')
+    console.log(JSON.stringify(error, null, 2))
     return Promise.reject(error)
   }
 )

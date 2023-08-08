@@ -102,7 +102,8 @@
 import { ref } from 'vue'
 import { useForm } from 'vee-validate'
 import { object, string, number, bool, ref as yupRef } from 'yup'
-import { useAuthStore } from '../stores/Auth'
+// import { useAuthStore } from '../stores/Auth'
+import AuthService from '../api/AuthService'
 
 const { errors, handleSubmit, defineInputBinds } = useForm({
   validationSchema: object({
@@ -121,7 +122,7 @@ const { errors, handleSubmit, defineInputBinds } = useForm({
   })
 })
 
-const authStore = useAuthStore()
+// const authStore = useAuthStore()
 // Creates a submission handler
 // It validate all fields and doesn't call your function unless all fields are valid
 const onSubmit = handleSubmit(async (values) => {
@@ -136,11 +137,24 @@ const onSubmit = handleSubmit(async (values) => {
     ['email', values.email ],
     ['password', values.password]
   ])
-  await authStore.register(data).then((rs: any) => {
-    console.log(rs)
-  })
-  registration_alert_variant.value = 'bg-green-500'
-  registration_alert_message.value = 'Success, your account has been created!'
+  let resp = null
+  try {
+    resp = await AuthService.register(data)
+  } catch (error) {
+    registration_pending.value = false
+    registration_alert_variant.value = 'bg-red-500'
+    registration_alert_message.value = 'Failure, an unexpected error occured, please try again later.'
+    return
+  }
+  if ( resp?.data.status === 'fail' ) {
+    console.log('response data fail: ' + JSON.stringify(resp?.data, null, 2))
+    registration_alert_variant.value = 'bg-red-500'
+    registration_alert_message.value = 'Failure: ' + resp?.data.message
+  } else {
+    console.log('response data success: ' + JSON.stringify(resp?.data, null, 2))
+    registration_alert_variant.value = 'bg-green-500'
+    registration_alert_message.value = 'Success, your account has been created!'
+  }
 })
 
 const name = defineInputBinds('name')

@@ -8,10 +8,12 @@ export const useAuthStore = defineStore('auth', {
     async register(data: Map<string, any>) {
       try {
         console.log('AuthStore::register ' + data)
+        // FIXME Note: I'm not storing anything!
         const res = await AuthService.register(data)
         return res
       } catch (error) {
         console.log(error)
+        return error
       }
     },
     async login(data: Map<string, any>) {
