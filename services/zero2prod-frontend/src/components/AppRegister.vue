@@ -98,74 +98,94 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref } from 'vue'
+<script lang="ts">
+import { ref, defineComponent } from 'vue'
 import { useForm } from 'vee-validate'
 import { object, string, number, bool, ref as yupRef } from 'yup'
 import { useAuthStore } from '../stores/Auth'
 import { MyError } from '../types/Error'
 
-const { errors, handleSubmit, defineInputBinds } = useForm({
-  validationSchema: object({
-    name: string().required('Please enter your name'),
-    email: string().email().required('Please enter your email'),
-    age: number().min(18).max(120).required('Please enter your age'),
-    password: string()
-      .required('Please Enter your password')
-      .matches(
-        /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/,
-        'Must Contain 8 Characters, One Uppercase, One Lowercase, One Number and one special case Character'
-      ),
-    passwordConfirmation: string().oneOf([yupRef('password')], 'Passwords does not match'),
-    country: string().required(),
-    termsOfService: bool().default(false).oneOf([true], 'You must accept the terms of services')
-  })
-})
+export default defineComponent({
+  setup() {
+    const { errors, handleSubmit, defineInputBinds } = useForm({
+      validationSchema: object({
+        name: string().required('Please enter your name'),
+        email: string().email().required('Please enter your email'),
+        age: number().min(18).max(120).required('Please enter your age'),
+        password: string()
+          .required('Please Enter your password')
+          .matches(
+            /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/,
+            'Must Contain 8 Characters, One Uppercase, One Lowercase, One Number and one special case Character'
+          ),
+        passwordConfirmation: string().oneOf([yupRef('password')], 'Passwords does not match'),
+        country: string().required(),
+        termsOfService: bool().default(false).oneOf([true], 'You must accept the terms of services')
+      })
+    })
+    
+    const authStore = useAuthStore()
+    
+    // Creates a submission handler
+    // It validate all fields and doesn't call your function unless all fields are valid
+    const onSubmit = handleSubmit(async (values) => {
+      registration_show_alert.value = true
+      registration_pending.value = true
+      registration_alert_variant.value = 'bg-blue-500'
+      registration_alert_message.value = 'Please wait while we create your account'
+      console.log('AppRegister::handleSubmit')
+      console.log(JSON.stringify(values, null, 2))
+      let data = new Map<string, any>([
+        ['username', values.name ],
+        ['email', values.email ],
+        ['password', values.password]
+      ])
+      try {
+        console.log('About to cal authstore register')
+        await authStore.register(data)
+        console.log('Done calling authstore register')
+      } catch (error) {
+        registration_pending.value = false
+        registration_alert_variant.value = 'bg-red-500'
+        if (error instanceof MyError) {
+          registration_alert_message.value = error.message
+        } else {
+          registration_alert_message.value = 'Failure, an unexpected error occured, please try again later.'
+        }
+        return
+      }
+      registration_alert_variant.value = 'bg-green-500'
+      registration_alert_message.value = 'Success, your account has been created!'
+    })
+    
+    const name = defineInputBinds('name')
+    const email = defineInputBinds('email')
+    const age = defineInputBinds('age')
+    const password = defineInputBinds('password')
+    const passwordConfirmation = defineInputBinds('passwordConfirmation')
+    const country = defineInputBinds('country')
+    const termsOfService = defineInputBinds('termsOfService')
+    
+    const registration_pending = ref(false)
+    const registration_show_alert = ref(false)
+    const registration_alert_variant = ref('bg-blue-500')
+    const registration_alert_message = ref('Please wait while we create your account')
 
-const authStore = useAuthStore()
-
-// Creates a submission handler
-// It validate all fields and doesn't call your function unless all fields are valid
-const onSubmit = handleSubmit(async (values) => {
-  registration_show_alert.value = true
-  registration_pending.value = true
-  registration_alert_variant.value = 'bg-blue-500'
-  registration_alert_message.value = 'Please wait while we create your account'
-  console.log('AppRegister::handleSubmit')
-  console.log(JSON.stringify(values, null, 2))
-  let data = new Map<string, any>([
-    ['username', values.name ],
-    ['email', values.email ],
-    ['password', values.password]
-  ])
-  try {
-    console.log('About to cal authstore register')
-    await authStore.register(data)
-    console.log('Done calling authstore register')
-  } catch (error) {
-    registration_pending.value = false
-    registration_alert_variant.value = 'bg-red-500'
-    if (error instanceof MyError) {
-      registration_alert_message.value = error.message
-    } else {
-      registration_alert_message.value = 'Failure, an unexpected error occured, please try again later.'
+    return {
+      name,
+      email,
+      age,
+      password,
+      passwordConfirmation,
+      country,
+      termsOfService,
+      registration_pending,
+      registration_show_alert,
+      registration_alert_variant,
+      registration_alert_message,
+      onSubmit,
+      errors,
     }
-    return
   }
-  registration_alert_variant.value = 'bg-green-500'
-  registration_alert_message.value = 'Success, your account has been created!'
 })
-
-const name = defineInputBinds('name')
-const email = defineInputBinds('email')
-const age = defineInputBinds('age')
-const password = defineInputBinds('password')
-const passwordConfirmation = defineInputBinds('passwordConfirmation')
-const country = defineInputBinds('country')
-const termsOfService = defineInputBinds('termsOfService')
-
-const registration_pending = ref(false)
-const registration_show_alert = ref(false)
-const registration_alert_variant = ref('bg-blue-500')
-const registration_alert_message = ref('Please wait while we create your account')
 </script>

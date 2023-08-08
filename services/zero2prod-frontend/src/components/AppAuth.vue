@@ -62,16 +62,31 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref } from 'vue'
+<script lang="ts">
+import { ref, defineComponent } from 'vue'
 import { useModalStore } from '../stores/modal'
 import { storeToRefs } from 'pinia'
 import AppRegister from './AppRegister.vue'
 import AppLogin from './AppLogin.vue'
 
-const store = useModalStore()
-const { hiddenClass } = storeToRefs(store)
-const toggleHidden = store.toggleHidden
+export default defineComponent({
+  components: {
+    AppRegister,
+    AppLogin
+  },
 
-const tab = ref('login') // The name of the tab opened by default.
+  setup() {
+    const store = useModalStore()
+    const { hiddenClass } = storeToRefs(store)
+    const toggleHidden = store.toggleHidden
+    
+    const tab = ref('login') // The name of the tab opened by default.
+
+    return {
+      hiddenClass,
+      toggleHidden,
+      tab
+    }
+  }
+})
 </script>
