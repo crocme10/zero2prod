@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 use secrecy::Secret;
-use std::fmt;
-use uuid::Uuid;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
+use std::fmt;
+use uuid::Uuid;
 
 use crate::domain::{ConfirmedSubscriber, Credentials, NewSubscription, Subscription};
 use common::err_context::ErrorContext;
@@ -138,5 +138,3 @@ impl Serialize for Error {
         state.end()
     }
 }
-
-

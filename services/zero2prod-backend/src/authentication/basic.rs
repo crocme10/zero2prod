@@ -185,6 +185,6 @@ mod tests {
         let res = basic_authentication(&headers).expect("valid credentials");
         assert_that(&res.username).is_equal_to(&credentials.username);
         assert_that(&res.password.expose_secret())
-            .is_equal_to(&credentials.password.expose_secret());
+            .is_equal_to(credentials.password.expose_secret());
     }
 }

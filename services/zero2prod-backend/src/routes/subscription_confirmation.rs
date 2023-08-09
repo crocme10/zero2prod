@@ -199,7 +199,7 @@ mod tests {
         storage_mock
             .expect_get_subscriber_id_by_token()
             .with(eq(token.clone()))
-            .return_once(move |_| Ok(Some(id.clone())));
+            .return_once(move |_| Ok(Some(id)));
         storage_mock
             .expect_confirm_subscriber_by_id_and_delete_token()
             .with(eq(id))

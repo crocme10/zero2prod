@@ -164,11 +164,15 @@ mod tests {
             .expect_get_credentials()
             .return_once(move |_| Ok(Some((id, hashed_password))));
 
-        let authenticator = Authenticator { storage: Arc::new(storage_mock) };
+        let authenticator = Authenticator {
+            storage: Arc::new(storage_mock),
+        };
 
-        let res = authenticator.validate_credentials(&credentials).await.expect("valid credentials");
+        let res = authenticator
+            .validate_credentials(&credentials)
+            .await
+            .expect("valid credentials");
 
-        assert_that(&res).is_equal_to(&id);
+        assert_that(&res).is_equal_to(id);
     }
 }
-

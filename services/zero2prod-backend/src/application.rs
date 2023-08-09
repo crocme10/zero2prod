@@ -14,9 +14,9 @@ use crate::server;
 use crate::storage::{Error as StorageError, Storage};
 use common::err_context::{ErrorContext, ErrorContextExt};
 use common::settings::{ApplicationSettings, DatabaseSettings, EmailClientSettings, Settings};
+use std::fmt;
 use std::net::TcpListener;
 use std::path::PathBuf;
-use std::fmt;
 use std::sync::Arc;
 
 pub struct Application {

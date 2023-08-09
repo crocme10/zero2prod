@@ -1,2 +1,2 @@
-pub mod password;
 pub mod basic;
+pub mod password;

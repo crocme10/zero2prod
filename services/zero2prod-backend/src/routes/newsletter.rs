@@ -37,10 +37,11 @@ pub async fn publish_newsletter(
 
     tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
     let authenticator = Authenticator {
-        storage: state.storage.clone()
+        storage: state.storage.clone(),
     };
 
-    let id = authenticator.validate_credentials(&credentials)
+    let id = authenticator
+        .validate_credentials(&credentials)
         .await
         .context("Could not validate credentials".to_string())?;
 
@@ -198,6 +199,7 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
+        authentication::password::compute_password_hash,
         domain::{ConfirmedSubscriber, Credentials, CredentialsGenerator, SubscriberEmail},
         email_service::MockEmailService,
         server::{AppState, ApplicationBaseUrl},
@@ -235,7 +237,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn newsletters_returns_400_for_invalid_data() {
+    async fn newsletter_returns_400_for_invalid_data() {
         // Arrange
         let storage_mock = MockStorage::new();
         let email_mock = MockEmailService::new();
@@ -320,22 +322,11 @@ mod tests {
             .return_once(move || Ok(vec![confirmed_subscriber]));
 
         let credentials: Credentials = CredentialsGenerator(EN).fake();
-        // let rhs = credentials.username.clone();
-
-        // Removed because storage does not have validate_credentials anymore.
-        // storage_mock
-        //     .expect_validate_credentials()
-        //     .withf(move |arg: &Credentials| {
-        //         let Credentials {
-        //             username,
-        //             password: _,
-        //         } = arg;
-        //         if *username != rhs {
-        //             return false;
-        //         }
-        //         true
-        //     })
-        //     .return_once(|_| Ok(Uuid::new_v4()));
+        let hashed_password = compute_password_hash(credentials.password.clone()).unwrap();
+        let id = Uuid::new_v4();
+        storage_mock
+            .expect_get_credentials()
+            .return_once(move |_| Ok(Some((id, hashed_password))));
 
         let state = AppState {
             storage: Arc::new(storage_mock),
@@ -422,7 +413,7 @@ mod tests {
         let mut email_mock = MockEmailService::new();
         email_mock
             .expect_send_email()
-            .never() 
+            .never()
             .return_once(|_| Ok(()));
         let mut storage_mock = MockStorage::new();
         storage_mock
@@ -431,21 +422,9 @@ mod tests {
             .return_once(|| Ok(vec![]));
 
         let credentials: Credentials = CredentialsGenerator(EN).fake();
-        // let rhs = credentials.username.clone();
-
-        // storage_mock
-        //     .expect_validate_credentials()
-        //     .withf(move |arg: &Credentials| {
-        //         let Credentials {
-        //             username,
-        //             password: _,
-        //         } = arg;
-        //         if *username != rhs {
-        //             return false;
-        //         }
-        //         true
-        //     })
-        //     .return_once(|_| Err(StorageError::InvalidUCredentials));
+        storage_mock
+            .expect_get_credentials()
+            .return_once(move |_| Ok(None));
 
         let state = AppState {
             storage: Arc::new(storage_mock),

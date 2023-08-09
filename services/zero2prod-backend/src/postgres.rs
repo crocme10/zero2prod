@@ -451,7 +451,7 @@ mod tests {
             .await
             .expect("getting subscriber id");
 
-        assert_that(&id.unwrap()).is_equal_to(&subscription.id);
+        assert_that(&id.unwrap()).is_equal_to(subscription.id);
     }
 
     #[tokio::test]
