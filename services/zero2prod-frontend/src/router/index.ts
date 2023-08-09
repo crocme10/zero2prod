@@ -30,6 +30,11 @@ const routes = [
     meta: {
       title: 'About'
     }
+  },
+  {
+    // A catch all, could redirect to a 404 page
+    path: '/:catchAll(.*)*',
+    redirect: { name: 'Home' },
   }
 ]
 //   {
@@ -75,7 +80,8 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes
+  routes,
+  linkExactActiveClass: 'text-yellow-500'
 })
 
 export default router
