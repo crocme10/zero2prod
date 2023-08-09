@@ -16,7 +16,7 @@
               <a class="px-2 text-white" href="#" @click.prevent="logout">Logout</a>
             </li>
             <li>
-              <a class="px-2 text-white" href="#">Manage</a>
+              <router-link class="px-2 text-white" to="/manage">Manage</router-link>
             </li>
           </template>
           <li>

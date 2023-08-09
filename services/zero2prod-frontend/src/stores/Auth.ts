@@ -9,8 +9,8 @@ export const useAuthStore = defineStore('auth', {
   }),
   actions: {
     async register(data: Map<string, any>) {
-      console.log('AuthStore::register')
-      console.log(JSON.stringify(data, null, 2))
+      // console.log('AuthStore::register')
+      // console.log(JSON.stringify(data, null, 2))
 
       let resp = null
       try {
@@ -35,8 +35,8 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     async login(data: Map<string, any>) {
-      console.log('AuthStore::login')
-      console.log(JSON.stringify(data, null, 2))
+      // console.log('AuthStore::login')
+      // console.log(JSON.stringify(data, null, 2))
 
       let resp = null
       try {
@@ -61,33 +61,33 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     async authenticate() {
-      console.log('AuthStore::authenticate')
+      // console.log('AuthStore::authenticate')
       let resp = null
       try {
         resp = await AuthService.authenticate()
-        console.log(JSON.stringify(resp, null, 2))
+        // console.log(JSON.stringify(resp, null, 2))
       } catch (error) {
-        console.log('AuthStore::authenticate error')
-        console.log(JSON.stringify(error, null, 2))
+        // console.log('AuthStore::authenticate error')
+        // console.log(JSON.stringify(error, null, 2))
         this.isLoggedIn = false
         return
       }
 
       if (resp?.data.status === 'fail') {
-        console.log('AuthStore::authenticate error in resp')
-        console.log(JSON.stringify(resp?.data, null, 2))
+        // console.log('AuthStore::authenticate error in resp')
+        // console.log(JSON.stringify(resp?.data, null, 2))
         this.isLoggedIn = false
       } else {
         this.isLoggedIn = true
       }
     },
     async logout() {
-      console.log('AuthStore::logout')
+      // console.log('AuthStore::logout')
       try {
         await AuthService.logout()
       } catch (error) {
-        console.log('AuthStore::logout error')
-        console.log(JSON.stringify(error, null, 2))
+        // console.log('AuthStore::logout error')
+        // console.log(JSON.stringify(error, null, 2))
         return
       }
 
