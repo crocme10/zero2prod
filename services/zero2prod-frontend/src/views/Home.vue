@@ -231,6 +231,4 @@
       <!-- .. end Playlist -->
     </div>
   </section>
-
-
 </template>

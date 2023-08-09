@@ -4,7 +4,6 @@ import { useAuthStore } from '../stores/Auth'
 const RouterInterceptor = {
   install() {
     router.beforeEach(async (to) => {
-
       const authStore = useAuthStore()
       const loggedIn = authStore.isLoggedIn
       const publicPages = ['Login', 'Register', 'Home']
