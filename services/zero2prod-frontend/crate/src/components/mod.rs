@@ -5,6 +5,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 pub mod backend;
 pub mod confirmation;
 pub mod subscription;
+pub mod login;
 
 // From yew examples futures
 //

@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use crate::components::{backend::Backend, confirmation::Confirmation, subscription::Subscription};
+use crate::components::{backend::Backend, confirmation::Confirmation, subscription::Subscription, login::Login};
 use crate::pages::home::Home;
 use crate::pages::{page_not_found::PageNotFound, terms_and_conditions::TermsAndConditions};
 
@@ -11,6 +11,8 @@ pub enum Route {
     Home,
     #[at("/api/*path")]
     Backend { path: String },
+    #[at("/login")]
+    Login,
     #[at("/subscription")]
     Subscription,
     #[at("/subscription/confirmation")]
@@ -30,6 +32,9 @@ fn switch(routes: Route) -> Html {
         }
         Route::Backend { path } => {
             html! { <Backend path={path}/> }
+        }
+        Route::Login => {
+            html! { <Login /> }
         }
         Route::Subscription => {
             html! { <Subscription /> }
