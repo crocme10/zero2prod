@@ -175,26 +175,3 @@
       </div>
     </section>
 </template>
-
-<script lang="ts">
-import { defineComponent } from 'vue'
-import { useAuthStore } from '../stores/Auth'
-
-export default defineComponent({
-  name: 'ManageView',
-  beforeRouteEnter(to, from, next) {
-    // FIXME The following logs are to use the arguments 'to' and 'from'
-    // without this, typescript complains the variables are declared and
-    // not used.
-    console.log(to)
-    console.log(from)
-    const authStore = useAuthStore()
-    const isLoggedIn = authStore.isLoggedIn
-    if (isLoggedIn) {
-      next()
-    } else {
-      next({ name: 'Home'})
-    }
-  }
-})
-</script>

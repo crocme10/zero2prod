@@ -8,7 +8,6 @@ const routes = [
     path: '/',
     name: 'Home',
     component: Home,
-    //hidden: true,
     meta: {
       title: 'Home'
     }
@@ -17,7 +16,6 @@ const routes = [
     path: '/about',
     name: 'About',
     component: About,
-    //hidden: true,
     meta: {
       title: 'About'
     }
@@ -26,8 +24,8 @@ const routes = [
     path: '/manage',
     name: 'Manage',
     component: Manage,
-    //hidden: true,
     meta: {
+      requiresAuth: true,
       title: 'About'
     }
   },
@@ -37,46 +35,6 @@ const routes = [
     redirect: { name: 'Home' },
   }
 ]
-//   {
-//     path: '/',
-//     name: 'Home',
-//     component: MainLayout,
-//     redirect: { name: 'Dashboard' },
-//     meta: {
-//       requiresAuth: true,
-//       title: 'Homepage'
-//     },
-//     children: [
-//       {
-//         path: '',
-//         name: 'Dashboard',
-//         component: DashboardPage,
-//         meta: {
-//           requiresAuth: true,
-//           title: 'Dashboard'
-//         }
-//       },
-//       {
-//         path: 'project',
-//         name: 'Project',
-//         component: ProjectPage,
-//         meta: {
-//           requiresAuth: true,
-//           title: 'Project'
-//         }
-//       },
-//       {
-//         path: 'language',
-//         name: 'language',
-//         component: LanguagePage,
-//         meta: {
-//           requiresAuth: true,
-//           title: 'Language'
-//         }
-//       }
-//     ]
-//   },
-// ]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

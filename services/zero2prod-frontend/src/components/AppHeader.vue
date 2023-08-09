@@ -54,7 +54,7 @@ export default defineComponent({
     const logout = () => {
       console.log('Logging out')
       authLogout()
-      if (route.name === 'Manage') {
+      if (route.meta?.requiresAuth) {
          router.push({name: 'Home'})
       }
     }
