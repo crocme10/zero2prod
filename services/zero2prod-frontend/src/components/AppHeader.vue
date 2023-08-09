@@ -37,6 +37,7 @@ import { defineComponent } from 'vue'
 import { useModalStore } from '../stores/modal'
 import { useAuthStore } from '../stores/Auth'
 import { storeToRefs } from 'pinia'
+import { useRouter, useRoute } from 'vue-router'
 
 export default defineComponent({
   setup() {
@@ -45,7 +46,18 @@ export default defineComponent({
 
     const authStore = useAuthStore()
     const { isLoggedIn } = storeToRefs(authStore)
-    const logout = authStore.logout
+    const authLogout = authStore.logout
+
+    const router = useRouter()
+    const route = useRoute()
+
+    const logout = () => {
+      console.log('Logging out')
+      authLogout()
+      if (route.name === 'Manage') {
+         router.push({name: 'Home'})
+      }
+    }
 
     return {
       toggleHidden,
