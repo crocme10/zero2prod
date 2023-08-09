@@ -39,6 +39,7 @@ Tasks:
   ci              runs all necessary checks to avoid CI errors when git pushed
   coverage        runs test coverage analysis
   dist            builds application and man pages
+  frontend        builds frontend
   prepare         runs the correct sqlx prepare command
   postgres        starts up a postgres docker container and runs migrations
   migrate         runs postgres database migrations

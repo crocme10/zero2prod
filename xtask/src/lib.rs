@@ -109,3 +109,20 @@ pub fn check_trunk_exists() -> Result<(), anyhow::Error> {
 
     Ok(())
 }
+
+pub fn check_npm_exists() -> Result<(), anyhow::Error> {
+    let status = Command::new("npm")
+        .current_dir(project_root())
+        .args(["--version"])
+        .status();
+
+    match status {
+        Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
+            anyhow::bail!("Error: 'npm' is not found on the PATH. Please install it to continue.",);
+        }
+        Err(e) => anyhow::bail!(format!("An unknown error occurred: {}", e)),
+        _ => {}
+    };
+
+    Ok(())
+}
