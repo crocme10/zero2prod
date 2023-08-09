@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::authentication::{
     basic::{basic_authentication, Error as AuthenticationSchemeError},
-    password::{validate_credentials, Error as CredentialsError},
+    password::{Authenticator, Error as CredentialsError},
 };
 use crate::domain::SubscriberEmail;
 use crate::email_service::{Email, Error as EmailError};
@@ -36,9 +36,11 @@ pub async fn publish_newsletter(
         basic_authentication(&headers).context("Publishing newsletter".to_string())?;
 
     tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
+    let authenticator = Authenticator {
+        storage: state.storage.clone()
+    };
 
-    let storage = state.storage.clone();
-    let id = validate_credentials(storage, &credentials)
+    let id = authenticator.validate_credentials(&credentials)
         .await
         .context("Could not validate credentials".to_string())?;
 
@@ -414,12 +416,13 @@ mod tests {
     async fn newsletter_should_reject_request_with_invalid_credentials() {
         // In this test, we make sure that the newsletter handler does not call
         // the EmailService::send_email nor the StorageService, because
-        // authorization criteria are not met
+        // authorization criteria are not met.
+        // So we use 'never' on the mocks.
 
         let mut email_mock = MockEmailService::new();
         email_mock
             .expect_send_email()
-            .never()
+            .never() 
             .return_once(|_| Ok(()));
         let mut storage_mock = MockStorage::new();
         storage_mock

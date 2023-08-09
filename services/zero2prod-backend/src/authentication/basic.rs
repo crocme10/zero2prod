@@ -1,9 +1,9 @@
 use base64::{DecodeError, Engine};
-use hyper::header::{HeaderMap, ToStrError};
+use hyper::header::{HeaderMap, ToStrError, AUTHORIZATION};
 use secrecy::Secret;
-use std::{fmt, string::FromUtf8Error};
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
+use std::{fmt, string::FromUtf8Error};
 
 use crate::domain::Credentials;
 use common::err_context::{ErrorContext, ErrorContextExt};
@@ -12,7 +12,7 @@ use common::err_context::{ErrorContext, ErrorContextExt};
 pub fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, Error> {
     // The header value, if present, must be a valid UTF8 string
     let header_value = headers
-        .get("Authorization")
+        .get(AUTHORIZATION)
         .ok_or_else(|| Error::MissingHeader {
             context: "The Authorization Header was missing".to_string(),
         })?
@@ -164,4 +164,27 @@ impl Serialize for Error {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use fake::locales::*;
+    use fake::Fake;
+    use secrecy::ExposeSecret;
+    use speculoos::prelude::*;
 
+    use crate::domain::{Credentials, CredentialsGenerator};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn basic_authentication_should_correctly_extract_valid_credentials() {
+        let credentials: Credentials = CredentialsGenerator(EN).fake();
+        let segment = format!("Basic {}", credentials.encode());
+
+        let mut headers = HeaderMap::new();
+        headers.insert(AUTHORIZATION, segment.parse().unwrap());
+        let res = basic_authentication(&headers).expect("valid credentials");
+        assert_that(&res.username).is_equal_to(&credentials.username);
+        assert_that(&res.password.expose_secret())
+            .is_equal_to(&credentials.password.expose_secret());
+    }
+}

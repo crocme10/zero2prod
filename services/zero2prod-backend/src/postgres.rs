@@ -289,7 +289,7 @@ impl Storage for PostgresStorage {
         )
         .fetch_all(&mut **conn)
         .await
-        .context(format!("Could not get a list of confirmed subscribers"))?;
+        .context("Could not get a list of confirmed subscribers".to_string())?;
         saved
             .into_iter()
             .map(|r| match SubscriberEmail::try_from(r.email) {
@@ -344,7 +344,7 @@ impl Storage for PostgresStorage {
         )
         .execute(&mut **conn)
         .await
-        .context(format!("Could not create credentials"))?;
+        .context("Could not create credentials".to_string())?;
 
         Ok(())
     }
