@@ -2,7 +2,9 @@
 use crate::domain::SubscriberEmail;
 use async_trait::async_trait;
 use common::err_context::ErrorContext;
-use serde::{Deserialize, Serialize};
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Serialize, Serializer};
+
 use std::fmt;
 
 #[cfg(test)]
@@ -42,6 +44,26 @@ impl From<ErrorContext<String, reqwest::Error>> for Error {
             context: err.0,
             source: err.1,
         }
+    }
+}
+
+/// FIXME This is an oversimplified serialization for the Error.
+/// I had to do this because some fields (source) where not 'Serialize'
+impl Serialize for Error {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Error", 1)?;
+        match self {
+            Error::Configuration { context } => {
+                state.serialize_field("description", context)?;
+            }
+            Error::Connection { context, source: _ } => {
+                state.serialize_field("description", context)?;
+            }
+        }
+        state.end()
     }
 }
 

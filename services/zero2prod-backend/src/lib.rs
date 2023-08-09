@@ -1,4 +1,5 @@
 pub mod application;
+pub mod authentication;
 pub mod domain;
 pub mod email_service;
 pub mod email_service_impl;

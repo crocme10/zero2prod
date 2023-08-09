@@ -1,15 +1,16 @@
 use axum::extract::{Json, State};
 use axum::http::status::StatusCode;
 use axum::response::{IntoResponse, Response};
-use base64::{DecodeError, Engine};
-use hyper::header::{self, HeaderMap, ToStrError};
-use secrecy::Secret;
-use serde::ser::SerializeStruct;
-use serde::{Deserialize, Serialize, Serializer};
-use std::{fmt, string::FromUtf8Error};
+use hyper::header::{self, HeaderMap};
+use serde::{Deserialize, Serialize};
+use std::fmt;
 use uuid::Uuid;
 
-use crate::domain::{Credentials, SubscriberEmail};
+use crate::authentication::{
+    basic::{basic_authentication, Error as AuthenticationSchemeError},
+    password::{validate_credentials, Error as CredentialsError},
+};
+use crate::domain::SubscriberEmail;
 use crate::email_service::{Email, Error as EmailError};
 use crate::server::AppState;
 use crate::storage::Error as StorageError;
@@ -31,13 +32,13 @@ pub async fn publish_newsletter(
     State(state): State<AppState>,
     Json(request): Json<BodyData>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let credentials = basic_authentication(&headers)?;
+    let credentials =
+        basic_authentication(&headers).context("Publishing newsletter".to_string())?;
 
     tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
 
-    let id = state
-        .storage
-        .validate_credentials(&credentials)
+    let storage = state.storage.clone();
+    let id = validate_credentials(storage, &credentials)
         .await
         .context("Could not validate credentials".to_string())?;
 
@@ -72,28 +73,15 @@ pub struct Content {
     pub text: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum Error {
-    MissingHeader {
+    AuthenticationScheme {
         context: String,
+        source: AuthenticationSchemeError,
     },
-    InvalidAuthenticationString {
+    Credentials {
         context: String,
-        source: ToStrError,
-    },
-    InvalidAuthenticationScheme {
-        context: String,
-    },
-    Base64 {
-        context: String,
-        source: DecodeError,
-    },
-    CredentialString {
-        context: String,
-        source: FromUtf8Error,
-    },
-    InvalidCredentials {
-        context: String,
+        source: CredentialsError,
     },
     Data {
         context: String,
@@ -108,23 +96,11 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::MissingHeader { context } => {
-                write!(fmt, "Missing Authentication: {context} ")
+            Error::AuthenticationScheme { context, source } => {
+                write!(fmt, "Authentication Scheme Error: {context} | {source}")
             }
-            Error::InvalidAuthenticationString { context, source } => {
-                write!(fmt, "Invalid Authentication Content: {context} | {source}")
-            }
-            Error::InvalidAuthenticationScheme { context } => {
-                write!(fmt, "Invalid Authentication Scheme: {context} ")
-            }
-            Error::Base64 { context, source } => {
-                write!(fmt, "Base64 Decode: {context} | {source}")
-            }
-            Error::CredentialString { context, source } => {
-                write!(fmt, "Invalid UTF8 String: {context} | {source}")
-            }
-            Error::InvalidCredentials { context } => {
-                write!(fmt, "Invalid Credentials: {context} ")
+            Error::Credentials { context, source } => {
+                write!(fmt, "Credential Validation Error: {context} | {source}")
             }
             Error::Data { context, source } => {
                 write!(fmt, "Storage Error: {context} | {source}")
@@ -138,27 +114,18 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, ToStrError>> for Error {
-    fn from(err: ErrorContext<String, ToStrError>) -> Self {
-        Error::InvalidAuthenticationString {
+impl From<ErrorContext<String, AuthenticationSchemeError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationSchemeError>) -> Self {
+        Error::AuthenticationScheme {
             context: err.0,
             source: err.1,
         }
     }
 }
 
-impl From<ErrorContext<String, DecodeError>> for Error {
-    fn from(err: ErrorContext<String, DecodeError>) -> Self {
-        Error::Base64 {
-            context: err.0,
-            source: err.1,
-        }
-    }
-}
-
-impl From<ErrorContext<String, FromUtf8Error>> for Error {
-    fn from(err: ErrorContext<String, FromUtf8Error>) -> Self {
-        Error::CredentialString {
+impl From<ErrorContext<String, CredentialsError>> for Error {
+    fn from(err: ErrorContext<String, CredentialsError>) -> Self {
+        Error::Credentials {
             context: err.0,
             source: err.1,
         }
@@ -183,44 +150,6 @@ impl From<ErrorContext<String, EmailError>> for Error {
     }
 }
 
-/// FIXME This is an oversimplified serialization for the Error.
-/// I had to do this because some fields (source) where not 'Serialize'
-impl Serialize for Error {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("Error", 1)?;
-        match self {
-            Error::MissingHeader { context } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::InvalidAuthenticationString { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::InvalidAuthenticationScheme { context } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::Base64 { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::CredentialString { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::InvalidCredentials { context } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::Data { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::Email { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-        }
-        state.end()
-    }
-}
-
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         (
@@ -234,50 +163,6 @@ impl IntoResponse for Error {
         )
             .into_response()
     }
-}
-
-fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, Error> {
-    // The header value, if present, must be a valid UTF8 string
-    let header_value = headers
-        .get("Authorization")
-        .ok_or_else(|| Error::MissingHeader {
-            context: "The Authorization Header was missing".to_string(),
-        })?
-        .to_str()
-        .context("The 'Authorization' header was not a valid UTF8 string.".to_string())?;
-
-    let base64encoded_segment =
-        header_value
-            .strip_prefix("Basic ")
-            .ok_or_else(|| Error::InvalidAuthenticationScheme {
-                context: "The Authorization scheme was not 'Basic'".to_string(),
-            })?;
-
-    let decoded_bytes = base64::engine::general_purpose::STANDARD
-        .decode(base64encoded_segment)
-        .context("Failed to base64-decode 'Basic' credentials.".to_string())?;
-
-    let decoded_credentials = String::from_utf8(decoded_bytes)
-        .context("The decoded credential string is not valid UTF8.".to_string())?;
-
-    // Split into two segments, using ':' as delimiter
-    let mut credentials = decoded_credentials.splitn(2, ':');
-    let username = credentials
-        .next()
-        .ok_or_else(|| Error::InvalidCredentials {
-            context: "The username was missing in 'Basic' authorization".to_string(),
-        })?
-        .to_string();
-    let password = credentials
-        .next()
-        .ok_or_else(|| Error::InvalidCredentials {
-            context: "The password was missing in 'Basic' authorization".to_string(),
-        })?
-        .to_string();
-    Ok(Credentials {
-        username,
-        password: Secret::new(password),
-    })
 }
 
 /// This is a helper function to create an email sent to the subscriber,
@@ -433,21 +318,22 @@ mod tests {
             .return_once(move || Ok(vec![confirmed_subscriber]));
 
         let credentials: Credentials = CredentialsGenerator(EN).fake();
-        let rhs = credentials.username.clone();
+        // let rhs = credentials.username.clone();
 
-        storage_mock
-            .expect_validate_credentials()
-            .withf(move |arg: &Credentials| {
-                let Credentials {
-                    username,
-                    password: _,
-                } = arg;
-                if *username != rhs {
-                    return false;
-                }
-                true
-            })
-            .return_once(|_| Ok(Uuid::new_v4()));
+        // Removed because storage does not have validate_credentials anymore.
+        // storage_mock
+        //     .expect_validate_credentials()
+        //     .withf(move |arg: &Credentials| {
+        //         let Credentials {
+        //             username,
+        //             password: _,
+        //         } = arg;
+        //         if *username != rhs {
+        //             return false;
+        //         }
+        //         true
+        //     })
+        //     .return_once(|_| Ok(Uuid::new_v4()));
 
         let state = AppState {
             storage: Arc::new(storage_mock),
@@ -542,21 +428,21 @@ mod tests {
             .return_once(|| Ok(vec![]));
 
         let credentials: Credentials = CredentialsGenerator(EN).fake();
-        let rhs = credentials.username.clone();
+        // let rhs = credentials.username.clone();
 
-        storage_mock
-            .expect_validate_credentials()
-            .withf(move |arg: &Credentials| {
-                let Credentials {
-                    username,
-                    password: _,
-                } = arg;
-                if *username != rhs {
-                    return false;
-                }
-                true
-            })
-            .return_once(|_| Err(StorageError::InvalidUsernameOrPassword));
+        // storage_mock
+        //     .expect_validate_credentials()
+        //     .withf(move |arg: &Credentials| {
+        //         let Credentials {
+        //             username,
+        //             password: _,
+        //         } = arg;
+        //         if *username != rhs {
+        //             return false;
+        //         }
+        //         true
+        //     })
+        //     .return_once(|_| Err(StorageError::InvalidUCredentials));
 
         let state = AppState {
             storage: Arc::new(storage_mock),

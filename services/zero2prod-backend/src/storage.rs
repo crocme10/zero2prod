@@ -2,9 +2,43 @@ use async_trait::async_trait;
 use secrecy::Secret;
 use std::fmt;
 use uuid::Uuid;
+use serde::ser::SerializeStruct;
+use serde::{Serialize, Serializer};
 
 use crate::domain::{ConfirmedSubscriber, Credentials, NewSubscription, Subscription};
 use common::err_context::ErrorContext;
+
+#[cfg_attr(test, mockall::automock)]
+#[async_trait]
+pub trait Storage {
+    /// Store a new subscription, and a token, and return the subscription
+    async fn create_subscription_and_store_token(
+        &self,
+        subscription: &NewSubscription,
+        token: &str,
+    ) -> Result<Subscription, Error>;
+
+    async fn get_subscription_by_email(&self, email: &str) -> Result<Option<Subscription>, Error>;
+
+    async fn get_subscriber_id_by_token(&self, token: &str) -> Result<Option<Uuid>, Error>;
+
+    async fn get_token_by_subscriber_id(&self, id: &Uuid) -> Result<Option<String>, Error>;
+
+    /// Modify the status of the subscriber identified by id to 'confirmed'
+    async fn confirm_subscriber_by_id_and_delete_token(&self, id: &Uuid) -> Result<(), Error>;
+
+    /// Delete a previously stored token identified by a subscriber_id
+    async fn delete_confirmation_token(&self, id: &Uuid) -> Result<(), Error>;
+
+    async fn get_confirmed_subscribers_email(&self) -> Result<Vec<ConfirmedSubscriber>, Error>;
+
+    async fn get_credentials(
+        &self,
+        username: &str,
+    ) -> Result<Option<(Uuid, Secret<String>)>, Error>;
+
+    async fn store_credentials(&self, id: Uuid, credentials: &Credentials) -> Result<(), Error>;
+}
 
 #[derive(Debug)]
 pub enum Error {
@@ -28,10 +62,6 @@ pub enum Error {
     Missing {
         context: String,
     },
-    Hasher {
-        context: String,
-    },
-    InvalidUsernameOrPassword,
 }
 
 impl fmt::Display for Error {
@@ -51,12 +81,6 @@ impl fmt::Display for Error {
             }
             Error::Missing { context } => {
                 write!(fmt, "Missing: {context}")
-            }
-            Error::Hasher { context } => {
-                write!(fmt, "Hasher Error: {context}")
-            }
-            Error::InvalidUsernameOrPassword => {
-                write!(fmt, "Invalid username or password")
             }
         }
     }
@@ -86,36 +110,33 @@ impl From<ErrorContext<String, sqlx::Error>> for Error {
     }
 }
 
-#[cfg_attr(test, mockall::automock)]
-#[async_trait]
-pub trait Storage {
-    /// Store a new subscription, and a token, and return the subscription
-    async fn create_subscription_and_store_token(
-        &self,
-        subscription: &NewSubscription,
-        token: &str,
-    ) -> Result<Subscription, Error>;
-
-    async fn get_subscription_by_email(&self, email: &str) -> Result<Option<Subscription>, Error>;
-
-    async fn get_subscriber_id_by_token(&self, token: &str) -> Result<Option<Uuid>, Error>;
-
-    async fn get_token_by_subscriber_id(&self, id: &Uuid) -> Result<Option<String>, Error>;
-
-    /// Modify the status of the subscriber identified by id to 'confirmed'
-    async fn confirm_subscriber_by_id_and_delete_token(&self, id: &Uuid) -> Result<(), Error>;
-
-    /// Delete a previously stored token identified by a subscriber_id
-    async fn delete_confirmation_token(&self, id: &Uuid) -> Result<(), Error>;
-
-    async fn get_confirmed_subscribers_email(&self) -> Result<Vec<ConfirmedSubscriber>, Error>;
-
-    async fn validate_credentials(&self, credentials: &Credentials) -> Result<Uuid, Error>;
-
-    async fn get_credentials(
-        &self,
-        username: &str,
-    ) -> Result<Option<(Uuid, Secret<String>)>, Error>;
-
-    async fn store_credentials(&self, id: Uuid, credentials: &Credentials) -> Result<(), Error>;
+/// FIXME This is an oversimplified serialization for the Error.
+/// I had to do this because some fields (source) where not 'Serialize'
+impl Serialize for Error {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Error", 1)?;
+        match self {
+            Error::Database { context, source: _ } => {
+                state.serialize_field("description", context)?;
+            }
+            Error::Validation { context } => {
+                state.serialize_field("description", context)?;
+            }
+            Error::Connection { context, source: _ } => {
+                state.serialize_field("description", context)?;
+            }
+            Error::Configuration { context } => {
+                state.serialize_field("description", context)?;
+            }
+            Error::Missing { context } => {
+                state.serialize_field("description", context)?;
+            }
+        }
+        state.end()
+    }
 }
+
+

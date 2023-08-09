@@ -1,7 +1,3 @@
-use argon2::{
-    password_hash::SaltString, Algorithm, Argon2, Params, PasswordHash, PasswordHasher,
-    PasswordVerifier, Version,
-};
 use async_trait::async_trait;
 use chrono::Utc;
 use common::err_context::ErrorContextExt;
@@ -14,6 +10,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
+use crate::authentication::password::compute_password_hash;
 use crate::domain::{
     ConfirmedSubscriber, Credentials, NewSubscription, SubscriberEmail, SubscriberName,
     Subscription, SubscriptionStatus,
@@ -302,35 +299,6 @@ impl Storage for PostgresStorage {
             .collect()
     }
 
-    #[tracing::instrument(name = "Validating Credentials")]
-    async fn validate_credentials(&self, credentials: &Credentials) -> Result<Uuid, Error> {
-        let Credentials { username, password } = credentials.clone();
-
-        let mut id = None;
-        let mut expected_password_hash = Secret::new(
-            "$argon2id$v=19$m=15000,t=2,p=1$\
-            gZiV/M1gPc22ElAH/Jh1Hw$\
-            CWOrkoo7oJBQ/iyh7uJ0LO2aLEfrHwTWllSAxT0zRno"
-                .to_string(),
-        );
-
-        if let Some((stored_user_id, stored_password_hash)) =
-            self.get_credentials(&username).await?
-        {
-            id = Some(stored_user_id);
-            expected_password_hash = stored_password_hash
-        }
-
-        spawn_blocking_with_tracing(move || verify_password_hash(expected_password_hash, password))
-            .await
-            .map_err(|_| Error::Hasher {
-                context: "Could not spawn blocking task".to_string(),
-            })?
-            .map_err(|_| Error::InvalidUsernameOrPassword)?;
-
-        id.ok_or_else(|| Error::InvalidUsernameOrPassword)
-    }
-
     #[tracing::instrument(name = "Getting Stored Credentials")]
     async fn get_credentials(
         &self,
@@ -359,10 +327,12 @@ impl Storage for PostgresStorage {
         let Credentials { username, password } = credentials.clone();
         let password_hash = spawn_blocking_with_tracing(move || compute_password_hash(password))
             .await
-            .map_err(|_| Error::Hasher {
+            .map_err(|_| Error::Validation {
+                // FIXME Not really validation
                 context: "Could not spawn blocking task".to_string(),
             })?
-            .map_err(|_| Error::Hasher {
+            .map_err(|_| Error::Validation {
+                // FIXME Not really validation
                 context: "Could not compute password hash".to_string(),
             })?;
 
@@ -378,45 +348,6 @@ impl Storage for PostgresStorage {
 
         Ok(())
     }
-}
-
-#[tracing::instrument(
-    name = "Verify password hash"
-    skip(expected_password_hash, password_candidate)
-)]
-fn verify_password_hash(
-    expected_password_hash: Secret<String>,
-    password_candidate: Secret<String>,
-) -> Result<(), Error> {
-    let expected_password_hash = PasswordHash::new(expected_password_hash.expose_secret())
-        .map_err(|_| Error::Hasher {
-            context: "Could not compute password hash".to_string(),
-        })?;
-
-    Argon2::default()
-        .verify_password(
-            password_candidate.expose_secret().as_bytes(),
-            &expected_password_hash,
-        )
-        .map_err(|_| Error::InvalidUsernameOrPassword)?;
-    Ok(())
-}
-
-fn compute_password_hash(password: Secret<String>) -> Result<Secret<String>, Error> {
-    let salt = SaltString::generate(&mut rand::thread_rng());
-    let argon_params = Params::new(15000, 2, 1, None).map_err(|_| Error::Hasher {
-        context: "Hasher parameters".to_string(),
-    })?;
-
-    let hasher = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon_params);
-    let password_hash = hasher
-        .hash_password(password.expose_secret().as_bytes(), &salt)
-        .map_err(|_| Error::Hasher {
-            context: "Hasher password".to_string(),
-        })?
-        .to_string();
-
-    Ok(Secret::new(password_hash))
 }
 
 #[cfg(test)]
