@@ -8,7 +8,11 @@ export default {
 		fontFamily: {
 			text: ['FiraSans']
 		},
-		extend: { }
+		extend: {
+      backgroundImage: {
+        'yili': "url('/assets/img/zeng-yili-c9ZQDFwn-pk-unsplash.jpg')"
+      }
+    }
 	},
 	plugins: [],
 }
