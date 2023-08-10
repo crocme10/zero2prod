@@ -68,7 +68,7 @@ impl IntoResponse for LoginResp {
     fn into_response(self) -> Response {
         let LoginResp { status: _, token } = self.clone();
         let json = serde_json::to_string(&self).unwrap();
-        let cookie = Cookie::build("token", token)
+        let cookie = Cookie::build("jwt", token)
             .path("/")
             .max_age(time::Duration::hours(1))
             .same_site(SameSite::Lax)

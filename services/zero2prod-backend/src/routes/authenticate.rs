@@ -120,13 +120,16 @@ impl Serialize for Error {
         let mut state = serializer.serialize_struct("Error", 1)?;
         match self {
             Error::InvalidCredentials { context, source: _ } => {
-                state.serialize_field("description", context)?;
+                state.serialize_field("status", "fail")?;
+                state.serialize_field("message", context)?;
             }
             Error::NotLoggedIn { context } => {
-                state.serialize_field("description", context)?;
+                state.serialize_field("status", "fail")?;
+                state.serialize_field("message", context)?;
             }
             Error::Data { context, source: _ } => {
-                state.serialize_field("description", context)?;
+                state.serialize_field("status", "fail")?;
+                state.serialize_field("message", context)?;
             }
         }
         state.end()

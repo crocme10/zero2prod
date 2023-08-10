@@ -2,7 +2,7 @@
 /// in our case all (most?) the axum related code.
 use axum::{
     body::{boxed, Body},
-    http::{Response, StatusCode},
+    http::{Response, StatusCode, header, HeaderValue, Method},
     routing::{get, post, IntoMakeService, Router},
     Server,
 };
@@ -84,6 +84,13 @@ pub fn new(
         .route("/api/v1/register", post(register))
         .route("/api/v1/authenticate", get(authenticate));
 
+    let cors = CorsLayer::new()
+        .allow_origin("http://127.0.0.1:5173".parse::<HeaderValue>().unwrap())
+        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
+        .allow_credentials(true)
+        .allow_headers([header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE]);
+    // let cors = CorsLayer::permissive();
+
     // Create a router that will contain and match all routes for the application
     // and a fallback service that will serve the static directory
     tracing::info!("Serving static: {}", static_dir.display());
@@ -120,7 +127,7 @@ pub fn new(
                     .expect("error response"),
             }
         }))
-        .layer(CorsLayer::permissive())
+        .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(app_state);
 

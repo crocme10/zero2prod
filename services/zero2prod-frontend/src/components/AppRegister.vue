@@ -107,17 +107,23 @@ import { MyError } from '../types/Error'
 
 export default defineComponent({
   setup() {
+    const getCharacterValidationError = (str: string) => {
+      return `Your password must have at least 1 ${str} character`;
+    };
     const { errors, handleSubmit, defineInputBinds } = useForm({
       validationSchema: object({
         name: string().required('Please enter your name'),
         email: string().email().required('Please enter your email'),
         age: number().min(18).max(120).required('Please enter your age'),
         password: string()
-          .required('Please Enter your password')
-          .matches(
-            /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/,
-            'Must Contain 8 Characters, One Uppercase, One Lowercase, One Number and one special case Character'
-          ),
+          // check minimum characters
+          .min(8, "Password must have at least 8 characters")
+          // different error messages for different requirements
+          .matches(/[0-9]/, getCharacterValidationError("digit"))
+          .matches(/[a-z]/, getCharacterValidationError("lowercase"))
+          .matches(/[A-Z]/, getCharacterValidationError("uppercase"))
+          .matches(/[^a-zA-Z0-9\s]/, getCharacterValidationError('special character'))
+          .required("Please enter a password"),
         passwordConfirmation: string().oneOf([yupRef('password')], 'Passwords does not match'),
         country: string().required(),
         termsOfService: bool().default(false).oneOf([true], 'You must accept the terms of services')
