@@ -8,16 +8,16 @@
       {{ login_alert_message }}
     </div>
     <form @submit="onSubmit">
-      <!-- Email -->
+      <!-- Username -->
       <div class="mb-3">
-        <label class="inline-block mb-2">Email</label>
+        <label class="inline-block mb-2">Username</label>
         <input
-          type="email"
-          v-bind="email"
+          type="text"
+          v-bind="username"
           class="block w-full py-1.5 px-3 text-gray-800 border border-gray-300 transition duration-500 focus:outline-none focus:border-black rounded"
-          placeholder="Enter Email"
+          placeholder="Enter Username"
         />
-        <div class="text-red-600">{{ errors.email }}</div>
+        <div class="text-red-600">{{ errors.username }}</div>
       </div>
       <!-- Password -->
       <div class="mb-3">
@@ -52,7 +52,7 @@ export default defineComponent({
   setup() {
     const { errors, handleSubmit, defineInputBinds } = useForm({
       validationSchema: object({
-        email: string().email().required('Please enter your email'),
+        username: string().required('Please enter your username'),
         password: string().required('Pleas enter your password')
       })
     })
@@ -66,7 +66,7 @@ export default defineComponent({
       login_alert_variant.value = 'bg-blue-500'
       login_alert_message.value = 'Please wait while we create your account'
       let data = new Map<string, any>([
-        ['email', values.email],
+        ['username', values.username],
         ['password', values.password]
       ])
       try {
@@ -87,7 +87,7 @@ export default defineComponent({
       window.location.reload()
     })
 
-    const email = defineInputBinds('email')
+    const username = defineInputBinds('username')
     const password = defineInputBinds('password')
 
     const login_pending = ref(false)
@@ -98,7 +98,7 @@ export default defineComponent({
     return {
       errors,
       onSubmit,
-      email,
+      username,
       password,
       login_pending,
       login_show_alert,
