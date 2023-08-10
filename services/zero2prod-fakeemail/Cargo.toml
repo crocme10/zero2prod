@@ -1,20 +1,20 @@
 [package]
 name = "zero2prod-fakeemail"
-version = "0.0.5"
+version = "0.0.6"
 edition = "2021"
 license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = "0.6.18"
-axum-extra = { version = "0.7.4" }
-clap = { version = "4.3.11", features = ["derive"] }
+axum = "0.6.20"
+axum-extra = "0.7.7"
+clap = { version = "4.3.21", features = ["derive"] }
 linkify = "^0.10.0"
 log = "0.4.19"
-serde = { version = "^1.0.171", features = [ "derive" ] }
-tokio = { version = "1.29.1", features = ["full"] }
+serde = { version = "^1.0.183", features = [ "derive" ] }
+tokio = { version = "1.30.0", features = ["full"] }
 tower = "0.4.13"
-tower-http = { version = "0.4.1", features = ["full"] }
+tower-http = { version = "0.4.3", features = ["full"] }
 tracing = "0.1.37"
 tracing-subscriber = "0.3.17"

@@ -2,7 +2,7 @@
 /// in our case all (most?) the axum related code.
 use axum::{
     body::{boxed, Body},
-    http::{Response, StatusCode, header, HeaderValue, Method},
+    http::{header, HeaderValue, Method, Response, StatusCode},
     routing::{get, post, IntoMakeService, Router},
     Server,
 };
@@ -19,9 +19,9 @@ use tower_http::trace::TraceLayer;
 
 use crate::email_service::EmailService;
 use crate::routes::{
-    authenticate::authenticate, health::health, login::login, newsletter::publish_newsletter,
-    register::register, subscription_confirmation::subscriptions_confirmation,
-    subscriptions::subscriptions, logout::logout,
+    authenticate::authenticate, health::health, login::login, logout::logout,
+    newsletter::publish_newsletter, register::register,
+    subscription_confirmation::subscriptions_confirmation, subscriptions::subscriptions,
 };
 use crate::storage::Storage;
 use common::err_context::ErrorContext;

@@ -22,7 +22,6 @@ pub struct Authenticator {
 
 #[cfg_attr(test, mockall::automock)]
 impl Authenticator {
-
     #[tracing::instrument(
     name = "Validating Credentials"
     skip(self),
@@ -86,7 +85,9 @@ fn verify_password_hash(
         )
         .map_err(|_| {
             tracing::info!("argon2 could not verify password");
-            Error::InvalidCredentials { context: "Password verification".to_string() }
+            Error::InvalidCredentials {
+                context: "Password verification".to_string(),
+            }
         })?;
     Ok(())
 }
