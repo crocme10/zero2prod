@@ -26,6 +26,7 @@ config = "^0.13.3"
 fake = { version = "^2.6.1", features = [ "derive" ] }
 hyper = "^0.14.27"
 jsonwebtoken = "8.3.0"
+passwords = { version = "3.1.13", features = [ "common-password"] }
 rand = { version = "^0.8.5", features = [ "std_rng" ] }
 reqwest = { version = "^0.11.18", default-features = false, features = ["json", "rustls-tls"] }
 secrecy = "^0.8.0"

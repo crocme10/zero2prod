@@ -85,6 +85,7 @@ pub struct TestApp {
 
 pub struct TestUser {
     pub id: Uuid,
+    pub email: String,
     pub credentials: Credentials,
 }
 
@@ -93,9 +94,11 @@ pub struct TestUserGenerator<L>(pub L);
 impl<L: Data> Dummy<TestUserGenerator<L>> for TestUser {
     fn dummy_with_rng<R: rand::Rng + ?Sized>(_config: &TestUserGenerator<L>, rng: &mut R) -> Self {
         let username = *L::NAME_FIRST_NAME.choose(rng).unwrap();
+        let email = *L::INTERNET_FREE_EMAIL_PROVIDER.choose(rng).unwrap();
         let password = *L::LOREM_WORD.choose(rng).unwrap();
         TestUser {
             id: Uuid::new_v4(),
+            email: email.into(),
             credentials: Credentials {
                 username: username.into(),
                 password: Secret::new(password.to_string()),
@@ -193,7 +196,7 @@ pub async fn spawn_app() -> TestApp {
     let user: TestUser = TestUserGenerator(EN).fake();
 
     storage
-        .store_credentials(user.id, &user.credentials)
+        .store_credentials(user.id, &user.email, &user.credentials)
         .await
         .expect("Store credentials");
 

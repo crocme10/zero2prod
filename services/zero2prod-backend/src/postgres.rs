@@ -322,7 +322,7 @@ impl Storage for PostgresStorage {
     }
 
     #[tracing::instrument(name = "Storing Credentials")]
-    async fn store_credentials(&self, id: Uuid, credentials: &Credentials) -> Result<(), Error> {
+    async fn store_credentials(&self, id: Uuid, email: &str, credentials: &Credentials) -> Result<(), Error> {
         let mut conn = self.exec.lock().await;
         let Credentials { username, password } = credentials.clone();
         let password_hash = spawn_blocking_with_tracing(move || compute_password_hash(password))
@@ -337,9 +337,10 @@ impl Storage for PostgresStorage {
             })?;
 
         sqlx::query!(
-            r#"INSERT INTO users (id, username, password_hash) VALUES ($1, $2, $3)"#,
+            r#"INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4)"#,
             id,
             username,
+            email,
             password_hash.expose_secret(),
         )
         .execute(&mut **conn)
@@ -348,6 +349,37 @@ impl Storage for PostgresStorage {
 
         Ok(())
     }
+
+    #[tracing::instrument(name = "Checking Email Existence")]
+    async fn email_exists(&self, email: &str) -> Result<bool, Error> {
+        let mut conn = self.exec.lock().await;
+
+        let exist = sqlx::query_scalar!(
+            r#"SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)"#,
+            email,
+        )
+        .fetch_one(&mut **conn)
+        .await
+        .context("Could not check email exists".to_string())?.unwrap();
+
+        Ok(exist)
+    }
+
+    #[tracing::instrument(name = "Checking Username Existence")]
+    async fn username_exists(&self, username: &str) -> Result<bool, Error> {
+        let mut conn = self.exec.lock().await;
+
+        let exist = sqlx::query_scalar!(
+            r#"SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)"#,
+            username
+        )
+        .fetch_one(&mut **conn)
+        .await
+        .context("Could not check username exists".to_string())?.unwrap();
+
+        Ok(exist)
+    }
+
 }
 
 #[cfg(test)]
