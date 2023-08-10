@@ -315,7 +315,7 @@ impl Storage for PostgresStorage {
         )
         .fetch_optional(&mut **conn)
         .await
-        .context("Could not retrieved credentials".to_string())?
+        .context("Could not retrieve credentials".to_string())?
         .map(|row| (row.id, Secret::new(row.password_hash)));
 
         Ok(row)

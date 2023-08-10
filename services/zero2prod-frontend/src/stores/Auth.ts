@@ -9,65 +9,59 @@ export const useAuthStore = defineStore('auth', {
   }),
   actions: {
     async register(data: Map<string, any>) {
-      // console.log('AuthStore::register')
+      // console.log('AuthStore::register -> start')
       // console.log(JSON.stringify(data, null, 2))
 
       let resp = null
       try {
         resp = await AuthService.register(data)
-        // console.log(JSON.stringify(resp, null, 2))
       } catch (error) {
-        // console.log('AuthStore::register error')
-        // console.log(JSON.stringify(error, null, 2))
-
         throw new MyError('Failure, an unexpected error occured, please try again later.')
       }
 
-      if (resp?.data.status === 'fail') {
-        // console.log('AuthStore::register error in resp')
-        // console.log(JSON.stringify(resp?.data, null, 2))
-
-        throw new MyError('Failure: ' + resp?.data.message)
+      if (resp.status != 200) {
+        this.isLoggedIn = false
+        if (resp?.data.status === 'fail') {
+          throw new MyError('Failure: ' + resp?.data.message)
+        } else {
+          throw new MyError('Failure, an unexpected error occured, please try again later.')
+        }
+      }
+      if (resp?.data.status !== 'success') {
+        throw new MyError('Failure, an unexpected error occured, please try again later.')
       } else {
-        // console.log('AuthStore::register storing access token')
         LocalStorage.setToken(resp.data?.token)
         this.isLoggedIn = true
       }
     },
     async login(data: Map<string, any>) {
-      // console.log('AuthStore::login')
-      // console.log(JSON.stringify(data, null, 2))
-
       let resp = null
       try {
         resp = await AuthService.login(data)
-        console.log(JSON.stringify(resp, null, 2))
       } catch (error) {
-        // console.log('AuthStore::login error')
-        // console.log(JSON.stringify(error, null, 2))
-
         throw new MyError('Failure, an unexpected error occured, please try again later.')
       }
-      if (resp?.data.status === 'fail') {
-        // console.log('AuthStore::login error in resp')
-        // console.log(JSON.stringify(resp?.data, null, 2))
-
-        throw new MyError('Failure: ' + resp?.data.message)
+      if (resp.status != 200) {
+        this.isLoggedIn = false
+        if (resp?.data.status === 'fail') {
+          throw new MyError('Failure: ' + resp?.data.message)
+        } else {
+          throw new MyError('Failure, an unexpected error occured, please try again later.')
+        }
+      }
+      if (resp?.data.status !== 'success') {
+        // That should not happen: status code is 200, but status message is not 'success'
+        throw new MyError('Failure, an unexpected error occured, please try again later.')
       } else {
-        // console.log('AuthStore::login storing access token')
         LocalStorage.setToken(resp.data?.token)
         this.isLoggedIn = true
       }
     },
     async authenticate() {
-      // console.log('AuthStore::authenticate')
       let resp = null
       try {
         resp = await AuthService.authenticate()
-        console.log(JSON.stringify(resp, null, 2))
       } catch (error) {
-        // console.log('AuthStore::authenticate error')
-        // console.log(JSON.stringify(error, null, 2))
         this.isLoggedIn = false
         return
       }
@@ -85,12 +79,9 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     async logout() {
-      // console.log('AuthStore::logout')
       try {
         await AuthService.logout()
       } catch (error) {
-        // console.log('AuthStore::logout error')
-        // console.log(JSON.stringify(error, null, 2))
         return
       }
 

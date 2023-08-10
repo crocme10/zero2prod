@@ -64,7 +64,7 @@ export default defineComponent({
       login_show_alert.value = true
       login_pending.value = true
       login_alert_variant.value = 'bg-blue-500'
-      login_alert_message.value = 'Please wait while we create your account'
+      login_alert_message.value = 'Please wait while we verify your credentials'
       let data = new Map<string, any>([
         ['username', values.username],
         ['password', values.password]

@@ -22,8 +22,14 @@ pub struct Authenticator {
 
 #[cfg_attr(test, mockall::automock)]
 impl Authenticator {
-    // FIXME Can we trace?
-    // #[tracing::instrument(name = "Validating Credentials")]
+
+    #[tracing::instrument(
+    name = "Validating Credentials"
+    skip(self),
+    fields(
+        request_id = %Uuid::new_v4(),
+    )
+)]
     pub async fn validate_credentials(&self, credentials: &Credentials) -> Result<Uuid, Error> {
         let Credentials { username, password } = credentials.clone();
 
@@ -78,8 +84,9 @@ fn verify_password_hash(
             password_candidate.expose_secret().as_bytes(),
             &expected_password_hash,
         )
-        .map_err(|_| Error::InvalidCredentials {
-            context: "Password verification".to_string(),
+        .map_err(|_| {
+            tracing::info!("argon2 could not verify password");
+            Error::InvalidCredentials { context: "Password verification".to_string() }
         })?;
     Ok(())
 }

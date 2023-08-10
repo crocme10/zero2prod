@@ -175,18 +175,19 @@ impl Serialize for Error {
         S: Serializer,
     {
         let mut state = serializer.serialize_struct("Error", 1)?;
+        state.serialize_field("status", "fail")?;
         match self {
             Error::DuplicateEmail { context } => {
-                state.serialize_field("description", context)?;
+                state.serialize_field("message", context)?;
             }
             Error::DuplicateUsername { context } => {
-                state.serialize_field("description", context)?;
+                state.serialize_field("message", context)?;
             }
             Error::WeakPassword { context } => {
-                state.serialize_field("description", context)?;
+                state.serialize_field("message", context)?;
             }
             Error::Data { context, source: _ } => {
-                state.serialize_field("description", context)?;
+                state.serialize_field("message", context)?;
             }
         }
         state.end()
