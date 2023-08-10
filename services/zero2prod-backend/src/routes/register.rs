@@ -4,17 +4,17 @@ use axum::response::{IntoResponse, Response};
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use common::err_context::{ErrorContext, ErrorContextExt};
 use hyper::header::HeaderMap;
+use passwords::{analyzer, scorer};
+use secrecy::Secret;
 use serde::ser::SerializeStruct;
-use passwords::{scorer, analyzer};
 use serde::{Deserialize, Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
-use secrecy::Secret;
 
+use crate::authentication::jwt::build_token;
+use crate::domain::Credentials;
 use crate::server::AppState;
 use crate::storage::Error as StorageError;
-use crate::domain::Credentials;
-use crate::authentication::jwt::build_token;
 
 /// POST handler for user registration
 #[allow(clippy::unused_async)]
@@ -56,7 +56,6 @@ pub async fn register(
         return Err(Error::WeakPassword {
             context: "Unable to register new user".to_string(),
         });
-
     }
 
     let credentials = Credentials {
@@ -77,7 +76,7 @@ pub async fn register(
     let resp = RegistrationResp {
         status: "success".to_string(),
         token,
-        id: id.to_string()
+        id: id.to_string(),
     };
 
     Ok::<_, Error>(resp)
@@ -95,7 +94,11 @@ pub struct RegistrationResp {
 
 impl IntoResponse for RegistrationResp {
     fn into_response(self) -> Response {
-        let RegistrationResp { status: _, token, id: _ } = self.clone();
+        let RegistrationResp {
+            status: _,
+            token,
+            id: _,
+        } = self.clone();
         let json = serde_json::to_string(&self).unwrap();
         let cookie = Cookie::build("token", token)
             .path("/")
@@ -198,7 +201,7 @@ impl IntoResponse for Error {
                 Json(serde_json::json!({
                     "status": "fail",
                     "message": context
-                }))
+                })),
             )
                 .into_response(),
             Error::DuplicateUsername { context } => (
@@ -206,7 +209,7 @@ impl IntoResponse for Error {
                 Json(serde_json::json!({
                     "status": "fail",
                     "message": context
-                }))
+                })),
             )
                 .into_response(),
             Error::WeakPassword { context } => (
@@ -214,7 +217,7 @@ impl IntoResponse for Error {
                 Json(serde_json::json!({
                     "status": "fail",
                     "message": context
-                }))
+                })),
             )
                 .into_response(),
             err @ Error::Data { .. } => (

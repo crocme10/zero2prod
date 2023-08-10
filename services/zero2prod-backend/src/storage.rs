@@ -37,6 +37,8 @@ pub trait Storage {
         username: &str,
     ) -> Result<Option<(Uuid, Secret<String>)>, Error>;
 
+    async fn id_exists(&self, id: &Uuid) -> Result<bool, Error>;
+
     // Strre credentials (register new user)
     async fn store_credentials(
         &self,

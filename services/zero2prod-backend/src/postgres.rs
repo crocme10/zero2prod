@@ -322,7 +322,12 @@ impl Storage for PostgresStorage {
     }
 
     #[tracing::instrument(name = "Storing Credentials")]
-    async fn store_credentials(&self, id: Uuid, email: &str, credentials: &Credentials) -> Result<(), Error> {
+    async fn store_credentials(
+        &self,
+        id: Uuid,
+        email: &str,
+        credentials: &Credentials,
+    ) -> Result<(), Error> {
         let mut conn = self.exec.lock().await;
         let Credentials { username, password } = credentials.clone();
         let password_hash = spawn_blocking_with_tracing(move || compute_password_hash(password))
@@ -350,6 +355,19 @@ impl Storage for PostgresStorage {
         Ok(())
     }
 
+    #[tracing::instrument(name = "Checking User Id Existence")]
+    async fn id_exists(&self, id: &Uuid) -> Result<bool, Error> {
+        let mut conn = self.exec.lock().await;
+
+        let exist = sqlx::query_scalar!(r#"SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)"#, id,)
+            .fetch_one(&mut **conn)
+            .await
+            .context("Could not check id exists".to_string())?
+            .unwrap();
+
+        Ok(exist)
+    }
+
     #[tracing::instrument(name = "Checking Email Existence")]
     async fn email_exists(&self, email: &str) -> Result<bool, Error> {
         let mut conn = self.exec.lock().await;
@@ -360,7 +378,8 @@ impl Storage for PostgresStorage {
         )
         .fetch_one(&mut **conn)
         .await
-        .context("Could not check email exists".to_string())?.unwrap();
+        .context("Could not check email exists".to_string())?
+        .unwrap();
 
         Ok(exist)
     }
@@ -375,11 +394,11 @@ impl Storage for PostgresStorage {
         )
         .fetch_one(&mut **conn)
         .await
-        .context("Could not check username exists".to_string())?.unwrap();
+        .context("Could not check username exists".to_string())?
+        .unwrap();
 
         Ok(exist)
     }
-
 }
 
 #[cfg(test)]

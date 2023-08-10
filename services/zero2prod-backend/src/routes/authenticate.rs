@@ -1,90 +1,62 @@
 use axum::extract::{Json, State};
-use axum::http::{header, status::StatusCode};
+use axum::http::{header, status::StatusCode, Request};
 use axum::response::{IntoResponse, Response};
-use axum_extra::extract::cookie::{Cookie, SameSite};
-use hyper::header::HeaderMap;
-use secrecy::Secret;
+use axum_extra::extract::cookie::CookieJar;
 use serde::ser::SerializeStruct;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
 
-use crate::authentication::jwt::build_token;
-use crate::authentication::password::{Authenticator, Error as AuthenticationError};
-use crate::domain::Credentials;
+use crate::authentication::jwt::{Authenticator, Error as AuthenticationError};
 use crate::server::AppState;
 use crate::storage::Error as StorageError;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
-/// POST handler for user login
+/// GETT handler for user authentication
 #[allow(clippy::unused_async)]
 #[tracing::instrument(
-    name = "User Login"
-    skip(state),
+    name = "User Authentication"
+    skip(state, cookie_jar),
     fields(
         request_id = %Uuid::new_v4(),
     )
 )]
-pub async fn login(
+pub async fn authenticate<B: fmt::Debug>(
+    cookie_jar: CookieJar,
     State(state): State<AppState>,
-    Json(request): Json<LoginRequest>,
+    req: Request<B>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let credentials = Credentials {
-        username: request.username,
-        password: Secret::new(request.password),
-    };
+    let token = cookie_jar
+        .get("token")
+        .map(|cookie| cookie.value().to_string())
+        .or_else(|| {
+            req.headers()
+                .get(header::AUTHORIZATION)
+                .and_then(|auth_header| auth_header.to_str().ok())
+                .and_then(|auth_value| {
+                    auth_value.strip_prefix("Bearer ").map(|token| token.to_owned())
+                })
+        });
 
-    tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
+    let token = token.ok_or_else(|| Error::NotLoggedIn {
+        context: "Unable to authenticate user".to_string(),
+    })?;
 
     let authenticator = Authenticator {
         storage: state.storage.clone(),
+        secret: state.secret.clone(),
     };
 
     let id = authenticator
-        .validate_credentials(&credentials)
+        .validate_token(&token)
         .await
-        .context("Could not validate credentials".to_string())?;
+        .context("Could not validate token".to_string())?;
 
-    let token = build_token(id, state.secret);
-
-    let resp = LoginResp {
-        status: "success".to_string(),
-        token,
-    };
-
-    Ok::<_, Error>(resp)
-}
-
-/// This is what we return to the user in response to the subscription request.
-/// Currently this is just a placeholder, and it does not return any useful
-/// information.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LoginResp {
-    pub status: String, // FIXME Placeholder
-    pub token: String,
-}
-
-impl IntoResponse for LoginResp {
-    fn into_response(self) -> Response {
-        let LoginResp { status: _, token } = self.clone();
-        let json = serde_json::to_string(&self).unwrap();
-        let cookie = Cookie::build("token", token)
-            .path("/")
-            .max_age(time::Duration::hours(1))
-            .same_site(SameSite::Lax)
-            .http_only(true)
-            .finish();
-        let mut headers = HeaderMap::new();
-        headers.insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
-        (StatusCode::OK, headers, json).into_response()
-    }
-}
-
-/// This is the information sent by the user to login.
-#[derive(Debug, Clone, Deserialize)]
-pub struct LoginRequest {
-    pub username: String,
-    pub password: String,
+    let resp = serde_json::json!({
+        "status": "success",
+        "id": id.to_string()
+    });
+    Ok::<_, Error>(Json(resp))
 }
 
 #[derive(Debug)]
@@ -93,7 +65,7 @@ pub enum Error {
         context: String,
         source: AuthenticationError,
     },
-    MissingToken {
+    NotLoggedIn {
         context: String,
     },
     Data {
@@ -108,8 +80,8 @@ impl fmt::Display for Error {
             Error::InvalidCredentials { context, source } => {
                 write!(fmt, "Invalid Credentials: {context} | {source}")
             }
-            Error::MissingToken { context } => {
-                write!(fmt, "Invalid Authentication Scheme: {context} ")
+            Error::NotLoggedIn { context } => {
+                write!(fmt, "Not Logged In: {context} ")
             }
             Error::Data { context, source } => {
                 write!(fmt, "Storage Error: {context} | {source}")
@@ -119,15 +91,6 @@ impl fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
-
-// impl From<ErrorContext<String, String>> for Error {
-//     fn from(err: ErrorContext<String, String>) -> Self {
-//         Error::InvalidRequest {
-//             context: err.0,
-//             source: err.1,
-//         }
-//     }
-// }
 
 impl From<ErrorContext<String, StorageError>> for Error {
     fn from(err: ErrorContext<String, StorageError>) -> Self {
@@ -159,7 +122,7 @@ impl Serialize for Error {
             Error::InvalidCredentials { context, source: _ } => {
                 state.serialize_field("description", context)?;
             }
-            Error::MissingToken { context } => {
+            Error::NotLoggedIn { context } => {
                 state.serialize_field("description", context)?;
             }
             Error::Data { context, source: _ } => {
@@ -174,11 +137,11 @@ impl IntoResponse for Error {
     fn into_response(self) -> Response {
         match self {
             err @ Error::InvalidCredentials { .. } => (
-                StatusCode::BAD_REQUEST,
+                StatusCode::UNAUTHORIZED,
                 serde_json::to_string(&err).unwrap(),
             )
                 .into_response(),
-            err @ Error::MissingToken { .. } => (
+            err @ Error::NotLoggedIn { .. } => (
                 StatusCode::UNAUTHORIZED,
                 serde_json::to_string(&err).unwrap(),
             )
