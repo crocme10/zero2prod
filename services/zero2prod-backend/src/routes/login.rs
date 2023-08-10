@@ -1,30 +1,58 @@
 use axum::extract::{Json, State};
-use axum::http::status::StatusCode;
+use axum::http::{header, status::StatusCode};
 use axum::response::{IntoResponse, Response};
+use axum_extra::extract::cookie::{Cookie, SameSite};
+use hyper::header::HeaderMap;
 use secrecy::Secret;
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
 
+use crate::authentication::jwt::build_token;
+use crate::authentication::password::{Authenticator, Error as AuthenticationError};
+use crate::domain::Credentials;
 use crate::server::AppState;
 use crate::storage::Error as StorageError;
-use common::err_context::ErrorContext;
+use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user login
 #[allow(clippy::unused_async)]
 #[tracing::instrument(
     name = "User Login"
-    skip(_state),
+    skip(state),
     fields(
         request_id = %Uuid::new_v4(),
     )
 )]
 pub async fn login(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Json(request): Json<LoginRequest>,
-) -> Result<impl IntoResponse, impl IntoResponse> {
-    Ok::<axum::Json<()>, Error>(Json(()))
+) -> Result<impl IntoResponse, Error> {
+    let credentials = Credentials {
+        username: request.username,
+        password: request.password,
+    };
+
+    tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
+
+    let authenticator = Authenticator {
+        storage: state.storage.clone(),
+    };
+
+    let id = authenticator
+        .validate_credentials(&credentials)
+        .await
+        .context("Could not validate credentials".to_string())?;
+
+    let token = build_token(id, state.secret);
+
+    let resp = LoginResp {
+        status: "success".to_string(),
+        token,
+    };
+
+    Ok(resp)
 }
 
 /// This is what we return to the user in response to the subscription request.
@@ -32,21 +60,38 @@ pub async fn login(
 /// information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoginResp {
-    pub data: String, // FIXME Placeholder
+    pub status: String, // FIXME Placeholder
+    pub token: String,
+}
+
+impl IntoResponse for LoginResp {
+    fn into_response(self) -> Response {
+        let LoginResp { status: _, token } = self.clone();
+        let json = serde_json::to_string(&self).unwrap();
+        let cookie = Cookie::build("token", token)
+            .path("/")
+            .max_age(time::Duration::hours(1))
+            .same_site(SameSite::Lax)
+            .http_only(true)
+            .finish();
+        let mut headers = HeaderMap::new();
+        headers.insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
+        (StatusCode::OK, headers, json).into_response()
+    }
 }
 
 /// This is the information sent by the user to login.
 #[derive(Debug, Clone)]
 pub struct LoginRequest {
     pub username: String,
-    pub email: Secret<String>,
+    pub password: Secret<String>,
 }
 
 #[derive(Debug)]
 pub enum Error {
-    InvalidRequest {
+    InvalidCredentials {
         context: String,
-        source: String,
+        source: AuthenticationError,
     },
     MissingToken {
         context: String,
@@ -60,8 +105,8 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::InvalidRequest { context, source } => {
-                write!(fmt, "Invalid Request: {context} | {source}")
+            Error::InvalidCredentials { context, source } => {
+                write!(fmt, "Invalid Credentials: {context} | {source}")
             }
             Error::MissingToken { context } => {
                 write!(fmt, "Invalid Authentication Scheme: {context} ")
@@ -75,18 +120,27 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, String>> for Error {
-    fn from(err: ErrorContext<String, String>) -> Self {
-        Error::InvalidRequest {
+// impl From<ErrorContext<String, String>> for Error {
+//     fn from(err: ErrorContext<String, String>) -> Self {
+//         Error::InvalidRequest {
+//             context: err.0,
+//             source: err.1,
+//         }
+//     }
+// }
+
+impl From<ErrorContext<String, StorageError>> for Error {
+    fn from(err: ErrorContext<String, StorageError>) -> Self {
+        Error::Data {
             context: err.0,
             source: err.1,
         }
     }
 }
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
-        Error::Data {
+impl From<ErrorContext<String, AuthenticationError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
+        Error::InvalidCredentials {
             context: err.0,
             source: err.1,
         }
@@ -102,7 +156,7 @@ impl Serialize for Error {
     {
         let mut state = serializer.serialize_struct("Error", 1)?;
         match self {
-            Error::InvalidRequest { context, source: _ } => {
+            Error::InvalidCredentials { context, source: _ } => {
                 state.serialize_field("description", context)?;
             }
             Error::MissingToken { context } => {
@@ -119,7 +173,7 @@ impl Serialize for Error {
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         match self {
-            err @ Error::InvalidRequest { .. } => (
+            err @ Error::InvalidCredentials { .. } => (
                 StatusCode::BAD_REQUEST,
                 serde_json::to_string(&err).unwrap(),
             )

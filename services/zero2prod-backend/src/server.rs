@@ -7,6 +7,7 @@ use axum::{
     Server,
 };
 use hyper::server::conn::AddrIncoming;
+use secrecy::Secret;
 use std::path::PathBuf;
 use std::{fmt, net::TcpListener};
 use std::{fmt::Display, sync::Arc};
@@ -59,12 +60,14 @@ pub fn new(
     email: Arc<dyn EmailService + Send + Sync>,
     base_url: String,
     static_dir: PathBuf,
+    secret: Secret<String>,
 ) -> AppServer {
     // Build app state
     let app_state = AppState {
         storage,
         email,
         base_url: ApplicationBaseUrl(base_url),
+        secret,
     };
 
     // Routes that need to not have a session applied
@@ -131,6 +134,7 @@ pub struct AppState {
     pub storage: DynStorage,
     pub email: DynEmail,
     pub base_url: ApplicationBaseUrl,
+    pub secret: Secret<String>,
 }
 
 pub type AppServer = Server<AddrIncoming, IntoMakeService<Router>>;

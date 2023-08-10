@@ -291,6 +291,7 @@ mod tests {
     };
     use fake::Fake;
     use mockall::predicate::*;
+    use secrecy::Secret;
     use std::sync::Arc;
     use tower::ServiceExt;
 
@@ -377,6 +378,7 @@ mod tests {
             storage: Arc::new(storage_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+            secret: Secret::new("secret".to_string()),
         };
 
         let app = subscription_route().with_state(state);
@@ -456,6 +458,7 @@ mod tests {
             storage: Arc::new(storage_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl(base_url),
+            secret: Secret::new("secret".to_string()),
         };
 
         let app = subscription_route().with_state(state);
@@ -508,6 +511,7 @@ mod tests {
             storage: Arc::new(storage_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+            secret: Secret::new("secret".to_string()),
         };
 
         let app = subscription_route().with_state(state);
@@ -536,6 +540,7 @@ mod tests {
             storage: Arc::new(storage_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+            secret: Secret::new("secret".to_string()),
         };
 
         let app = subscription_route().with_state(state);

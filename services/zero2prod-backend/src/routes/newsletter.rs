@@ -36,6 +36,7 @@ pub async fn publish_newsletter(
         basic_authentication(&headers).context("Publishing newsletter".to_string())?;
 
     tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
+
     let authenticator = Authenticator {
         storage: state.storage.clone(),
     };
@@ -194,6 +195,7 @@ mod tests {
     use fake::Fake;
     use mockall::predicate::*;
     use reqwest::header::HeaderValue;
+    use secrecy::Secret;
     use speculoos::prelude::*;
     use std::sync::Arc;
     use tower::ServiceExt;
@@ -246,6 +248,7 @@ mod tests {
             storage: Arc::new(storage_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+            secret: Secret::new("secret".to_string()),
         };
 
         let test_cases = vec![
@@ -332,6 +335,7 @@ mod tests {
             storage: Arc::new(storage_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+            secret: Secret::new("secret".to_string()),
         };
 
         let app = newsletter_route().with_state(state);
@@ -377,6 +381,7 @@ mod tests {
             storage: Arc::new(storage_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+            secret: Secret::new("secret".to_string()),
         };
 
         let app = newsletter_route().with_state(state);
@@ -430,6 +435,7 @@ mod tests {
             storage: Arc::new(storage_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+            secret: Secret::new("secret".to_string()),
         };
 
         let app = newsletter_route().with_state(state);

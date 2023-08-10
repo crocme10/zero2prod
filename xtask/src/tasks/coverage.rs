@@ -19,8 +19,6 @@ pub fn run_coverage_test() -> Result<ExitStatus, anyhow::Error> {
                 "--implicit-test-threads",
                 "--packages",
                 "zero2prod-backend",
-                "--packages",
-                "zero2prod-common",
             ])
             .status()?
     } else {

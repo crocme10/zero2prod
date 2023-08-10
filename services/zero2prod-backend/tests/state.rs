@@ -170,7 +170,8 @@ pub async fn spawn_app() -> TestApp {
         .expect("getting listener")
         .url(settings.application.base_url.clone())
         .static_dir(settings.application.static_dir.clone())
-        .expect("getting static dir");
+        .expect("getting static dir")
+        .secret("secret".to_string());
 
     // Before building the app, we extract a copy of storage and email.
     let storage = builder.storage.clone().unwrap();

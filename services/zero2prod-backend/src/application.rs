@@ -6,18 +6,20 @@
 ///    let settings = Settings { ... }
 ///    let app = Application::build(settings).await?;
 ///    app.run_until_stopped().await?;
+use common::err_context::{ErrorContext, ErrorContextExt};
+use common::settings::{ApplicationSettings, DatabaseSettings, EmailClientSettings, Settings};
+use secrecy::Secret;
+use std::fmt;
+use std::net::TcpListener;
+use std::path::PathBuf;
+use std::sync::Arc;
+
 use crate::email_service::{EmailService, Error as EmailError};
 use crate::email_service_impl::EmailClient;
 use crate::listener::{listen_with_host_port, Error as ListenerError};
 use crate::postgres::PostgresStorage;
 use crate::server;
 use crate::storage::{Error as StorageError, Storage};
-use common::err_context::{ErrorContext, ErrorContextExt};
-use common::settings::{ApplicationSettings, DatabaseSettings, EmailClientSettings, Settings};
-use std::fmt;
-use std::net::TcpListener;
-use std::path::PathBuf;
-use std::sync::Arc;
 
 pub struct Application {
     port: u16,
@@ -37,6 +39,7 @@ pub struct ApplicationBuilder {
     pub listener: Option<TcpListener>,
     pub url: Option<String>,
     pub static_dir: Option<PathBuf>,
+    pub secret: Option<Secret<String>>,
 }
 
 impl ApplicationBuilder {
@@ -54,7 +57,8 @@ impl ApplicationBuilder {
             .await?
             .listener(application.clone())?
             .url(application.base_url)
-            .static_dir(application.static_dir)?;
+            .static_dir(application.static_dir)?
+            .secret("Secret".to_string());
 
         Ok(builder)
     }
@@ -110,6 +114,11 @@ impl ApplicationBuilder {
         Ok(self)
     }
 
+    pub fn secret(mut self, secret: String) -> Self {
+        self.secret = Some(Secret::new(secret));
+        self
+    }
+
     pub fn build(self) -> Application {
         let ApplicationBuilder {
             storage,
@@ -117,6 +126,7 @@ impl ApplicationBuilder {
             listener,
             url,
             static_dir,
+            secret,
         } = self;
         let listener = listener.expect("listener");
         let port = listener.local_addr().expect("listener local addr").port();
@@ -126,6 +136,7 @@ impl ApplicationBuilder {
             email.expect("email"),
             url.expect("url"),
             static_dir.expect("static dir"),
+            secret.expect("secret"),
         );
         Application { port, server }
     }
