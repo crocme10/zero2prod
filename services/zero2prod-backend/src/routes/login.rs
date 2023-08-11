@@ -81,7 +81,7 @@ impl IntoResponse for LoginResp {
 }
 
 /// This is the information sent by the user to login.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
@@ -191,4 +191,96 @@ impl IntoResponse for Error {
                 .into_response(),
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::{
+        body::Body,
+        http::{header, Request, StatusCode},
+        routing::{post, Router},
+    };
+    use fake::faker::{
+        internet::en::{Password, SafeEmail},
+        name::en::Name,
+    };
+    use fake::Fake;
+    use mockall::predicate::*;
+    use secrecy::Secret;
+    use std::sync::Arc;
+    use tower::ServiceExt;
+    use hyper::body::HttpBody;
+
+    use crate::{
+        authentication::password::compute_password_hash,
+        email_service::MockEmailService,
+        routes::login::LoginRequest,
+        server::{AppState, ApplicationBaseUrl},
+        storage::MockStorage,
+    };
+
+    use super::*;
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct FailedLoginResp {
+        pub status: String,
+        pub message: String,
+        pub code: String,
+    }
+
+    fn login_route() -> Router<AppState> {
+        Router::new().route("/api/login", post(login))
+    }
+
+    fn send_login_request(uri: &str, request: LoginRequest) -> Request<Body> {
+        Request::builder()
+            .uri(uri)
+            .header(header::CONTENT_TYPE, "application/json")
+            .header(header::ACCEPT, "application/json")
+            .method("POST")
+            .body(Body::from(
+                serde_json::to_string(&request).expect("request"),
+            ))
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn login_should_retrieve_credentials() {
+
+        let username = Name().fake::<String>();
+        let password = Password(12..32).fake::<String>();
+        let secret = Secret::new(password.clone());
+        let password_hash = compute_password_hash(secret).expect("password hash");
+
+        let request = LoginRequest {
+            username: username.clone(),
+            password: password.clone(),
+        };
+
+        let id = Uuid::new_v4();
+
+        let mut storage_mock = MockStorage::new();
+        storage_mock
+            .expect_get_credentials()
+            .return_once(move |_| Ok(Some((id, password_hash))));
+
+        let email_mock = MockEmailService::new();
+        let state = AppState {
+            storage: Arc::new(storage_mock),
+            email: Arc::new(email_mock),
+            base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+            secret: Secret::new("secret".to_string()),
+        };
+
+        let app = login_route().with_state(state);
+
+        let response = app
+            .oneshot(send_login_request("/api/login", request))
+            .await
+            .expect("response");
+
+        // Check the response status code.
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
 }
