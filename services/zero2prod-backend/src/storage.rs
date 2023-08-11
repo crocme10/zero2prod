@@ -40,6 +40,7 @@ pub trait Storage {
     async fn id_exists(&self, id: &Uuid) -> Result<bool, Error>;
 
     // Strre credentials (register new user)
+    // TODO Maybe should return the id
     async fn store_credentials(
         &self,
         id: Uuid,

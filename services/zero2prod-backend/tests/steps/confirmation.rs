@@ -47,7 +47,7 @@ async fn post_confirmation_link(world: &mut state::TestWorld) {
         .send()
         .await
         .expect("failed to execute request");
-    world.status = Some(resp.status());
+    world.status_code = Some(resp.status());
     world.subscribers[0].status = "confirmed".to_string();
 }
 

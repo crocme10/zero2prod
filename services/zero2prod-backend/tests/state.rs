@@ -1,5 +1,5 @@
 use cucumber::World;
-use fake::faker::internet::en::SafeEmail;
+use fake::faker::internet::en::{Password, SafeEmail};
 use fake::faker::name::en::Name;
 use fake::locales::Data;
 use fake::locales::*;
@@ -39,11 +39,12 @@ pub struct TestWorld {
     pub app: TestApp,
     // We store an optional response's status code. The response, typically, can be set in
     // a 'when' step, and checked in a following 'then' step.
-    pub status: Option<reqwest::StatusCode>,
+    pub status_code: Option<reqwest::StatusCode>,
     // We store a representation of subscribers. This is not necessarily
     // what is in storage, but it is used to keep track of information
     // between steps.
     pub subscribers: Vec<Subscriber>,
+    pub users: Vec<User>,
 }
 
 impl TestWorld {
@@ -53,8 +54,9 @@ impl TestWorld {
 
         TestWorld {
             app,
-            status: None,
+            status_code: None,
             subscribers: vec![],
+            users: vec![],
         }
     }
 
@@ -254,6 +256,28 @@ impl TestApp {
             .expect("failed to post on subscriptions endpoint")
     }
 
+    /// Send a post request to the user registration endpoint.
+    pub async fn post_registration(&self, map: HashMap<&str, String>) -> reqwest::Response {
+        let url = format!("{}/api/v1/register", self.address);
+        self.api_client
+            .post(url)
+            .json(&map)
+            .send()
+            .await
+            .expect("failed to post on user registration endpoint")
+    }
+
+    /// Send a post request to the user login endpoint.
+    pub async fn post_credentials(&self, map: HashMap<&str, String>) -> reqwest::Response {
+        let url = format!("{}/api/v1/login", self.address);
+        self.api_client
+            .post(url)
+            .json(&map)
+            .send()
+            .await
+            .expect("failed to post on user login endpoint")
+    }
+
     /// Send a newsletter
     pub async fn send_newsletter(&self, newsletter: &BodyData) -> reqwest::Response {
         let url = format!("{}/api/newsletter", self.address);
@@ -304,13 +328,65 @@ impl TestApp {
         // Finally we return the subscription information so that
         // the caller can make something with it.
         SubscriptionResponse {
-            status: resp.status(),
+            status_code: resp.status(),
             subscriber: Subscriber {
                 username,
                 email,
                 status: "pending_confirmation".to_string(),
                 confirmation_link: None,
             },
+        }
+    }
+
+    /// Register a random user.
+    pub fn generate_random_user(&self) -> User {
+        // We draw random information to define the subscription.
+        let username = Name().fake::<String>();
+        let email = SafeEmail().fake::<String>();
+        let password = Password(20..32).fake::<String>();
+        User {
+            username,
+            email,
+            password,
+        }
+    }
+
+    pub async fn register_user(
+        &self,
+        username: String,
+        email: String,
+        password: String,
+    ) -> RegistrationResponse {
+        // Then we send the registration information
+        let mut map = HashMap::new();
+        map.insert("username", username.clone());
+        map.insert("email", email.clone());
+        map.insert("password", password.clone());
+        tracing::info!("Posting registration");
+        let resp = self.post_registration(map).await;
+        // Finally we return the subscription information so that
+        // the caller can make something with it.
+        RegistrationResponse {
+            status_code: resp.status(),
+            status: "foo".to_string(),
+            message: "foo".to_string(),
+        }
+    }
+
+    pub async fn login_user(&self, username: String, password: String) -> LoginResponse {
+        // Then we send the registration information
+        let mut map = HashMap::new();
+        map.insert("username", username.clone());
+        map.insert("password", password.clone());
+        tracing::info!("Posting credentials");
+        let resp = self.post_credentials(map).await;
+        // Finally we return the subscription information so that
+        // the caller can make something with it.
+        tracing::info!("Logging response: {:?}", resp);
+        LoginResponse {
+            status_code: resp.status(),
+            status: "foo".to_string(),
+            message: "foo".to_string(),
         }
     }
 
@@ -329,6 +405,27 @@ pub struct ConfirmationLinks {
 }
 
 #[derive(Debug, Clone)]
+pub struct User {
+    pub username: String,
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct RegistrationResponse {
+    pub status_code: reqwest::StatusCode,
+    pub status: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct LoginResponse {
+    pub status_code: reqwest::StatusCode,
+    pub status: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct Subscriber {
     pub username: String,
     pub email: String,
@@ -340,6 +437,6 @@ pub struct Subscriber {
 pub struct SubscriptionResponse {
     // Note we can't store the response as it is not Clone.
     // For now, just store the status code
-    pub status: reqwest::StatusCode,
+    pub status_code: reqwest::StatusCode,
     pub subscriber: Subscriber,
 }

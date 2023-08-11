@@ -299,7 +299,7 @@ impl Storage for PostgresStorage {
             .collect()
     }
 
-    #[tracing::instrument(name = "Getting Stored Credentials")]
+    #[tracing::instrument(name = "Getting credentials from postgres")]
     async fn get_credentials(
         &self,
         username: &str,
@@ -321,7 +321,7 @@ impl Storage for PostgresStorage {
         Ok(row)
     }
 
-    #[tracing::instrument(name = "Storing Credentials")]
+    #[tracing::instrument(name = "Storing credentials in postgres")]
     async fn store_credentials(
         &self,
         id: Uuid,
@@ -355,7 +355,7 @@ impl Storage for PostgresStorage {
         Ok(())
     }
 
-    #[tracing::instrument(name = "Checking User Id Existence")]
+    #[tracing::instrument(name = "Checking user id exists")]
     async fn id_exists(&self, id: &Uuid) -> Result<bool, Error> {
         let mut conn = self.exec.lock().await;
 
@@ -368,7 +368,7 @@ impl Storage for PostgresStorage {
         Ok(exist)
     }
 
-    #[tracing::instrument(name = "Checking Email Existence")]
+    #[tracing::instrument(name = "Checking email exists")]
     async fn email_exists(&self, email: &str) -> Result<bool, Error> {
         let mut conn = self.exec.lock().await;
 
@@ -384,7 +384,7 @@ impl Storage for PostgresStorage {
         Ok(exist)
     }
 
-    #[tracing::instrument(name = "Checking Username Existence")]
+    #[tracing::instrument(name = "Checking username exists")]
     async fn username_exists(&self, username: &str) -> Result<bool, Error> {
         let mut conn = self.exec.lock().await;
 

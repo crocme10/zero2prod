@@ -1,3 +1,4 @@
+pub mod authentication;
 pub mod confirmation;
 pub mod health;
 pub mod notification;

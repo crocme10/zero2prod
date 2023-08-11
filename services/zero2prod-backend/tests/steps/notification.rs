@@ -33,7 +33,7 @@ async fn notify_newsletter(world: &mut state::TestWorld) {
         };
         // FIXME Note that the world.status will only be the status of the last subscriber!
         let resp = world.app.send_newsletter(&data).await;
-        world.status = Some(resp.status());
+        world.status_code = Some(resp.status());
     }
 }
 
