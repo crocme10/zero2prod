@@ -93,9 +93,6 @@ pub enum Error {
         context: String,
         source: AuthenticationError,
     },
-    MissingToken {
-        context: String,
-    },
     Data {
         context: String,
         source: StorageError,
@@ -108,9 +105,6 @@ impl fmt::Display for Error {
             Error::InvalidCredentials { context, source } => {
                 write!(fmt, "Invalid Credentials: {context} | {source}")
             }
-            Error::MissingToken { context } => {
-                write!(fmt, "Invalid Authentication Scheme: {context} ")
-            }
             Error::Data { context, source } => {
                 write!(fmt, "Storage Error: {context} | {source}")
             }
@@ -119,15 +113,6 @@ impl fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
-
-// impl From<ErrorContext<String, String>> for Error {
-//     fn from(err: ErrorContext<String, String>) -> Self {
-//         Error::InvalidRequest {
-//             context: err.0,
-//             source: err.1,
-//         }
-//     }
-// }
 
 impl From<ErrorContext<String, StorageError>> for Error {
     fn from(err: ErrorContext<String, StorageError>) -> Self {
@@ -160,9 +145,6 @@ impl Serialize for Error {
             Error::InvalidCredentials { context, source: _ } => {
                 state.serialize_field("message", context)?;
             }
-            Error::MissingToken { context } => {
-                state.serialize_field("message", context)?;
-            }
             Error::Data { context, source: _ } => {
                 state.serialize_field("message", context)?;
             }
@@ -174,19 +156,22 @@ impl Serialize for Error {
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         match self {
-            err @ Error::InvalidCredentials { .. } => (
-                StatusCode::BAD_REQUEST,
-                serde_json::to_string(&err).unwrap(),
-            )
-                .into_response(),
-            err @ Error::MissingToken { .. } => (
+            Error::InvalidCredentials { context, source: _ } => (
                 StatusCode::UNAUTHORIZED,
-                serde_json::to_string(&err).unwrap(),
+                Json(serde_json::json!({
+                    "status": "fail",
+                    "message": context,
+                    "code": "auth/invalid_credentials"
+                })),
             )
                 .into_response(),
-            err @ Error::Data { .. } => (
+            Error::Data { context, source: _ } => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                serde_json::to_string(&err).unwrap(),
+                Json(serde_json::json!({
+                    "status": "fail",
+                    "message": context,
+                    "code": "auth/internal"
+                })),
             )
                 .into_response(),
         }
@@ -200,16 +185,13 @@ mod tests {
         http::{header, Request, StatusCode},
         routing::{post, Router},
     };
-    use fake::faker::{
-        internet::en::{Password, SafeEmail},
-        name::en::Name,
-    };
+    use fake::faker::{internet::en::Password, name::en::Name};
     use fake::Fake;
+    use hyper::body::HttpBody;
     use mockall::predicate::*;
     use secrecy::Secret;
     use std::sync::Arc;
     use tower::ServiceExt;
-    use hyper::body::HttpBody;
 
     use crate::{
         authentication::password::compute_password_hash,
@@ -246,7 +228,6 @@ mod tests {
 
     #[tokio::test]
     async fn login_should_retrieve_credentials() {
-
         let username = Name().fake::<String>();
         let password = Password(12..32).fake::<String>();
         let secret = Secret::new(password.clone());
@@ -283,4 +264,51 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
     }
 
+    #[tokio::test]
+    async fn login_should_fail_with_invalid_credentials() {
+        let username = Name().fake::<String>();
+        let password = Password(12..32).fake::<String>();
+        let secret = Secret::new(password.clone());
+        let password_hash = compute_password_hash(secret).expect("password hash");
+
+        let request = LoginRequest {
+            username: username.clone(),
+            password: "secret".to_string(),
+        };
+
+        let id = Uuid::new_v4();
+
+        let mut storage_mock = MockStorage::new();
+        storage_mock
+            .expect_get_credentials()
+            .return_once(move |_| Ok(Some((id, password_hash))));
+
+        let email_mock = MockEmailService::new();
+        let state = AppState {
+            storage: Arc::new(storage_mock),
+            email: Arc::new(email_mock),
+            base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+            secret: Secret::new("secret".to_string()),
+        };
+
+        let app = login_route().with_state(state);
+
+        let mut response = app
+            .oneshot(send_login_request("/api/login", request))
+            .await
+            .expect("response");
+
+        // Check the response status code.
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        // Check the response code
+        // let mut data = Vec::with_capacity(expected_length);
+        let mut data = Vec::new();
+        while let Some(chunk) = response.data().await {
+            data.extend(&chunk.unwrap());
+        }
+        let response: FailedLoginResp = serde_json::from_slice(&data).expect("json");
+        assert_eq!(response.status, "fail");
+        assert_eq!(response.code, "auth/invalid_credentials");
+    }
 }
