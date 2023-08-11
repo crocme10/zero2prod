@@ -2,6 +2,7 @@ use common::settings;
 use cucumber::when;
 use std::path::PathBuf;
 use zero2prod::opts;
+use std::time;
 
 use crate::state::TestWorld;
 
@@ -23,6 +24,10 @@ async fn health_check(world: &mut TestWorld) {
         "{}:{}/api/health",
         settings.application.base_url, settings.application.port
     );
-    let resp = reqwest::get(url).await.expect("response");
+
+    let client = reqwest::Client::builder()
+        .timeout(time::Duration::from_secs(2))
+        .build().expect("reqwest client");
+    let resp = client.get(url).send().await.expect("health check response");
     world.status_code = Some(resp.status());
 }

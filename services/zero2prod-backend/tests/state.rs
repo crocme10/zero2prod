@@ -8,6 +8,7 @@ use fake::Fake;
 use once_cell::sync::Lazy;
 use rand::prelude::SliceRandom;
 use reqwest::header;
+use std::time;
 use secrecy::Secret;
 use std::collections::HashMap;
 use std::fmt;
@@ -189,6 +190,7 @@ pub async fn spawn_app() -> TestApp {
     let handle = tokio::spawn(app.run_until_stopped());
 
     let api_client = reqwest::Client::builder()
+        .timeout(time::Duration::from_secs(2))
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .expect("api client build");
