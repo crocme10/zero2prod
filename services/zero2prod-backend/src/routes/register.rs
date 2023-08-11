@@ -46,7 +46,7 @@ pub async fn register(
         .await
         .context("Could not check if the username exists".to_string())?
     {
-        return Err(Error::DuplicateEmail {
+        return Err(Error::DuplicateUsername {
             context: "Unable to register new user".to_string(),
         });
     }
@@ -201,7 +201,8 @@ impl IntoResponse for Error {
                 StatusCode::CONFLICT,
                 Json(serde_json::json!({
                     "status": "fail",
-                    "message": context
+                    "message": context,
+                    "code": "auth/duplicate_email"
                 })),
             )
                 .into_response(),
@@ -209,7 +210,8 @@ impl IntoResponse for Error {
                 StatusCode::CONFLICT,
                 Json(serde_json::json!({
                     "status": "fail",
-                    "message": context
+                    "message": context,
+                    "code": "auth/duplicate_username"
                 })),
             )
                 .into_response(),
@@ -217,13 +219,18 @@ impl IntoResponse for Error {
                 StatusCode::BAD_REQUEST,
                 Json(serde_json::json!({
                     "status": "fail",
-                    "message": context
+                    "message": context,
+                    "code": "auth/weak_password"
                 })),
             )
                 .into_response(),
-            err @ Error::Data { .. } => (
+            Error::Data { .. } => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                serde_json::to_string(&err).unwrap(),
+                Json(serde_json::json!({
+                    "status": "fail",
+                    "message": "unexpected error",
+                    "code": "auth/internal"
+                })),
             )
                 .into_response(),
         }
@@ -246,6 +253,7 @@ mod tests {
     use secrecy::Secret;
     use std::sync::Arc;
     use tower::ServiceExt;
+    use hyper::body::HttpBody;
 
     use crate::{
         domain::Credentials,
@@ -256,6 +264,13 @@ mod tests {
     };
 
     use super::*;
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct FailedRegistrationResp {
+        pub status: String,
+        pub message: String,
+        pub code: String,
+    }
 
     fn registration_route() -> Router<AppState> {
         Router::new().route("/api/register", post(register))
@@ -278,10 +293,6 @@ mod tests {
 
     #[tokio::test]
     async fn registration_should_store_credentials() {
-        // In this test, we use a MockStorage, and we expect that
-        // the subscription handler will trigger a call to Storage::create_subscription.
-        // Note that we do not actually use a database and check that the subscription is stored in
-        // there.
 
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();
@@ -335,165 +346,176 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
     }
 
-    // #[tokio::test]
-    // async fn subscription_should_send_email_confirmation() {
-    //     // In this test, we make sure that the subscription handler calls
-    //     // the EmailService::send_email
-    //     // We also check some of the field values in the email.
+    #[tokio::test]
+    async fn registration_should_fail_if_username_exists() {
 
-    //     let username = Name().fake::<String>();
-    //     let email_addr = SafeEmail().fake::<String>();
+        let username = Name().fake::<String>();
+        let email = SafeEmail().fake::<String>();
+        let password = Password(12..32).fake::<String>();
 
-    //     let request = SubscriptionRequest {
-    //         username,
-    //         email: email_addr.clone(),
-    //     };
+        let email_clone = email.clone();
+        let username_clone = username.clone();
 
-    //     let new_subscription = NewSubscription::try_from(request.clone()).unwrap();
-    //     let email_clone = new_subscription.email.clone();
+        let request = RegistrationRequest {
+            username: username.clone(),
+            email: email.clone(),
+            password: password.clone(),
+        };
 
-    //     let base_url = format!("http://{}", IPv4().fake::<String>());
-    //     let base_url_clone = base_url.clone();
-    //     let mut email_mock = MockEmailService::new();
-    //     email_mock
-    //         .expect_send_email()
-    //         .withf(move |email: &Email| {
-    //             let Email {
-    //                 to,
-    //                 subject: _,
-    //                 html_content,
-    //                 text_content: _,
-    //             } = email;
+        let mut storage_mock = MockStorage::new();
+        storage_mock
+            .expect_store_credentials()
+            .never()
+            .return_once(move |_, _, _| Ok(()));
+        storage_mock
+            .expect_email_exists()
+            .withf(move |email: &str| email == email_clone)
+            .return_once(|_| Ok(false));
+        storage_mock
+            .expect_username_exists()
+            .withf(move |username: &str| username == username_clone)
+            .return_once(|_| Ok(true));
 
-    //             if *to != SubscriberEmail::parse(email_addr.clone()).unwrap() {
-    //                 return false;
-    //             }
-    //             let confirmation_link = get_url_link(html_content);
-    //             println!("confirmation link: {confirmation_link}");
-    //             let confirmation_link_pattern =
-    //                 format!("{}/api/subscriptions/confirmation", base_url_clone);
-    //             if !confirmation_link.starts_with(&confirmation_link_pattern) {
-    //                 return false;
-    //             }
-    //             true
-    //         })
-    //         .return_once(|_| Ok(()));
+        let email_mock = MockEmailService::new();
+        let state = AppState {
+            storage: Arc::new(storage_mock),
+            email: Arc::new(email_mock),
+            base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+            secret: Secret::new("secret".to_string()),
+        };
 
-    //     // We also need a storage mock that returns 'Ok(())'
-    //     let mut storage_mock = MockStorage::new();
-    //     storage_mock
-    //         .expect_create_subscription_and_store_token()
-    //         .return_once(move |_, _| {
-    //             Ok(Subscription {
-    //                 id: Uuid::new_v4(),
-    //                 username: new_subscription.username,
-    //                 email: new_subscription.email,
-    //                 status: SubscriptionStatus::PendingConfirmation,
-    //             })
-    //         });
+        let app = registration_route().with_state(state);
 
-    //     storage_mock
-    //         .expect_get_subscription_by_email()
-    //         .withf(move |email: &str| email == email_clone.as_ref())
-    //         .return_once(|_| Ok(None));
+        let mut response = app
+            .oneshot(send_registration_request("/api/register", request))
+            .await
+            .expect("response");
 
-    //     let state = AppState {
-    //         storage: Arc::new(storage_mock),
-    //         email: Arc::new(email_mock),
-    //         base_url: ApplicationBaseUrl(base_url),
-    //         secret: Secret::new("secret".to_string()),
-    //     };
+        // Check the response status code.
+        assert_eq!(response.status(), StatusCode::CONFLICT);
 
-    //     let app = subscription_route().with_state(state);
+        // Check the response code
+        // let mut data = Vec::with_capacity(expected_length);
+        let mut data = Vec::new();
+        while let Some(chunk) = response.data().await {
+            data.extend(&chunk.unwrap());
+        }
+        let response: FailedRegistrationResp = serde_json::from_slice(&data).expect("json");
+        assert_eq!(response.status, "fail");
+        assert_eq!(response.code, "auth/duplicate_username");
+    }
 
-    //     let response = app
-    //         .oneshot(send_subscription_request("/api/subscriptions", request))
-    //         .await
-    //         .expect("response");
+    #[tokio::test]
+    async fn registration_should_fail_if_email_exists() {
 
-    //     // Check the response status code.
-    //     assert_eq!(response.status(), StatusCode::OK);
-    // }
+        let username = Name().fake::<String>();
+        let email = SafeEmail().fake::<String>();
+        let password = Password(12..32).fake::<String>();
 
-    // #[tokio::test]
-    // async fn subscription_should_return_an_error_if_storage_fails() {
-    //     // In this test, we use a MockStorage, and we expect that
-    //     // the subscription handler will trigger a call to Storage::create_subscription.
-    //     // Note that we do not actually use a database and check that the subscription is stored in
-    //     // there.
+        let email_clone = email.clone();
+        let username_clone = username.clone();
 
-    //     let username = Name().fake::<String>();
-    //     let email = SafeEmail().fake::<String>();
+        let request = RegistrationRequest {
+            username: username.clone(),
+            email: email.clone(),
+            password: password.clone(),
+        };
 
-    //     let request = SubscriptionRequest { username, email };
+        let mut storage_mock = MockStorage::new();
+        storage_mock
+            .expect_store_credentials()
+            .never()
+            .return_once(move |_, _, _| Ok(()));
+        storage_mock
+            .expect_email_exists()
+            .withf(move |email: &str| email == email_clone)
+            .return_once(|_| Ok(true));
+        storage_mock
+            .expect_username_exists()
+            .withf(move |username: &str| username == username_clone)
+            .return_once(|_| Ok(false));
 
-    //     let new_subscription = NewSubscription::try_from(request.clone()).unwrap();
+        let email_mock = MockEmailService::new();
+        let state = AppState {
+            storage: Arc::new(storage_mock),
+            email: Arc::new(email_mock),
+            base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+            secret: Secret::new("secret".to_string()),
+        };
 
-    //     // This mock storage returns an error which does not really makes
-    //     // sense.
-    //     let mut storage_mock = MockStorage::new();
-    //     storage_mock
-    //         .expect_create_subscription_and_store_token()
-    //         .withf(move |subscription: &NewSubscription, _token: &str| {
-    //             subscription == &new_subscription
-    //         })
-    //         .return_once(|_, _| {
-    //             Err(StorageError::Database {
-    //                 context: "subscription context".to_string(),
-    //                 source: sqlx::Error::RowNotFound,
-    //             })
-    //         });
-    //     storage_mock
-    //         .expect_get_subscription_by_email()
-    //         .return_once(|_| Ok(None));
+        let app = registration_route().with_state(state);
 
-    //     let mut email_mock = MockEmailService::new();
-    //     email_mock.expect_send_email().return_once(|_| Ok(()));
+        let mut response = app
+            .oneshot(send_registration_request("/api/register", request))
+            .await
+            .expect("response");
 
-    //     let state = AppState {
-    //         storage: Arc::new(storage_mock),
-    //         email: Arc::new(email_mock),
-    //         base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
-    //         secret: Secret::new("secret".to_string()),
-    //     };
+        // Check the response status code.
+        assert_eq!(response.status(), StatusCode::CONFLICT);
 
-    //     let app = subscription_route().with_state(state);
+        // Check the response code
+        // let mut data = Vec::with_capacity(expected_length);
+        let mut data = Vec::new();
+        while let Some(chunk) = response.data().await {
+            data.extend(&chunk.unwrap());
+        }
+        let response: FailedRegistrationResp = serde_json::from_slice(&data).expect("json");
+        assert_eq!(response.status, "fail");
+        assert_eq!(response.code, "auth/duplicate_email");
+    }
 
-    //     let response = app
-    //         .oneshot(send_subscription_request("/api/subscriptions", request))
-    //         .await
-    //         .expect("response");
+    #[tokio::test]
+    async fn registration_should_fail_if_password_is_weak() {
 
-    //     // Check the response status code.
-    //     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
-    // }
+        let username = Name().fake::<String>();
+        let email = SafeEmail().fake::<String>();
+        let password = "Secret123".to_string();
 
-    // #[tokio::test]
-    // async fn subscription_should_return_error_if_invalid_data() {
-    //     let username = Name().fake::<String>();
-    //     let email = username.clone();
+        let request = RegistrationRequest {
+            username: username.clone(),
+            email: email.clone(),
+            password: password.clone(),
+        };
 
-    //     let request = SubscriptionRequest { username, email };
+        let mut storage_mock = MockStorage::new();
+        storage_mock
+            .expect_store_credentials()
+            .never()
+            .return_once(move |_, _, _| Ok(()));
+        storage_mock
+            .expect_email_exists()
+            .return_once(|_| Ok(false));
+        storage_mock
+            .expect_username_exists()
+            .return_once(|_| Ok(false));
 
-    //     let storage_mock = MockStorage::new();
+        let email_mock = MockEmailService::new();
+        let state = AppState {
+            storage: Arc::new(storage_mock),
+            email: Arc::new(email_mock),
+            base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
+            secret: Secret::new("secret".to_string()),
+        };
 
-    //     let email_mock = MockEmailService::new();
+        let app = registration_route().with_state(state);
 
-    //     let state = AppState {
-    //         storage: Arc::new(storage_mock),
-    //         email: Arc::new(email_mock),
-    //         base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
-    //         secret: Secret::new("secret".to_string()),
-    //     };
+        let mut response = app
+            .oneshot(send_registration_request("/api/register", request))
+            .await
+            .expect("response");
 
-    //     let app = subscription_route().with_state(state);
+        // Check the response status code.
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
-    //     let response = app
-    //         .oneshot(send_subscription_request("/api/subscriptions", request))
-    //         .await
-    //         .expect("response");
+        // Check the response code
+        // let mut data = Vec::with_capacity(expected_length);
+        let mut data = Vec::new();
+        while let Some(chunk) = response.data().await {
+            data.extend(&chunk.unwrap());
+        }
+        let response: FailedRegistrationResp = serde_json::from_slice(&data).expect("json");
+        assert_eq!(response.status, "fail");
+        assert_eq!(response.code, "auth/weak_password");
+    }
 
-    //     // Check the response status code.
-    //     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-    // }
 }
