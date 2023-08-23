@@ -86,7 +86,7 @@ struct SendEmailRequest<'a> {
 mod tests {
     use crate::domain::SubscriberEmail;
     use crate::domain::ports::secondary::{Email, EmailService};
-    use crate::email_service_impl::EmailClient;
+    use crate::services::email::EmailClient;
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::lorem::en::{Paragraph, Sentence};
     use fake::{Fake, Faker};

@@ -18,9 +18,9 @@ use crate::domain::ports::secondary::{
     AuthenticationError, AuthenticationStorage, EmailError, EmailService, SubscriptionError,
     SubscriptionStorage,
 };
-use crate::email_service_impl::EmailClient;
+use crate::services::email::EmailClient;
 use crate::listener::{listen_with_host_port, Error as ListenerError};
-use crate::postgres::{Error as PostgresError, PostgresStorage};
+use crate::services::postgres::{Error as PostgresError, PostgresStorage};
 use crate::server;
 
 pub struct Application {
