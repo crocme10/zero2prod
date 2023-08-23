@@ -17,13 +17,13 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 
+use crate::domain::ports::secondary::{AuthenticationStorage, SubscriptionStorage};
 use crate::email_service::EmailService;
 use crate::routes::{
     authenticate::authenticate, health::health, login::login, logout::logout,
     newsletter::publish_newsletter, register::register,
     subscription_confirmation::subscriptions_confirmation, subscriptions::subscriptions,
 };
-use crate::storage::Storage;
 use common::err_context::ErrorContext;
 
 #[derive(Debug)]
@@ -57,7 +57,8 @@ impl From<ErrorContext<String, hyper::Error>> for Error {
 
 pub fn new(
     listener: TcpListener,
-    storage: Arc<dyn Storage + Send + Sync>,
+    authentication: Arc<dyn AuthenticationStorage + Send + Sync>,
+    subscription: Arc<dyn SubscriptionStorage + Send + Sync>,
     email: Arc<dyn EmailService + Send + Sync>,
     base_url: String,
     static_dir: PathBuf,
@@ -65,7 +66,8 @@ pub fn new(
 ) -> AppServer {
     // Build app state
     let app_state = AppState {
-        storage,
+        authentication,
+        subscription,
         email,
         base_url: ApplicationBaseUrl(base_url),
         secret,
@@ -138,12 +140,14 @@ pub fn new(
         .serve(app.into_make_service())
 }
 
-pub type DynStorage = Arc<dyn Storage + Send + Sync>;
+pub type DynAuthentication = Arc<dyn AuthenticationStorage + Send + Sync>;
+pub type DynSubscription = Arc<dyn SubscriptionStorage + Send + Sync>;
 pub type DynEmail = Arc<dyn EmailService + Send + Sync>;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub storage: DynStorage,
+    pub subscription: DynSubscription,
+    pub authentication: DynAuthentication,
     pub email: DynEmail,
     pub base_url: ApplicationBaseUrl,
     pub secret: Secret<String>,

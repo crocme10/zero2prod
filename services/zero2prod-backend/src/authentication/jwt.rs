@@ -7,7 +7,7 @@ use std::fmt;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::storage::{Error as StorageError, Storage};
+use crate::domain::ports::secondary::{AuthenticationStorage, Error as StorageError};
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -41,7 +41,7 @@ pub fn build_token(id: Uuid, secret: Secret<String>) -> String {
 // validate_credentials could be a free function, but for mocking
 // it should be either a struct or a trait.
 pub struct Authenticator {
-    pub storage: Arc<dyn Storage + Send + Sync>,
+    pub storage: Arc<dyn AuthenticationStorage + Send + Sync>,
     pub secret: Secret<String>,
 }
 

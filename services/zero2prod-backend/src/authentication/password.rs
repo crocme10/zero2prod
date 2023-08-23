@@ -9,7 +9,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::domain::Credentials;
-use crate::storage::{Error as StorageError, Storage};
+use crate::domain::ports::secondary::{AuthenticationStorage, Error as StorageError};
 use crate::telemetry::spawn_blocking_with_tracing;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
@@ -17,7 +17,7 @@ use common::err_context::{ErrorContext, ErrorContextExt};
 // validate_credentials could be a free function, but for mocking
 // it should be either a struct or a trait.
 pub struct Authenticator {
-    pub storage: Arc<dyn Storage + Send + Sync>,
+    pub storage: Arc<dyn AuthenticationStorage + Send + Sync>,
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -158,7 +158,7 @@ mod tests {
     use uuid::Uuid;
 
     use crate::domain::{Credentials, CredentialsGenerator};
-    use crate::storage::MockStorage;
+    use crate::domain::ports::secondary::authentication_storage::MockAuthenticationStorage;
 
     use super::*;
 
@@ -167,7 +167,7 @@ mod tests {
         let credentials: Credentials = CredentialsGenerator(EN).fake();
         let hashed_password = compute_password_hash(credentials.password.clone()).unwrap();
         let id = Uuid::new_v4();
-        let mut storage_mock = MockStorage::new();
+        let mut storage_mock = MockAuthenticationStorage::new();
         storage_mock
             .expect_get_credentials()
             .return_once(move |_| Ok(Some((id, hashed_password))));

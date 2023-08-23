@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
 
+use crate::domain::ports::secondary::Error as StorageError;
 use crate::server::AppState;
-use crate::storage::Error as StorageError;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user subscription confirmation
@@ -25,7 +25,7 @@ pub async fn subscriptions_confirmation(
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let request = request.0;
     match state
-        .storage
+        .subscription
         .get_subscriber_id_by_token(&request.token)
         .await
         .context("Could not get subscriber id by token".to_string())?
@@ -35,7 +35,7 @@ pub async fn subscriptions_confirmation(
         }),
         Some(id) => {
             state
-                .storage
+                .subscription
                 .confirm_subscriber_by_id_and_delete_token(&id)
                 .await
                 .context("Could not confirm subscriber".to_string())?;
@@ -158,7 +158,7 @@ mod tests {
     use crate::{
         email_service::MockEmailService,
         server::{AppState, ApplicationBaseUrl},
-        storage::MockStorage,
+        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage},
     };
 
     use super::*;
@@ -189,19 +189,21 @@ mod tests {
 
     #[tokio::test]
     async fn subscription_confirmation_should_request_subscriber_info() {
-        // In this test, we use a MockStorage, and we expect that
+        // In this test, we use a MockSubscriptionStorage, and we expect that
         // the subscription confirmation handler will trigger a call to
         // Storage::get_subscriber_id_by_token, and then use that id to confirm the
         // subscriber.
 
         let token = 32.fake::<String>();
-        let mut storage_mock = MockStorage::new();
+        let authentication_mock = MockAuthenticationStorage::new();
+        let mut subscription_mock = MockSubscriptionStorage::new();
+
         let id = Uuid::new_v4();
-        storage_mock
+        subscription_mock
             .expect_get_subscriber_id_by_token()
             .with(eq(token.clone()))
             .return_once(move |_| Ok(Some(id)));
-        storage_mock
+        subscription_mock
             .expect_confirm_subscriber_by_id_and_delete_token()
             .with(eq(id))
             .return_once(|_| Ok(()));
@@ -209,7 +211,8 @@ mod tests {
         let email_mock = MockEmailService::new();
 
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -236,7 +239,7 @@ mod tests {
 
     #[tokio::test]
     async fn subscription_confirmation_with_invalid_token_should_return_unauthorized() {
-        // In this test, we use a MockStorage, and we expect that:
+        // In this test, we use a MockSubscriptionStorage, and we expect that:
         // - Storage::get_subscriber_id_by_token will get called (it returns None to simulate no
         //   valid token was found)
         // - Storage::confirm_subscriber_by_id never to get called,
@@ -244,12 +247,14 @@ mod tests {
         // FIXME Automagick alert!
         // 32 is the length of the token.
         let token = 32.fake::<String>();
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let authentication_mock = MockAuthenticationStorage::new();
+        let mut subscription_mock = MockSubscriptionStorage::new();
+
+        subscription_mock
             .expect_get_subscriber_id_by_token()
             .with(eq(token.clone()))
             .return_once(move |_| Ok(None));
-        storage_mock
+        subscription_mock
             .expect_confirm_subscriber_by_id_and_delete_token()
             .never()
             .return_once(|_| Ok(()));
@@ -257,7 +262,8 @@ mod tests {
         let email_mock = MockEmailService::new();
 
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),

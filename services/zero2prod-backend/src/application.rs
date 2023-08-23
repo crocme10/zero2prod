@@ -14,12 +14,12 @@ use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::domain::ports::secondary::{AuthenticationStorage, Error as StorageError, SubscriptionStorage};
 use crate::email_service::{EmailService, Error as EmailError};
 use crate::email_service_impl::EmailClient;
 use crate::listener::{listen_with_host_port, Error as ListenerError};
 use crate::postgres::PostgresStorage;
 use crate::server;
-use crate::storage::{Error as StorageError, Storage};
 
 pub struct Application {
     port: u16,
@@ -34,7 +34,8 @@ impl Application {
 
 #[derive(Default)]
 pub struct ApplicationBuilder {
-    pub storage: Option<Arc<dyn Storage + Send + Sync>>,
+    pub authentication: Option<Arc<dyn AuthenticationStorage + Send + Sync>>,
+    pub subscription: Option<Arc<dyn SubscriptionStorage + Send + Sync>>,
     pub email: Option<Arc<dyn EmailService + Send + Sync>>,
     pub listener: Option<TcpListener>,
     pub url: Option<String>,
@@ -51,7 +52,9 @@ impl ApplicationBuilder {
             mode: _,
         } = settings;
         let builder = Self::default()
-            .storage(database)
+            .authentication(database.clone())
+            .await?
+            .subscription(database)
             .await?
             .email(email_client)
             .await?
@@ -63,13 +66,23 @@ impl ApplicationBuilder {
         Ok(builder)
     }
 
-    pub async fn storage(mut self, settings: DatabaseSettings) -> Result<Self, Error> {
+    pub async fn authentication(mut self, settings: DatabaseSettings) -> Result<Self, Error> {
         let storage = Arc::new(
             PostgresStorage::new(settings)
                 .await
                 .context("Establishing a database connection".to_string())?,
         );
-        self.storage = Some(storage);
+        self.authentication = Some(storage);
+        Ok(self)
+    }
+
+    pub async fn subscription(mut self, settings: DatabaseSettings) -> Result<Self, Error> {
+        let storage = Arc::new(
+            PostgresStorage::new(settings)
+                .await
+                .context("Establishing a database connection".to_string())?,
+        );
+        self.subscription = Some(storage);
         Ok(self)
     }
 
@@ -121,7 +134,8 @@ impl ApplicationBuilder {
 
     pub fn build(self) -> Application {
         let ApplicationBuilder {
-            storage,
+            authentication,
+            subscription,
             email,
             listener,
             url,
@@ -132,7 +146,8 @@ impl ApplicationBuilder {
         let port = listener.local_addr().expect("listener local addr").port();
         let server = server::new(
             listener,
-            storage.expect("storage"),
+            authentication.expect("authentication"),
+            subscription.expect("subscription"),
             email.expect("email"),
             url.expect("url"),
             static_dir.expect("static dir"),

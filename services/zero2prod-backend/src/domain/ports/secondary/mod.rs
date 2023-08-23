@@ -1,57 +1,20 @@
-use async_trait::async_trait;
-use secrecy::Secret;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use std::fmt;
-use uuid::Uuid;
 
-use crate::domain::{ConfirmedSubscriber, Credentials, NewSubscription, Subscription};
 use common::err_context::ErrorContext;
 
-#[cfg_attr(test, mockall::automock)]
-#[async_trait]
-pub trait Storage {
-    /// Store a new subscription, and a token, and return the subscription
-    async fn create_subscription_and_store_token(
-        &self,
-        subscription: &NewSubscription,
-        token: &str,
-    ) -> Result<Subscription, Error>;
+pub mod authentication_storage;
+pub mod subscription_storage;
 
-    async fn get_subscription_by_email(&self, email: &str) -> Result<Option<Subscription>, Error>;
+pub use authentication_storage::AuthenticationStorage;
+pub use subscription_storage::SubscriptionStorage;
 
-    async fn get_subscriber_id_by_token(&self, token: &str) -> Result<Option<Uuid>, Error>;
+#[cfg(test)]
+pub use authentication_storage::MockAuthenticationStorage;
 
-    async fn get_token_by_subscriber_id(&self, id: &Uuid) -> Result<Option<String>, Error>;
-
-    /// Modify the status of the subscriber identified by id to 'confirmed'
-    async fn confirm_subscriber_by_id_and_delete_token(&self, id: &Uuid) -> Result<(), Error>;
-
-    /// Delete a previously stored token identified by a subscriber_id
-    async fn delete_confirmation_token(&self, id: &Uuid) -> Result<(), Error>;
-
-    async fn get_confirmed_subscribers_email(&self) -> Result<Vec<ConfirmedSubscriber>, Error>;
-
-    async fn get_credentials(
-        &self,
-        username: &str,
-    ) -> Result<Option<(Uuid, Secret<String>)>, Error>;
-
-    async fn id_exists(&self, id: &Uuid) -> Result<bool, Error>;
-
-    // Strre credentials (register new user)
-    // TODO Maybe should return the id
-    async fn store_credentials(
-        &self,
-        id: Uuid,
-        email: &str,
-        credentials: &Credentials,
-    ) -> Result<(), Error>;
-
-    async fn email_exists(&self, email: &str) -> Result<bool, Error>;
-
-    async fn username_exists(&self, username: &str) -> Result<bool, Error>;
-}
+#[cfg(test)]
+pub use subscription_storage::MockSubscriptionStorage;
 
 #[derive(Debug)]
 pub enum Error {

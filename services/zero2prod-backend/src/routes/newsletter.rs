@@ -10,10 +10,10 @@ use crate::authentication::{
     basic::{basic_authentication, Error as AuthenticationSchemeError},
     password::{Authenticator, Error as CredentialsError},
 };
+use crate::domain::ports::secondary::Error as StorageError;
 use crate::domain::SubscriberEmail;
 use crate::email_service::{Email, Error as EmailError};
 use crate::server::AppState;
-use crate::storage::Error as StorageError;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for newsletter publishing
@@ -38,7 +38,7 @@ pub async fn publish_newsletter(
     tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
 
     let authenticator = Authenticator {
-        storage: state.storage.clone(),
+        storage: state.authentication.clone(),
     };
 
     let id = authenticator
@@ -49,7 +49,7 @@ pub async fn publish_newsletter(
     tracing::Span::current().record("id", &tracing::field::display(&id));
 
     let subscribers = state
-        .storage
+        .subscription
         .get_confirmed_subscribers_email()
         .await
         .context("Could not retrieve list of confirmed subscribers".to_string())?;
@@ -202,10 +202,11 @@ mod tests {
 
     use crate::{
         authentication::password::compute_password_hash,
+        domain::ports::secondary::MockAuthenticationStorage,
+        domain::ports::secondary::MockSubscriptionStorage,
         domain::{ConfirmedSubscriber, Credentials, CredentialsGenerator, SubscriberEmail},
         email_service::MockEmailService,
         server::{AppState, ApplicationBaseUrl},
-        storage::MockStorage,
     };
 
     use super::*;
@@ -241,11 +242,13 @@ mod tests {
     #[tokio::test]
     async fn newsletter_returns_400_for_invalid_data() {
         // Arrange
-        let storage_mock = MockStorage::new();
+        let authentication_mock = MockAuthenticationStorage::new();
+        let subscription_mock = MockSubscriptionStorage::new();
         let email_mock = MockEmailService::new();
 
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -319,20 +322,23 @@ mod tests {
             .return_once(|_| Ok(()));
 
         // We also need a storage mock that returns a list of confirmed subscribers
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        let mut subscription_mock = MockSubscriptionStorage::new();
+
+        subscription_mock
             .expect_get_confirmed_subscribers_email()
             .return_once(move || Ok(vec![confirmed_subscriber]));
 
         let credentials: Credentials = CredentialsGenerator(EN).fake();
         let hashed_password = compute_password_hash(credentials.password.clone()).unwrap();
         let id = Uuid::new_v4();
-        storage_mock
+        authentication_mock
             .expect_get_credentials()
             .return_once(move |_| Ok(Some((id, hashed_password))));
 
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -371,14 +377,17 @@ mod tests {
             .expect_send_email()
             .never()
             .return_once(|_| Ok(()));
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let authentication_mock = MockAuthenticationStorage::new();
+        let mut subscription_mock = MockSubscriptionStorage::new();
+
+        subscription_mock
             .expect_get_confirmed_subscribers_email()
             .never()
             .return_once(|| Ok(vec![]));
 
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -420,19 +429,21 @@ mod tests {
             .expect_send_email()
             .never()
             .return_once(|_| Ok(()));
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        let credentials: Credentials = CredentialsGenerator(EN).fake();
+        authentication_mock
+            .expect_get_credentials()
+            .return_once(move |_| Ok(None));
+        let mut subscription_mock = MockSubscriptionStorage::new();
+
+        subscription_mock
             .expect_get_confirmed_subscribers_email()
             .never()
             .return_once(|| Ok(vec![]));
 
-        let credentials: Credentials = CredentialsGenerator(EN).fake();
-        storage_mock
-            .expect_get_credentials()
-            .return_once(move |_| Ok(None));
-
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),

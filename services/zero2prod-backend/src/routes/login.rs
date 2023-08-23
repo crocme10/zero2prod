@@ -11,9 +11,9 @@ use uuid::Uuid;
 
 use crate::authentication::jwt::build_token;
 use crate::authentication::password::{Authenticator, Error as AuthenticationError};
+use crate::domain::ports::secondary::Error as StorageError;
 use crate::domain::Credentials;
 use crate::server::AppState;
-use crate::storage::Error as StorageError;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user login
@@ -37,7 +37,7 @@ pub async fn login(
     tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
 
     let authenticator = Authenticator {
-        storage: state.storage.clone(),
+        storage: state.authentication.clone(),
     };
 
     let id = authenticator
@@ -198,7 +198,7 @@ mod tests {
         email_service::MockEmailService,
         routes::login::LoginRequest,
         server::{AppState, ApplicationBaseUrl},
-        storage::MockStorage,
+        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage},
     };
 
     use super::*;
@@ -240,14 +240,15 @@ mod tests {
 
         let id = Uuid::new_v4();
 
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        authentication_mock
             .expect_get_credentials()
             .return_once(move |_| Ok(Some((id, password_hash))));
-
+        let subscription_mock = MockSubscriptionStorage::new();
         let email_mock = MockEmailService::new();
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -278,14 +279,16 @@ mod tests {
 
         let id = Uuid::new_v4();
 
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        authentication_mock
             .expect_get_credentials()
             .return_once(move |_| Ok(Some((id, password_hash))));
+        let subscription_mock = MockSubscriptionStorage::new();
 
         let email_mock = MockEmailService::new();
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),

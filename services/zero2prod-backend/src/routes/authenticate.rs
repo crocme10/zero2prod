@@ -8,11 +8,11 @@ use std::fmt;
 use uuid::Uuid;
 
 use crate::authentication::jwt::{Authenticator, Error as AuthenticationError};
+use crate::domain::ports::secondary::Error as StorageError;
 use crate::server::AppState;
-use crate::storage::Error as StorageError;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
-/// GETT handler for user authentication
+/// GET handler for user authentication
 #[allow(clippy::unused_async)]
 #[tracing::instrument(
     name = "User Authentication"
@@ -45,7 +45,7 @@ pub async fn authenticate<B: fmt::Debug>(
     })?;
 
     let authenticator = Authenticator {
-        storage: state.storage.clone(),
+        storage: state.authentication.clone(),
         secret: state.secret.clone(),
     };
 

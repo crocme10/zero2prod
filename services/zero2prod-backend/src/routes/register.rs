@@ -14,7 +14,7 @@ use uuid::Uuid;
 use crate::authentication::jwt::build_token;
 use crate::domain::Credentials;
 use crate::server::AppState;
-use crate::storage::Error as StorageError;
+use crate::domain::ports::secondary::Error as StorageError;
 
 /// POST handler for user registration
 #[allow(clippy::unused_async)]
@@ -30,7 +30,7 @@ pub async fn register(
     Json(request): Json<RegistrationRequest>,
 ) -> Result<impl IntoResponse, Error> {
     if state
-        .storage
+        .authentication
         .email_exists(&request.email)
         .await
         .context("Could not check if the email exists".to_string())?
@@ -41,7 +41,7 @@ pub async fn register(
     }
 
     if state
-        .storage
+        .authentication
         .username_exists(&request.username)
         .await
         .context("Could not check if the username exists".to_string())?
@@ -66,7 +66,7 @@ pub async fn register(
     let id = Uuid::new_v4();
 
     state
-        .storage
+        .authentication
         .store_credentials(id, &request.email, &credentials)
         .await
         .context("Could not store credentials".to_string())?;
@@ -260,7 +260,7 @@ mod tests {
         email_service::MockEmailService,
         routes::register::RegistrationRequest,
         server::{AppState, ApplicationBaseUrl},
-        storage::MockStorage,
+        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage},
     };
 
     use super::*;
@@ -314,22 +314,24 @@ mod tests {
 
         let _id = Uuid::new_v4();
 
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        let subscription_mock = MockSubscriptionStorage::new();
+        authentication_mock
             .expect_store_credentials()
             .return_once(move |_, _, _| Ok(()));
-        storage_mock
+        authentication_mock
             .expect_email_exists()
             .withf(move |email: &str| email == email_clone)
             .return_once(|_| Ok(false));
-        storage_mock
+        authentication_mock
             .expect_username_exists()
             .withf(move |username: &str| username == username_clone)
             .return_once(|_| Ok(false));
 
         let email_mock = MockEmailService::new();
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -362,23 +364,26 @@ mod tests {
             password: password.clone(),
         };
 
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        let subscription_mock = MockSubscriptionStorage::new();
+
+        authentication_mock
             .expect_store_credentials()
             .never()
             .return_once(move |_, _, _| Ok(()));
-        storage_mock
+        authentication_mock
             .expect_email_exists()
             .withf(move |email: &str| email == email_clone)
             .return_once(|_| Ok(false));
-        storage_mock
+        authentication_mock
             .expect_username_exists()
             .withf(move |username: &str| username == username_clone)
             .return_once(|_| Ok(true));
 
         let email_mock = MockEmailService::new();
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -421,23 +426,26 @@ mod tests {
             password: password.clone(),
         };
 
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        let subscription_mock = MockSubscriptionStorage::new();
+
+        authentication_mock
             .expect_store_credentials()
             .never()
             .return_once(move |_, _, _| Ok(()));
-        storage_mock
+        authentication_mock
             .expect_email_exists()
             .withf(move |email: &str| email == email_clone)
             .return_once(|_| Ok(true));
-        storage_mock
+        authentication_mock
             .expect_username_exists()
             .withf(move |username: &str| username == username_clone)
             .return_once(|_| Ok(false));
 
         let email_mock = MockEmailService::new();
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -476,22 +484,25 @@ mod tests {
             email: email.clone(),
             password: password.clone(),
         };
+        
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        let subscription_mock = MockSubscriptionStorage::new();
 
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        authentication_mock
             .expect_store_credentials()
             .never()
             .return_once(move |_, _, _| Ok(()));
-        storage_mock
+        authentication_mock
             .expect_email_exists()
             .return_once(|_| Ok(false));
-        storage_mock
+        authentication_mock
             .expect_username_exists()
             .return_once(|_| Ok(false));
 
         let email_mock = MockEmailService::new();
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),

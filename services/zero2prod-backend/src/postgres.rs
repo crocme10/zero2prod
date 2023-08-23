@@ -14,8 +14,10 @@ use crate::authentication::password::compute_password_hash;
 use crate::domain::{
     ConfirmedSubscriber, Credentials, NewSubscription, SubscriberEmail, SubscriberName,
     Subscription, SubscriptionStatus,
+    ports::secondary::SubscriptionStorage,
+    ports::secondary::AuthenticationStorage,
+    ports::secondary::Error,
 };
-use crate::storage::{Error, Storage};
 use crate::telemetry::spawn_blocking_with_tracing;
 
 /// This is the executor type, which can be either a pool connection, or a transaction.
@@ -115,7 +117,7 @@ pub async fn connect_with_options(config: &DatabaseSettings) -> Result<PgPool, E
 }
 
 #[async_trait]
-impl Storage for PostgresStorage {
+impl SubscriptionStorage for PostgresStorage {
     #[tracing::instrument(name = "Storing a new subscription in postgres")]
     async fn create_subscription_and_store_token(
         &self,
@@ -298,7 +300,10 @@ impl Storage for PostgresStorage {
             })
             .collect()
     }
+}
 
+#[async_trait]
+impl AuthenticationStorage for PostgresStorage {
     #[tracing::instrument(name = "Getting credentials from postgres")]
     async fn get_credentials(
         &self,
