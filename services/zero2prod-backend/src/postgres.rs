@@ -1,9 +1,13 @@
 use async_trait::async_trait;
 use chrono::Utc;
+use common::err_context::ErrorContext;
 use common::err_context::ErrorContextExt;
 use common::settings::DatabaseSettings;
 use secrecy::{ExposeSecret, Secret};
+use serde::ser::SerializeStruct;
+use serde::{Serialize, Serializer};
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
+use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -12,11 +16,10 @@ use uuid::Uuid;
 
 use crate::authentication::password::compute_password_hash;
 use crate::domain::{
+    ports::secondary::AuthenticationError, ports::secondary::AuthenticationStorage,
+    ports::secondary::SubscriptionError, ports::secondary::SubscriptionStorage,
     ConfirmedSubscriber, Credentials, NewSubscription, SubscriberEmail, SubscriberName,
     Subscription, SubscriptionStatus,
-    ports::secondary::SubscriptionStorage,
-    ports::secondary::AuthenticationStorage,
-    ports::secondary::Error,
 };
 use crate::telemetry::spawn_blocking_with_tracing;
 
@@ -123,7 +126,7 @@ impl SubscriptionStorage for PostgresStorage {
         &self,
         new_subscription: &NewSubscription,
         token: &str,
-    ) -> Result<Subscription, Error> {
+    ) -> Result<Subscription, SubscriptionError> {
         // FIXME The following two statements should be part of a transaction.
         // But I'm not sure how to bring in a Transaction from my Exec?
         // Side stepping this issue for now, as maybe sqlx will bring a solution
@@ -159,15 +162,17 @@ impl SubscriptionStorage for PostgresStorage {
         .fetch_one(&mut **conn)
         .await
         .context(format!("Could not get subscription for {id}"))?;
-        let username = SubscriberName::parse(saved.username).map_err(|err| Error::Validation {
-            context: format!("Invalid username: {err}"),
-        })?;
-        let email = SubscriberEmail::parse(saved.email).map_err(|err| Error::Validation {
-            context: format!("Invalid email: {err}"),
-        })?;
+        let username =
+            SubscriberName::parse(saved.username).map_err(|err| SubscriptionError::Validation {
+                context: format!("Invalid username: {err}"),
+            })?;
+        let email =
+            SubscriberEmail::parse(saved.email).map_err(|err| SubscriptionError::Validation {
+                context: format!("Invalid email: {err}"),
+            })?;
         let status =
             SubscriptionStatus::from_str(&saved.status.unwrap_or_default()).map_err(|err| {
-                Error::Validation {
+                SubscriptionError::Validation {
                     context: format!("Invalid status: {err}"),
                 }
             })?;
@@ -180,7 +185,10 @@ impl SubscriptionStorage for PostgresStorage {
     }
 
     #[tracing::instrument(name = "Fetching a subscription by email in postgres")]
-    async fn get_subscription_by_email(&self, email: &str) -> Result<Option<Subscription>, Error> {
+    async fn get_subscription_by_email(
+        &self,
+        email: &str,
+    ) -> Result<Option<Subscription>, SubscriptionError> {
         let mut conn = self.exec.lock().await;
         let saved = sqlx::query!(
             r#"SELECT id, email, username, status::text FROM subscriptions WHERE email = $1"#,
@@ -193,15 +201,18 @@ impl SubscriptionStorage for PostgresStorage {
         match saved {
             None => Ok(None),
             Some(rec) => {
-                let username =
-                    SubscriberName::parse(rec.username).map_err(|err| Error::Validation {
+                let username = SubscriberName::parse(rec.username).map_err(|err| {
+                    SubscriptionError::Validation {
                         context: format!("Invalid username: {err}"),
-                    })?;
-                let email = SubscriberEmail::parse(rec.email).map_err(|err| Error::Validation {
-                    context: format!("Invalid email: {err}"),
+                    }
+                })?;
+                let email = SubscriberEmail::parse(rec.email).map_err(|err| {
+                    SubscriptionError::Validation {
+                        context: format!("Invalid email: {err}"),
+                    }
                 })?;
                 let status = SubscriptionStatus::from_str(&rec.status.unwrap_or_default())
-                    .map_err(|err| Error::Validation {
+                    .map_err(|err| SubscriptionError::Validation {
                         context: format!("Invalid status: {err}"),
                     })?;
                 Ok(Some(Subscription {
@@ -215,7 +226,10 @@ impl SubscriptionStorage for PostgresStorage {
     }
 
     #[tracing::instrument(name = "Fetching a subscriber id by token in postgres")]
-    async fn get_subscriber_id_by_token(&self, token: &str) -> Result<Option<Uuid>, Error> {
+    async fn get_subscriber_id_by_token(
+        &self,
+        token: &str,
+    ) -> Result<Option<Uuid>, SubscriptionError> {
         let mut conn = self.exec.lock().await;
         let saved = sqlx::query!(
             r#"SELECT subscriber_id FROM subscription_tokens WHERE subscription_token = $1"#,
@@ -229,7 +243,10 @@ impl SubscriptionStorage for PostgresStorage {
     }
 
     #[tracing::instrument(name = "Fetching a token using the subscriber's id in postgres")]
-    async fn get_token_by_subscriber_id(&self, id: &Uuid) -> Result<Option<String>, Error> {
+    async fn get_token_by_subscriber_id(
+        &self,
+        id: &Uuid,
+    ) -> Result<Option<String>, SubscriptionError> {
         // FIXME Move to transaction
         let mut conn = self.exec.lock().await;
         let saved = sqlx::query!(
@@ -243,7 +260,7 @@ impl SubscriptionStorage for PostgresStorage {
     }
 
     #[tracing::instrument(name = "Deleting subscription token")]
-    async fn delete_confirmation_token(&self, id: &Uuid) -> Result<(), Error> {
+    async fn delete_confirmation_token(&self, id: &Uuid) -> Result<(), SubscriptionError> {
         let mut conn = self.exec.lock().await;
         sqlx::query!(
             r#"DELETE FROM subscription_tokens WHERE subscriber_id = $1"#,
@@ -258,7 +275,10 @@ impl SubscriptionStorage for PostgresStorage {
     }
 
     #[tracing::instrument(name = "Confirming subscriber")]
-    async fn confirm_subscriber_by_id_and_delete_token(&self, id: &Uuid) -> Result<(), Error> {
+    async fn confirm_subscriber_by_id_and_delete_token(
+        &self,
+        id: &Uuid,
+    ) -> Result<(), SubscriptionError> {
         let mut conn = self.exec.lock().await;
         sqlx::query!(
             r#"UPDATE subscriptions SET status = $1 WHERE id = $2"#,
@@ -281,7 +301,9 @@ impl SubscriptionStorage for PostgresStorage {
     }
 
     #[tracing::instrument(name = "Confirming subscriber")]
-    async fn get_confirmed_subscribers_email(&self) -> Result<Vec<ConfirmedSubscriber>, Error> {
+    async fn get_confirmed_subscribers_email(
+        &self,
+    ) -> Result<Vec<ConfirmedSubscriber>, SubscriptionError> {
         let mut conn = self.exec.lock().await;
         //Create a fallback password hash to enforce doing the same amount
         //of work whether we have a user account in the db or not.
@@ -296,7 +318,7 @@ impl SubscriptionStorage for PostgresStorage {
             .into_iter()
             .map(|r| match SubscriberEmail::try_from(r.email) {
                 Ok(email) => Ok(ConfirmedSubscriber { email }),
-                Err(err) => Err(Error::Validation { context: err }),
+                Err(err) => Err(SubscriptionError::Validation { context: err }),
             })
             .collect()
     }
@@ -308,7 +330,7 @@ impl AuthenticationStorage for PostgresStorage {
     async fn get_credentials(
         &self,
         username: &str,
-    ) -> Result<Option<(Uuid, Secret<String>)>, Error> {
+    ) -> Result<Option<(Uuid, Secret<String>)>, AuthenticationError> {
         let mut conn = self.exec.lock().await;
         let row: Option<_> = sqlx::query!(
             r#"
@@ -332,16 +354,16 @@ impl AuthenticationStorage for PostgresStorage {
         id: Uuid,
         email: &str,
         credentials: &Credentials,
-    ) -> Result<(), Error> {
+    ) -> Result<(), AuthenticationError> {
         let mut conn = self.exec.lock().await;
         let Credentials { username, password } = credentials.clone();
         let password_hash = spawn_blocking_with_tracing(move || compute_password_hash(password))
             .await
-            .map_err(|_| Error::Validation {
+            .map_err(|_| AuthenticationError::Validation {
                 // FIXME Not really validation
                 context: "Could not spawn blocking task".to_string(),
             })?
-            .map_err(|_| Error::Validation {
+            .map_err(|_| AuthenticationError::Validation {
                 // FIXME Not really validation
                 context: "Could not compute password hash".to_string(),
             })?;
@@ -361,7 +383,7 @@ impl AuthenticationStorage for PostgresStorage {
     }
 
     #[tracing::instrument(name = "Checking user id exists")]
-    async fn id_exists(&self, id: &Uuid) -> Result<bool, Error> {
+    async fn id_exists(&self, id: &Uuid) -> Result<bool, AuthenticationError> {
         let mut conn = self.exec.lock().await;
 
         let exist = sqlx::query_scalar!(r#"SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)"#, id,)
@@ -374,7 +396,7 @@ impl AuthenticationStorage for PostgresStorage {
     }
 
     #[tracing::instrument(name = "Checking email exists")]
-    async fn email_exists(&self, email: &str) -> Result<bool, Error> {
+    async fn email_exists(&self, email: &str) -> Result<bool, AuthenticationError> {
         let mut conn = self.exec.lock().await;
 
         let exist = sqlx::query_scalar!(
@@ -390,7 +412,7 @@ impl AuthenticationStorage for PostgresStorage {
     }
 
     #[tracing::instrument(name = "Checking username exists")]
-    async fn username_exists(&self, username: &str) -> Result<bool, Error> {
+    async fn username_exists(&self, username: &str) -> Result<bool, AuthenticationError> {
         let mut conn = self.exec.lock().await;
 
         let exist = sqlx::query_scalar!(
@@ -403,6 +425,95 @@ impl AuthenticationStorage for PostgresStorage {
         .unwrap();
 
         Ok(exist)
+    }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    /// Error returned by sqlx
+    Database {
+        context: String,
+        source: sqlx::Error,
+    },
+    Validation {
+        context: String,
+    },
+    /// Connection issue with the database
+    Connection {
+        context: String,
+        source: sqlx::Error,
+    },
+    Configuration {
+        context: String,
+    },
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::Database { context, source } => {
+                write!(fmt, "Database: {context} | {source}")
+            }
+            Error::Validation { context } => {
+                write!(fmt, "Data: {context}")
+            }
+            Error::Connection { context, source } => {
+                write!(fmt, "Database Connection: {context} | {source}")
+            }
+            Error::Configuration { context } => {
+                write!(fmt, "Database Configuration: {context}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+impl From<ErrorContext<String, sqlx::Error>> for Error {
+    fn from(err: ErrorContext<String, sqlx::Error>) -> Self {
+        match err.1 {
+            sqlx::Error::PoolTimedOut => Error::Connection {
+                context: format!("PostgreSQL Storage: Connection Timeout: {}", err.0),
+                source: err.1,
+            },
+            sqlx::Error::Database(_) => Error::Database {
+                context: format!("PostgreSQL Storage: Database: {}", err.0),
+                source: err.1,
+            },
+            _ => Error::Connection {
+                context: format!(
+                    "PostgreSQL Storage: Could not establish a connection: {}",
+                    err.0
+                ),
+                source: err.1,
+            },
+        }
+    }
+}
+
+/// FIXME This is an oversimplified serialization for the Error.
+/// I had to do this because some fields (source) where not 'Serialize'
+impl Serialize for Error {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Error", 1)?;
+        match self {
+            Error::Database { context, source: _ } => {
+                state.serialize_field("description", context)?;
+            }
+            Error::Validation { context } => {
+                state.serialize_field("description", context)?;
+            }
+            Error::Connection { context, source: _ } => {
+                state.serialize_field("description", context)?;
+            }
+            Error::Configuration { context } => {
+                state.serialize_field("description", context)?;
+            }
+        }
+        state.end()
     }
 }
 

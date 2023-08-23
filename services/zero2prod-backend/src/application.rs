@@ -14,11 +14,13 @@ use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::domain::ports::secondary::{AuthenticationStorage, Error as StorageError, SubscriptionStorage};
-use crate::email_service::{EmailService, Error as EmailError};
+use crate::domain::ports::secondary::{
+    AuthenticationError, AuthenticationStorage, EmailError, EmailService, SubscriptionError,
+    SubscriptionStorage,
+};
 use crate::email_service_impl::EmailClient;
 use crate::listener::{listen_with_host_port, Error as ListenerError};
-use crate::postgres::PostgresStorage;
+use crate::postgres::{Error as PostgresError, PostgresStorage};
 use crate::server;
 
 pub struct Application {
@@ -176,9 +178,17 @@ pub enum Error {
         context: String,
         source: ListenerError,
     },
-    Storage {
+    Postgres {
         context: String,
-        source: StorageError,
+        source: PostgresError,
+    },
+    Authentication {
+        context: String,
+        source: AuthenticationError,
+    },
+    Subscription {
+        context: String,
+        source: SubscriptionError,
     },
     Email {
         context: String,
@@ -200,8 +210,14 @@ impl fmt::Display for Error {
             Error::Listener { context, source } => {
                 write!(fmt, "Could not build TCP listener: {context} | {source}")
             }
-            Error::Storage { context, source } => {
+            Error::Postgres { context, source } => {
                 write!(fmt, "Storage Error: {context} | {source}")
+            }
+            Error::Authentication { context, source } => {
+                write!(fmt, "Authentication Error: {context} | {source}")
+            }
+            Error::Subscription { context, source } => {
+                write!(fmt, "Subscription Error: {context} | {source}")
             }
             Error::Email { context, source } => {
                 write!(fmt, "Email Error: {context} | {source}")
@@ -218,18 +234,27 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
-        Error::Storage {
+impl From<ErrorContext<String, AuthenticationError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
+        Error::Authentication {
             context: err.0,
             source: err.1,
         }
     }
 }
 
-impl From<ErrorContext<String, ListenerError>> for Error {
-    fn from(err: ErrorContext<String, ListenerError>) -> Self {
-        Error::Listener {
+impl From<ErrorContext<String, PostgresError>> for Error {
+    fn from(err: ErrorContext<String, PostgresError>) -> Self {
+        Error::Postgres {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<String, SubscriptionError>> for Error {
+    fn from(err: ErrorContext<String, SubscriptionError>) -> Self {
+        Error::Subscription {
             context: err.0,
             source: err.1,
         }
@@ -239,6 +264,15 @@ impl From<ErrorContext<String, ListenerError>> for Error {
 impl From<ErrorContext<String, EmailError>> for Error {
     fn from(err: ErrorContext<String, EmailError>) -> Self {
         Error::Email {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<String, ListenerError>> for Error {
+    fn from(err: ErrorContext<String, ListenerError>) -> Self {
+        Error::Listener {
             context: err.0,
             source: err.1,
         }

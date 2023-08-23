@@ -26,7 +26,7 @@ use common::settings::Settings;
 use zero2prod::application::{Application, Error};
 use zero2prod::domain::ports::secondary::{AuthenticationStorage, SubscriptionStorage};
 use zero2prod::domain::Credentials;
-use zero2prod::email_service::EmailService;
+use zero2prod::domain::ports::secondary::EmailService;
 use zero2prod::opts::{Command, Opts};
 use zero2prod::routes::newsletter::BodyData;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};

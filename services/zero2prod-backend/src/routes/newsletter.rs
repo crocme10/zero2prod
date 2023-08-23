@@ -10,9 +10,9 @@ use crate::authentication::{
     basic::{basic_authentication, Error as AuthenticationSchemeError},
     password::{Authenticator, Error as CredentialsError},
 };
-use crate::domain::ports::secondary::Error as StorageError;
+use crate::domain::ports::secondary::SubscriptionError;
 use crate::domain::SubscriberEmail;
-use crate::email_service::{Email, Error as EmailError};
+use crate::domain::ports::secondary::{EmailError, Email};
 use crate::server::AppState;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
@@ -89,7 +89,7 @@ pub enum Error {
     },
     Data {
         context: String,
-        source: StorageError,
+        source: SubscriptionError,
     },
     Email {
         context: String,
@@ -136,8 +136,8 @@ impl From<ErrorContext<String, CredentialsError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, SubscriptionError>> for Error {
+    fn from(err: ErrorContext<String, SubscriptionError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -205,7 +205,7 @@ mod tests {
         domain::ports::secondary::MockAuthenticationStorage,
         domain::ports::secondary::MockSubscriptionStorage,
         domain::{ConfirmedSubscriber, Credentials, CredentialsGenerator, SubscriberEmail},
-        email_service::MockEmailService,
+        domain::ports::secondary::MockEmailService,
         server::{AppState, ApplicationBaseUrl},
     };
 

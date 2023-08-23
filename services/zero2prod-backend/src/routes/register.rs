@@ -14,7 +14,7 @@ use uuid::Uuid;
 use crate::authentication::jwt::build_token;
 use crate::domain::Credentials;
 use crate::server::AppState;
-use crate::domain::ports::secondary::Error as StorageError;
+use crate::domain::ports::secondary::AuthenticationError;
 
 /// POST handler for user registration
 #[allow(clippy::unused_async)]
@@ -133,7 +133,7 @@ pub enum Error {
     },
     Data {
         context: String,
-        source: StorageError,
+        source: AuthenticationError,
     },
 }
 
@@ -158,8 +158,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, AuthenticationError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -257,10 +257,9 @@ mod tests {
 
     use crate::{
         domain::Credentials,
-        email_service::MockEmailService,
         routes::register::RegistrationRequest,
         server::{AppState, ApplicationBaseUrl},
-        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage},
+        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage, MockEmailService},
     };
 
     use super::*;

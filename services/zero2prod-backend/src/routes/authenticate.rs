@@ -7,8 +7,8 @@ use serde::{Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
 
-use crate::authentication::jwt::{Authenticator, Error as AuthenticationError};
-use crate::domain::ports::secondary::Error as StorageError;
+use crate::authentication::jwt::{Authenticator, Error as JwtError};
+use crate::domain::ports::secondary::AuthenticationError;
 use crate::server::AppState;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
@@ -65,14 +65,14 @@ pub async fn authenticate<B: fmt::Debug>(
 pub enum Error {
     InvalidCredentials {
         context: String,
-        source: AuthenticationError,
+        source: JwtError,
     },
     NotLoggedIn {
         context: String,
     },
     Data {
         context: String,
-        source: StorageError,
+        source: AuthenticationError,
     },
 }
 
@@ -94,8 +94,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, AuthenticationError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -103,8 +103,8 @@ impl From<ErrorContext<String, StorageError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, AuthenticationError>> for Error {
-    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
+impl From<ErrorContext<String, JwtError>> for Error {
+    fn from(err: ErrorContext<String, JwtError>) -> Self {
         Error::InvalidCredentials {
             context: err.0,
             source: err.1,

@@ -10,8 +10,8 @@ use std::fmt;
 use uuid::Uuid;
 
 use crate::authentication::jwt::build_token;
-use crate::authentication::password::{Authenticator, Error as AuthenticationError};
-use crate::domain::ports::secondary::Error as StorageError;
+use crate::authentication::password::{Authenticator, Error as PasswordError};
+use crate::domain::ports::secondary::AuthenticationError;
 use crate::domain::Credentials;
 use crate::server::AppState;
 use common::err_context::{ErrorContext, ErrorContextExt};
@@ -91,11 +91,11 @@ pub struct LoginRequest {
 pub enum Error {
     InvalidCredentials {
         context: String,
-        source: AuthenticationError,
+        source: PasswordError,
     },
     Data {
         context: String,
-        source: StorageError,
+        source: AuthenticationError,
     },
 }
 
@@ -114,8 +114,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, AuthenticationError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -123,8 +123,8 @@ impl From<ErrorContext<String, StorageError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, AuthenticationError>> for Error {
-    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
+impl From<ErrorContext<String, PasswordError>> for Error {
+    fn from(err: ErrorContext<String, PasswordError>) -> Self {
         Error::InvalidCredentials {
             context: err.0,
             source: err.1,
@@ -195,10 +195,9 @@ mod tests {
 
     use crate::{
         authentication::password::compute_password_hash,
-        email_service::MockEmailService,
         routes::login::LoginRequest,
         server::{AppState, ApplicationBaseUrl},
-        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage},
+        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage, MockEmailService},
     };
 
     use super::*;

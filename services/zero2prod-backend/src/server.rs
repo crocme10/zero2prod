@@ -17,8 +17,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 
-use crate::domain::ports::secondary::{AuthenticationStorage, SubscriptionStorage};
-use crate::email_service::EmailService;
+use crate::domain::ports::secondary::{AuthenticationStorage, SubscriptionStorage, EmailService};
 use crate::routes::{
     authenticate::authenticate, health::health, login::login, logout::logout,
     newsletter::publish_newsletter, register::register,

@@ -8,9 +8,9 @@ use std::fmt;
 use uuid::Uuid;
 
 use crate::domain::{NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus};
-use crate::email_service::{Email, Error as EmailError};
+use crate::domain::ports::secondary::{EmailError, Email};
 use crate::server::{AppState, ApplicationBaseUrl};
-use crate::domain::ports::secondary::Error as StorageError;
+use crate::domain::ports::secondary::SubscriptionError;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user subscriptions
@@ -169,7 +169,7 @@ pub enum Error {
     },
     Data {
         context: String,
-        source: StorageError,
+        source: SubscriptionError,
     },
     Email {
         context: String,
@@ -207,8 +207,8 @@ impl From<ErrorContext<String, String>> for Error {
     }
 }
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, SubscriptionError>> for Error {
+    fn from(err: ErrorContext<String, SubscriptionError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -297,10 +297,9 @@ mod tests {
 
     use crate::{
         domain::{NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus},
-        email_service::MockEmailService,
         routes::subscriptions::SubscriptionRequest,
         server::{AppState, ApplicationBaseUrl},
-        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage},
+        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage, MockEmailService},
     };
 
     use super::*;
@@ -503,7 +502,7 @@ mod tests {
                 subscription == &new_subscription
             })
             .return_once(|_, _| {
-                Err(StorageError::Database {
+                Err(SubscriptionError::Database {
                     context: "subscription context".to_string(),
                     source: sqlx::Error::RowNotFound,
                 })

@@ -8,8 +8,8 @@ use std::fmt;
 use std::sync::Arc;
 use uuid::Uuid;
 
+use crate::domain::ports::secondary::{AuthenticationError, AuthenticationStorage};
 use crate::domain::Credentials;
-use crate::domain::ports::secondary::{AuthenticationStorage, Error as StorageError};
 use crate::telemetry::spawn_blocking_with_tracing;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
@@ -119,7 +119,7 @@ pub enum Error {
     },
     Data {
         context: String,
-        source: StorageError,
+        source: AuthenticationError,
     },
 }
 
@@ -141,8 +141,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, AuthenticationError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -157,8 +157,8 @@ mod tests {
     use speculoos::prelude::*;
     use uuid::Uuid;
 
-    use crate::domain::{Credentials, CredentialsGenerator};
     use crate::domain::ports::secondary::authentication_storage::MockAuthenticationStorage;
+    use crate::domain::{Credentials, CredentialsGenerator};
 
     use super::*;
 

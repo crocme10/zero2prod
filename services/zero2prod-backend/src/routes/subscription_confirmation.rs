@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
 
-use crate::domain::ports::secondary::Error as StorageError;
+use crate::domain::ports::secondary::SubscriptionError;
 use crate::server::AppState;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
@@ -68,7 +68,7 @@ pub enum Error {
     },
     Data {
         context: String,
-        source: StorageError,
+        source: SubscriptionError,
     },
 }
 
@@ -87,8 +87,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, SubscriptionError>> for Error {
+    fn from(err: ErrorContext<String, SubscriptionError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -156,9 +156,8 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
-        email_service::MockEmailService,
         server::{AppState, ApplicationBaseUrl},
-        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage},
+        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage, MockEmailService},
     };
 
     use super::*;
