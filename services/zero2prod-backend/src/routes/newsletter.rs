@@ -11,8 +11,8 @@ use crate::authentication::{
     password::{Authenticator, Error as CredentialsError},
 };
 use crate::domain::ports::secondary::SubscriptionError;
+use crate::domain::ports::secondary::{Email, EmailError};
 use crate::domain::SubscriberEmail;
-use crate::domain::ports::secondary::{EmailError, Email};
 use crate::server::AppState;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
@@ -203,9 +203,9 @@ mod tests {
     use crate::{
         authentication::password::compute_password_hash,
         domain::ports::secondary::MockAuthenticationStorage,
+        domain::ports::secondary::MockEmailService,
         domain::ports::secondary::MockSubscriptionStorage,
         domain::{ConfirmedSubscriber, Credentials, CredentialsGenerator, SubscriberEmail},
-        domain::ports::secondary::MockEmailService,
         server::{AppState, ApplicationBaseUrl},
     };
 

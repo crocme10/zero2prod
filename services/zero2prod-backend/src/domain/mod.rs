@@ -1,10 +1,10 @@
 pub mod confirmed_subscriber;
 pub mod new_subscription;
+pub mod ports;
 pub mod subscriber_email;
 pub mod subscriber_name;
 pub mod subscription;
 pub mod user_credentials;
-pub mod ports;
 
 pub use confirmed_subscriber::ConfirmedSubscriber;
 pub use new_subscription::NewSubscription;

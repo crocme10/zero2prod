@@ -195,9 +195,11 @@ mod tests {
 
     use crate::{
         authentication::password::compute_password_hash,
+        domain::ports::secondary::{
+            MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
+        },
         routes::login::LoginRequest,
         server::{AppState, ApplicationBaseUrl},
-        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage, MockEmailService},
     };
 
     use super::*;

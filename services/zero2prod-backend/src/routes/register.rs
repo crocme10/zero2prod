@@ -12,9 +12,9 @@ use std::fmt;
 use uuid::Uuid;
 
 use crate::authentication::jwt::build_token;
+use crate::domain::ports::secondary::AuthenticationError;
 use crate::domain::Credentials;
 use crate::server::AppState;
-use crate::domain::ports::secondary::AuthenticationError;
 
 /// POST handler for user registration
 #[allow(clippy::unused_async)]
@@ -249,17 +249,19 @@ mod tests {
         name::en::Name,
     };
     use fake::Fake;
+    use hyper::body::HttpBody;
     use mockall::predicate::*;
     use secrecy::Secret;
     use std::sync::Arc;
     use tower::ServiceExt;
-    use hyper::body::HttpBody;
 
     use crate::{
+        domain::ports::secondary::{
+            MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
+        },
         domain::Credentials,
         routes::register::RegistrationRequest,
         server::{AppState, ApplicationBaseUrl},
-        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage, MockEmailService},
     };
 
     use super::*;
@@ -292,7 +294,6 @@ mod tests {
 
     #[tokio::test]
     async fn registration_should_store_credentials() {
-
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();
         let password = Password(12..32).fake::<String>();
@@ -349,7 +350,6 @@ mod tests {
 
     #[tokio::test]
     async fn registration_should_fail_if_username_exists() {
-
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();
         let password = Password(12..32).fake::<String>();
@@ -411,7 +411,6 @@ mod tests {
 
     #[tokio::test]
     async fn registration_should_fail_if_email_exists() {
-
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();
         let password = Password(12..32).fake::<String>();
@@ -473,7 +472,6 @@ mod tests {
 
     #[tokio::test]
     async fn registration_should_fail_if_password_is_weak() {
-
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();
         let password = "Secret123".to_string();
@@ -483,7 +481,7 @@ mod tests {
             email: email.clone(),
             password: password.clone(),
         };
-        
+
         let mut authentication_mock = MockAuthenticationStorage::new();
         let subscription_mock = MockSubscriptionStorage::new();
 
@@ -527,5 +525,4 @@ mod tests {
         assert_eq!(response.status, "fail");
         assert_eq!(response.code, "auth/weak_password");
     }
-
 }

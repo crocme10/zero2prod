@@ -1,2 +1,2 @@
-pub mod postgres;
 pub mod email;
+pub mod postgres;

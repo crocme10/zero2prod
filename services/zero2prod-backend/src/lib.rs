@@ -1,5 +1,4 @@
 pub mod application;
-pub mod services;
 pub mod authentication;
 pub mod domain;
 pub mod error;
@@ -7,4 +6,5 @@ pub mod listener;
 pub mod opts;
 pub mod routes;
 pub mod server;
+pub mod services;
 pub mod telemetry;

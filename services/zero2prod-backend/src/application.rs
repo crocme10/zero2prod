@@ -18,10 +18,10 @@ use crate::domain::ports::secondary::{
     AuthenticationError, AuthenticationStorage, EmailError, EmailService, SubscriptionError,
     SubscriptionStorage,
 };
-use crate::services::email::EmailClient;
 use crate::listener::{listen_with_host_port, Error as ListenerError};
-use crate::services::postgres::{Error as PostgresError, PostgresStorage};
 use crate::server;
+use crate::services::email::EmailClient;
+use crate::services::postgres::{Error as PostgresError, PostgresStorage};
 
 pub struct Application {
     port: u16,

@@ -156,8 +156,10 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
+        domain::ports::secondary::{
+            MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
+        },
         server::{AppState, ApplicationBaseUrl},
-        domain::ports::secondary::{MockAuthenticationStorage, MockSubscriptionStorage, MockEmailService},
     };
 
     use super::*;

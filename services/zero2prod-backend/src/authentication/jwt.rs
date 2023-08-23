@@ -7,7 +7,7 @@ use std::fmt;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::domain::ports::secondary::{AuthenticationStorage, AuthenticationError};
+use crate::domain::ports::secondary::{AuthenticationError, AuthenticationStorage};
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 #[derive(Debug, Serialize, Deserialize)]
