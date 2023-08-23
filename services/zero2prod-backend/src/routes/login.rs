@@ -1,8 +1,7 @@
 use axum::extract::{Json, State};
-use axum::http::{header, status::StatusCode};
+use axum::http::{header, status::StatusCode, HeaderMap};
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::cookie::{Cookie, SameSite};
-use hyper::header::HeaderMap;
 use secrecy::Secret;
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize, Serializer};
@@ -76,6 +75,11 @@ impl IntoResponse for LoginResp {
             .finish();
         let mut headers = HeaderMap::new();
         headers.insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
+        headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
+        headers.insert("X-Frame-Options", "DENY".parse().unwrap());
+        headers.insert("X-XSS-Protection", "0".parse().unwrap());
+        headers.insert("Cache-Control", "no-store".parse().unwrap());
+        headers.insert("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; sandbox".parse().unwrap());
         (StatusCode::OK, headers, json).into_response()
     }
 }
@@ -155,9 +159,16 @@ impl Serialize for Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
+        headers.insert("X-Frame-Options", "DENY".parse().unwrap());
+        headers.insert("X-XSS-Protection", "0".parse().unwrap());
+        headers.insert("Cache-Control", "no-store".parse().unwrap());
+        headers.insert("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; sandbox".parse().unwrap());
         match self {
             Error::InvalidCredentials { context, source: _ } => (
                 StatusCode::UNAUTHORIZED,
+                headers,
                 Json(serde_json::json!({
                     "status": "fail",
                     "message": context,
@@ -167,6 +178,7 @@ impl IntoResponse for Error {
                 .into_response(),
             Error::Data { context, source: _ } => (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                headers,
                 Json(serde_json::json!({
                     "status": "fail",
                     "message": context,

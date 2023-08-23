@@ -58,7 +58,18 @@ pub async fn authenticate<B: fmt::Debug>(
         "status": "success",
         "id": id.to_string()
     });
-    Ok::<_, Error>(Json(resp))
+
+
+    Ok::<_, Error>((
+            StatusCode::OK,
+            [
+            ("X-Content-Type-Options", "nosniff"),
+            ("X-Frame-Options", "DENY"),
+            ("X-XSS-Protection", "0"),
+            ("Cache-Control", "no-store"),
+            ("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; sandbox")
+            ],
+            Json(resp)))
 }
 
 #[derive(Debug)]
