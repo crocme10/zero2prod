@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT subscription_token FROM subscription_tokens WHERE subscriber_id = $1",
+  "query": "SELECT subscription_token FROM main.subscription_tokens WHERE subscriber_id = $1",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       false
     ]
   },
-  "hash": "2aa3124b00dbb4e06c369c6e63730714dde99aa3bbdb07fb7bcf40e0fb90edfd"
+  "hash": "ef4df6aedbada7d5bafe593bdee12388f3e8e80939d73b3a20a268c65c1e07b5"
 }

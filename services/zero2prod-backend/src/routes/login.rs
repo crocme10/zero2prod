@@ -79,7 +79,12 @@ impl IntoResponse for LoginResp {
         headers.insert("X-Frame-Options", "DENY".parse().unwrap());
         headers.insert("X-XSS-Protection", "0".parse().unwrap());
         headers.insert("Cache-Control", "no-store".parse().unwrap());
-        headers.insert("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; sandbox".parse().unwrap());
+        headers.insert(
+            "Content-Security-Policy",
+            "default-src 'none'; frame-ancestors 'none'; sandbox"
+                .parse()
+                .unwrap(),
+        );
         (StatusCode::OK, headers, json).into_response()
     }
 }
@@ -164,7 +169,12 @@ impl IntoResponse for Error {
         headers.insert("X-Frame-Options", "DENY".parse().unwrap());
         headers.insert("X-XSS-Protection", "0".parse().unwrap());
         headers.insert("Cache-Control", "no-store".parse().unwrap());
-        headers.insert("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; sandbox".parse().unwrap());
+        headers.insert(
+            "Content-Security-Policy",
+            "default-src 'none'; frame-ancestors 'none'; sandbox"
+                .parse()
+                .unwrap(),
+        );
         match self {
             Error::InvalidCredentials { context, source: _ } => (
                 StatusCode::UNAUTHORIZED,

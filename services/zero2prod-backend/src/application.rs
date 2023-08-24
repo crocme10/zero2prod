@@ -11,7 +11,6 @@ use common::settings::{ApplicationSettings, DatabaseSettings, EmailClientSetting
 use secrecy::Secret;
 use std::fmt;
 use std::net::TcpListener;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::domain::ports::secondary::{
@@ -41,7 +40,6 @@ pub struct ApplicationBuilder {
     pub email: Option<Arc<dyn EmailService + Send + Sync>>,
     pub listener: Option<TcpListener>,
     pub url: Option<String>,
-    pub static_dir: Option<PathBuf>,
     pub requests_per_sec: Option<u64>,
     pub secret: Option<Secret<String>>,
 }
@@ -63,7 +61,6 @@ impl ApplicationBuilder {
             .await?
             .listener(application.clone())?
             .url(application.base_url)
-            .static_dir(application.static_dir)?
             .requests_per_sec(application.requests_per_sec)
             .secret("Secret".to_string());
 
@@ -115,22 +112,6 @@ impl ApplicationBuilder {
         self
     }
 
-    pub fn static_dir(mut self, static_dir: String) -> Result<Self, Error> {
-        let path = PathBuf::from(&static_dir);
-        let path = if path.is_absolute() {
-            path
-        } else {
-            let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-            root.push(&path);
-            root
-        };
-        let path = path
-            .canonicalize()
-            .context("Could not canonicalize static dir".to_string())?;
-        self.static_dir = Some(path);
-        Ok(self)
-    }
-
     pub fn requests_per_sec(mut self, requests_per_sec: u64) -> Self {
         self.requests_per_sec = Some(requests_per_sec);
         self
@@ -148,7 +129,6 @@ impl ApplicationBuilder {
             email,
             listener,
             url,
-            static_dir,
             requests_per_sec,
             secret,
         } = self;
@@ -160,7 +140,6 @@ impl ApplicationBuilder {
             subscription.expect("subscription"),
             email.expect("email"),
             url.expect("url"),
-            static_dir.expect("static dir"),
             requests_per_sec.expect("requests per sec"),
             secret.expect("secret"),
         );

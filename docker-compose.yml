@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+
+  backend:
+    image:
+      zero2prod/backend:latest
+    ports:
+      - 8083:8080
+    depends_on:
+      - db
+
+  db:
+    image:
+      zero2prod/postgres:latest
+    ports:
+      - 5434:5432
+    command: ["postgres", "-c", "log_statement=all"]
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=bob
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=newsletter
+
+  frontend:
+    image:
+      zero2prod/frontend:latest
+    ports:
+      - 80
+    depends_on:
+      - backend
+
+  gateway:
+    image:
+      zero2prod/gateway:latest 
+    ports:
+      - 8084:80
+    depends_on:
+      - backend
+      - frontend
+

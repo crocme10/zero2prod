@@ -1,2 +1,11 @@
+.env
+.cargo
+documentation
+.git
+.github
+Makefile
+LICENSE
+README.md
+data
 target
-Cargo.lock
+.spec.yaml

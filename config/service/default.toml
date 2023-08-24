@@ -4,5 +4,4 @@ mode = "default"
 port = 8080
 host = "0.0.0.0"
 base_url = "http://127.0.0.1"
-static_dir = "../zero2prod-frontend/dist" # Relative to ??? FIXME
 requests_per_sec = 20
