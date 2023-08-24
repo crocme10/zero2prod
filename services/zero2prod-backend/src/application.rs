@@ -42,6 +42,7 @@ pub struct ApplicationBuilder {
     pub listener: Option<TcpListener>,
     pub url: Option<String>,
     pub static_dir: Option<PathBuf>,
+    pub requests_per_sec: Option<u64>,
     pub secret: Option<Secret<String>>,
 }
 
@@ -63,6 +64,7 @@ impl ApplicationBuilder {
             .listener(application.clone())?
             .url(application.base_url)
             .static_dir(application.static_dir)?
+            .requests_per_sec(application.requests_per_sec)
             .secret("Secret".to_string());
 
         Ok(builder)
@@ -129,6 +131,11 @@ impl ApplicationBuilder {
         Ok(self)
     }
 
+    pub fn requests_per_sec(mut self, requests_per_sec: u64) -> Self {
+        self.requests_per_sec = Some(requests_per_sec);
+        self
+    }
+
     pub fn secret(mut self, secret: String) -> Self {
         self.secret = Some(Secret::new(secret));
         self
@@ -142,6 +149,7 @@ impl ApplicationBuilder {
             listener,
             url,
             static_dir,
+            requests_per_sec,
             secret,
         } = self;
         let listener = listener.expect("listener");
@@ -153,6 +161,7 @@ impl ApplicationBuilder {
             email.expect("email"),
             url.expect("url"),
             static_dir.expect("static dir"),
+            requests_per_sec.expect("requests per sec"),
             secret.expect("secret"),
         );
         Application { port, server }

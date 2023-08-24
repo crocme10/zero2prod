@@ -33,6 +33,7 @@ pub fn new(
     email: Arc<dyn EmailService + Send + Sync>,
     base_url: String,
     static_dir: PathBuf,
+    requests_per_sec: u64,
     secret: Secret<String>,
 ) -> AppServer {
     // Build app state
@@ -82,7 +83,7 @@ pub fn new(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(handle_timeout_error))
                 .layer(BufferLayer::new(1024))
-                .layer(RateLimitLayer::new(5, Duration::from_secs(1))),
+                .layer(RateLimitLayer::new(requests_per_sec, Duration::from_secs(1))),
         )
         .with_state(app_state);
 

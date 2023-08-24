@@ -38,6 +38,7 @@ pub struct ApplicationSettings {
     pub port: u16,
     pub base_url: String,
     pub static_dir: String,
+    pub requests_per_sec: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
