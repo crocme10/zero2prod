@@ -1,20 +1,21 @@
 /// This module holds the webserver specific details,
 /// in our case all (most?) the axum related code.
 use axum::{
-    body::{boxed, Body},
-    http::{header, HeaderValue, Method, Response, StatusCode},
-    routing::{get, post, IntoMakeService, Router},
-    Server,
+    error_handling::HandleErrorLayer,
+    http::{header, HeaderValue, Method, StatusCode},
+    routing::{get, get_service, post, IntoMakeService, Router},
+    BoxError, Server,
 };
 use hyper::server::conn::AddrIncoming;
 use secrecy::Secret;
 use std::path::PathBuf;
+use std::time::Duration;
 use std::{fmt, net::TcpListener};
 use std::{fmt::Display, sync::Arc};
-use tokio::fs;
-use tower::util::ServiceExt;
+use tower::ServiceBuilder;
+use tower::{buffer::BufferLayer, limit::RateLimitLayer};
 use tower_http::cors::CorsLayer;
-use tower_http::services::ServeDir;
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::domain::ports::secondary::{AuthenticationStorage, EmailService, SubscriptionStorage};
@@ -24,35 +25,6 @@ use crate::routes::{
     subscription_confirmation::subscriptions_confirmation, subscriptions::subscriptions,
 };
 use common::err_context::ErrorContext;
-
-#[derive(Debug)]
-pub enum Error {
-    Server {
-        context: String,
-        source: hyper::Error,
-    },
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::Server { context, source } => {
-                write!(fmt, "Server: {context} | {source}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl From<ErrorContext<String, hyper::Error>> for Error {
-    fn from(err: ErrorContext<String, hyper::Error>) -> Self {
-        Error::Server {
-            context: err.0,
-            source: err.1,
-        }
-    }
-}
 
 pub fn new(
     listener: TcpListener,
@@ -93,44 +65,25 @@ pub fn new(
         .allow_headers([header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE]);
     // let cors = CorsLayer::permissive();
 
+    let not_found_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pages").join("404.html");
+    let serve_dir = ServeDir::new(&static_dir).not_found_service(ServeFile::new(&not_found_path));
+
     // Create a router that will contain and match all routes for the application
     // and a fallback service that will serve the static directory
     tracing::info!("Serving static: {}", static_dir.display());
     let app = Router::new()
         .merge(router_no_session)
-        .fallback_service(get(|req| async move {
-            match ServeDir::new(&static_dir).oneshot(req).await {
-                Ok(res) => {
-                    let status = res.status();
-                    match status {
-                        StatusCode::NOT_FOUND => {
-                            let index_path = PathBuf::from(&static_dir).join("index.html");
-                            let index_content = match fs::read_to_string(index_path).await {
-                                Err(_) => {
-                                    return Response::builder()
-                                        .status(StatusCode::NOT_FOUND)
-                                        .body(boxed(Body::from("index file not found")))
-                                        .unwrap()
-                                }
-                                Ok(index_content) => index_content,
-                            };
-
-                            Response::builder()
-                                .status(StatusCode::OK)
-                                .body(boxed(Body::from(index_content)))
-                                .unwrap()
-                        }
-                        _ => res.map(boxed),
-                    }
-                }
-                Err(err) => Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(boxed(Body::from(format!("error: {err}"))))
-                    .expect("error response"),
-            }
+        .fallback_service(get_service(serve_dir).handle_error(|_| async {
+            (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong...")
         }))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
+        .layer(
+            ServiceBuilder::new()
+                .layer(HandleErrorLayer::new(handle_timeout_error))
+                .layer(BufferLayer::new(1024))
+                .layer(RateLimitLayer::new(5, Duration::from_secs(1))),
+        )
         .with_state(app_state);
 
     // Start the axum server and set up to use supplied listener
@@ -165,3 +118,39 @@ impl Display for ApplicationBaseUrl {
 
 // TODO Investigate:
 // impl FromRef<AppState> for PgPool {
+//
+async fn handle_timeout_error(err: BoxError) -> (StatusCode, String) {
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        format!("Unhandled internal error: {}", err),
+    )
+}
+
+#[derive(Debug)]
+pub enum Error {
+    Server {
+        context: String,
+        source: hyper::Error,
+    },
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::Server { context, source } => {
+                write!(fmt, "Server: {context} | {source}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+impl From<ErrorContext<String, hyper::Error>> for Error {
+    fn from(err: ErrorContext<String, hyper::Error>) -> Self {
+        Error::Server {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
