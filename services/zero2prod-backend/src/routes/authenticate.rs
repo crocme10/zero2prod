@@ -7,12 +7,12 @@ use serde::{Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
 
-use crate::authentication::jwt::{Authenticator, Error as AuthenticationError};
+use crate::authentication::jwt::{Authenticator, Error as JwtError};
+use crate::domain::ports::secondary::AuthenticationError;
 use crate::server::AppState;
-use crate::storage::Error as StorageError;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
-/// GETT handler for user authentication
+/// GET handler for user authentication
 #[allow(clippy::unused_async)]
 #[tracing::instrument(
     name = "User Authentication"
@@ -45,7 +45,7 @@ pub async fn authenticate<B: fmt::Debug>(
     })?;
 
     let authenticator = Authenticator {
-        storage: state.storage.clone(),
+        storage: state.authentication.clone(),
         secret: state.secret.clone(),
     };
 
@@ -58,21 +58,35 @@ pub async fn authenticate<B: fmt::Debug>(
         "status": "success",
         "id": id.to_string()
     });
-    Ok::<_, Error>(Json(resp))
+
+    Ok::<_, Error>((
+        StatusCode::OK,
+        [
+            ("X-Content-Type-Options", "nosniff"),
+            ("X-Frame-Options", "DENY"),
+            ("X-XSS-Protection", "0"),
+            ("Cache-Control", "no-store"),
+            (
+                "Content-Security-Policy",
+                "default-src 'none'; frame-ancestors 'none'; sandbox",
+            ),
+        ],
+        Json(resp),
+    ))
 }
 
 #[derive(Debug)]
 pub enum Error {
     InvalidCredentials {
         context: String,
-        source: AuthenticationError,
+        source: JwtError,
     },
     NotLoggedIn {
         context: String,
     },
     Data {
         context: String,
-        source: StorageError,
+        source: AuthenticationError,
     },
 }
 
@@ -94,8 +108,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, AuthenticationError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -103,8 +117,8 @@ impl From<ErrorContext<String, StorageError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, AuthenticationError>> for Error {
-    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
+impl From<ErrorContext<String, JwtError>> for Error {
+    fn from(err: ErrorContext<String, JwtError>) -> Self {
         Error::InvalidCredentials {
             context: err.0,
             source: err.1,

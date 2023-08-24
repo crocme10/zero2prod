@@ -11,15 +11,16 @@ use common::settings::{ApplicationSettings, DatabaseSettings, EmailClientSetting
 use secrecy::Secret;
 use std::fmt;
 use std::net::TcpListener;
-use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::email_service::{EmailService, Error as EmailError};
-use crate::email_service_impl::EmailClient;
+use crate::domain::ports::secondary::{
+    AuthenticationError, AuthenticationStorage, EmailError, EmailService, SubscriptionError,
+    SubscriptionStorage,
+};
 use crate::listener::{listen_with_host_port, Error as ListenerError};
-use crate::postgres::PostgresStorage;
 use crate::server;
-use crate::storage::{Error as StorageError, Storage};
+use crate::services::email::EmailClient;
+use crate::services::postgres::{Error as PostgresError, PostgresStorage};
 
 pub struct Application {
     port: u16,
@@ -34,11 +35,12 @@ impl Application {
 
 #[derive(Default)]
 pub struct ApplicationBuilder {
-    pub storage: Option<Arc<dyn Storage + Send + Sync>>,
+    pub authentication: Option<Arc<dyn AuthenticationStorage + Send + Sync>>,
+    pub subscription: Option<Arc<dyn SubscriptionStorage + Send + Sync>>,
     pub email: Option<Arc<dyn EmailService + Send + Sync>>,
     pub listener: Option<TcpListener>,
     pub url: Option<String>,
-    pub static_dir: Option<PathBuf>,
+    pub requests_per_sec: Option<u64>,
     pub secret: Option<Secret<String>>,
 }
 
@@ -51,25 +53,37 @@ impl ApplicationBuilder {
             mode: _,
         } = settings;
         let builder = Self::default()
-            .storage(database)
+            .authentication(database.clone())
+            .await?
+            .subscription(database)
             .await?
             .email(email_client)
             .await?
             .listener(application.clone())?
             .url(application.base_url)
-            .static_dir(application.static_dir)?
+            .requests_per_sec(application.requests_per_sec)
             .secret("Secret".to_string());
 
         Ok(builder)
     }
 
-    pub async fn storage(mut self, settings: DatabaseSettings) -> Result<Self, Error> {
+    pub async fn authentication(mut self, settings: DatabaseSettings) -> Result<Self, Error> {
         let storage = Arc::new(
             PostgresStorage::new(settings)
                 .await
                 .context("Establishing a database connection".to_string())?,
         );
-        self.storage = Some(storage);
+        self.authentication = Some(storage);
+        Ok(self)
+    }
+
+    pub async fn subscription(mut self, settings: DatabaseSettings) -> Result<Self, Error> {
+        let storage = Arc::new(
+            PostgresStorage::new(settings)
+                .await
+                .context("Establishing a database connection".to_string())?,
+        );
+        self.subscription = Some(storage);
         Ok(self)
     }
 
@@ -98,20 +112,9 @@ impl ApplicationBuilder {
         self
     }
 
-    pub fn static_dir(mut self, static_dir: String) -> Result<Self, Error> {
-        let path = PathBuf::from(&static_dir);
-        let path = if path.is_absolute() {
-            path
-        } else {
-            let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-            root.push(&path);
-            root
-        };
-        let path = path
-            .canonicalize()
-            .context("Could not canonicalize static dir".to_string())?;
-        self.static_dir = Some(path);
-        Ok(self)
+    pub fn requests_per_sec(mut self, requests_per_sec: u64) -> Self {
+        self.requests_per_sec = Some(requests_per_sec);
+        self
     }
 
     pub fn secret(mut self, secret: String) -> Self {
@@ -121,21 +124,23 @@ impl ApplicationBuilder {
 
     pub fn build(self) -> Application {
         let ApplicationBuilder {
-            storage,
+            authentication,
+            subscription,
             email,
             listener,
             url,
-            static_dir,
+            requests_per_sec,
             secret,
         } = self;
         let listener = listener.expect("listener");
         let port = listener.local_addr().expect("listener local addr").port();
         let server = server::new(
             listener,
-            storage.expect("storage"),
+            authentication.expect("authentication"),
+            subscription.expect("subscription"),
             email.expect("email"),
             url.expect("url"),
-            static_dir.expect("static dir"),
+            requests_per_sec.expect("requests per sec"),
             secret.expect("secret"),
         );
         Application { port, server }
@@ -161,9 +166,17 @@ pub enum Error {
         context: String,
         source: ListenerError,
     },
-    Storage {
+    Postgres {
         context: String,
-        source: StorageError,
+        source: PostgresError,
+    },
+    Authentication {
+        context: String,
+        source: AuthenticationError,
+    },
+    Subscription {
+        context: String,
+        source: SubscriptionError,
     },
     Email {
         context: String,
@@ -185,8 +198,14 @@ impl fmt::Display for Error {
             Error::Listener { context, source } => {
                 write!(fmt, "Could not build TCP listener: {context} | {source}")
             }
-            Error::Storage { context, source } => {
+            Error::Postgres { context, source } => {
                 write!(fmt, "Storage Error: {context} | {source}")
+            }
+            Error::Authentication { context, source } => {
+                write!(fmt, "Authentication Error: {context} | {source}")
+            }
+            Error::Subscription { context, source } => {
+                write!(fmt, "Subscription Error: {context} | {source}")
             }
             Error::Email { context, source } => {
                 write!(fmt, "Email Error: {context} | {source}")
@@ -203,18 +222,27 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
-        Error::Storage {
+impl From<ErrorContext<String, AuthenticationError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
+        Error::Authentication {
             context: err.0,
             source: err.1,
         }
     }
 }
 
-impl From<ErrorContext<String, ListenerError>> for Error {
-    fn from(err: ErrorContext<String, ListenerError>) -> Self {
-        Error::Listener {
+impl From<ErrorContext<String, PostgresError>> for Error {
+    fn from(err: ErrorContext<String, PostgresError>) -> Self {
+        Error::Postgres {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<String, SubscriptionError>> for Error {
+    fn from(err: ErrorContext<String, SubscriptionError>) -> Self {
+        Error::Subscription {
             context: err.0,
             source: err.1,
         }
@@ -224,6 +252,15 @@ impl From<ErrorContext<String, ListenerError>> for Error {
 impl From<ErrorContext<String, EmailError>> for Error {
     fn from(err: ErrorContext<String, EmailError>) -> Self {
         Error::Email {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<String, ListenerError>> for Error {
+    fn from(err: ErrorContext<String, ListenerError>) -> Self {
+        Error::Listener {
             context: err.0,
             source: err.1,
         }

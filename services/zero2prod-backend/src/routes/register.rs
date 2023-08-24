@@ -12,9 +12,9 @@ use std::fmt;
 use uuid::Uuid;
 
 use crate::authentication::jwt::build_token;
+use crate::domain::ports::secondary::AuthenticationError;
 use crate::domain::Credentials;
 use crate::server::AppState;
-use crate::storage::Error as StorageError;
 
 /// POST handler for user registration
 #[allow(clippy::unused_async)]
@@ -30,7 +30,7 @@ pub async fn register(
     Json(request): Json<RegistrationRequest>,
 ) -> Result<impl IntoResponse, Error> {
     if state
-        .storage
+        .authentication
         .email_exists(&request.email)
         .await
         .context("Could not check if the email exists".to_string())?
@@ -41,7 +41,7 @@ pub async fn register(
     }
 
     if state
-        .storage
+        .authentication
         .username_exists(&request.username)
         .await
         .context("Could not check if the username exists".to_string())?
@@ -66,7 +66,7 @@ pub async fn register(
     let id = Uuid::new_v4();
 
     state
-        .storage
+        .authentication
         .store_credentials(id, &request.email, &credentials)
         .await
         .context("Could not store credentials".to_string())?;
@@ -133,7 +133,7 @@ pub enum Error {
     },
     Data {
         context: String,
-        source: StorageError,
+        source: AuthenticationError,
     },
 }
 
@@ -158,8 +158,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, AuthenticationError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -249,18 +249,19 @@ mod tests {
         name::en::Name,
     };
     use fake::Fake;
+    use hyper::body::HttpBody;
     use mockall::predicate::*;
     use secrecy::Secret;
     use std::sync::Arc;
     use tower::ServiceExt;
-    use hyper::body::HttpBody;
 
     use crate::{
+        domain::ports::secondary::{
+            MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
+        },
         domain::Credentials,
-        email_service::MockEmailService,
         routes::register::RegistrationRequest,
         server::{AppState, ApplicationBaseUrl},
-        storage::MockStorage,
     };
 
     use super::*;
@@ -293,7 +294,6 @@ mod tests {
 
     #[tokio::test]
     async fn registration_should_store_credentials() {
-
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();
         let password = Password(12..32).fake::<String>();
@@ -314,22 +314,24 @@ mod tests {
 
         let _id = Uuid::new_v4();
 
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        let subscription_mock = MockSubscriptionStorage::new();
+        authentication_mock
             .expect_store_credentials()
             .return_once(move |_, _, _| Ok(()));
-        storage_mock
+        authentication_mock
             .expect_email_exists()
             .withf(move |email: &str| email == email_clone)
             .return_once(|_| Ok(false));
-        storage_mock
+        authentication_mock
             .expect_username_exists()
             .withf(move |username: &str| username == username_clone)
             .return_once(|_| Ok(false));
 
         let email_mock = MockEmailService::new();
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -348,7 +350,6 @@ mod tests {
 
     #[tokio::test]
     async fn registration_should_fail_if_username_exists() {
-
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();
         let password = Password(12..32).fake::<String>();
@@ -362,23 +363,26 @@ mod tests {
             password: password.clone(),
         };
 
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        let subscription_mock = MockSubscriptionStorage::new();
+
+        authentication_mock
             .expect_store_credentials()
             .never()
             .return_once(move |_, _, _| Ok(()));
-        storage_mock
+        authentication_mock
             .expect_email_exists()
             .withf(move |email: &str| email == email_clone)
             .return_once(|_| Ok(false));
-        storage_mock
+        authentication_mock
             .expect_username_exists()
             .withf(move |username: &str| username == username_clone)
             .return_once(|_| Ok(true));
 
         let email_mock = MockEmailService::new();
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -407,7 +411,6 @@ mod tests {
 
     #[tokio::test]
     async fn registration_should_fail_if_email_exists() {
-
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();
         let password = Password(12..32).fake::<String>();
@@ -421,23 +424,26 @@ mod tests {
             password: password.clone(),
         };
 
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        let subscription_mock = MockSubscriptionStorage::new();
+
+        authentication_mock
             .expect_store_credentials()
             .never()
             .return_once(move |_, _, _| Ok(()));
-        storage_mock
+        authentication_mock
             .expect_email_exists()
             .withf(move |email: &str| email == email_clone)
             .return_once(|_| Ok(true));
-        storage_mock
+        authentication_mock
             .expect_username_exists()
             .withf(move |username: &str| username == username_clone)
             .return_once(|_| Ok(false));
 
         let email_mock = MockEmailService::new();
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -466,7 +472,6 @@ mod tests {
 
     #[tokio::test]
     async fn registration_should_fail_if_password_is_weak() {
-
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();
         let password = "Secret123".to_string();
@@ -477,21 +482,24 @@ mod tests {
             password: password.clone(),
         };
 
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        let subscription_mock = MockSubscriptionStorage::new();
+
+        authentication_mock
             .expect_store_credentials()
             .never()
             .return_once(move |_, _, _| Ok(()));
-        storage_mock
+        authentication_mock
             .expect_email_exists()
             .return_once(|_| Ok(false));
-        storage_mock
+        authentication_mock
             .expect_username_exists()
             .return_once(|_| Ok(false));
 
         let email_mock = MockEmailService::new();
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -517,5 +525,4 @@ mod tests {
         assert_eq!(response.status, "fail");
         assert_eq!(response.code, "auth/weak_password");
     }
-
 }

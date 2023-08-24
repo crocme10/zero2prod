@@ -8,12 +8,12 @@ use fake::Fake;
 use once_cell::sync::Lazy;
 use rand::prelude::SliceRandom;
 use reqwest::header;
-use std::time;
 use secrecy::Secret;
 use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 use wiremock::MockServer;
@@ -24,11 +24,11 @@ use wiremock::{
 
 use common::settings::Settings;
 use zero2prod::application::{Application, Error};
+use zero2prod::domain::ports::secondary::EmailService;
+use zero2prod::domain::ports::secondary::{AuthenticationStorage, SubscriptionStorage};
 use zero2prod::domain::Credentials;
-use zero2prod::email_service::EmailService;
 use zero2prod::opts::{Command, Opts};
 use zero2prod::routes::newsletter::BodyData;
-use zero2prod::storage::Storage;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
 /// The TestWorld contains both the context for every tests
@@ -72,8 +72,8 @@ impl TestWorld {
 pub struct TestApp {
     pub address: String,
     pub port: u16,
-    // The interface to storage
-    pub storage: Arc<dyn Storage + Send + Sync>,
+    pub authentication: Arc<dyn AuthenticationStorage + Send + Sync>,
+    pub subscription: Arc<dyn SubscriptionStorage + Send + Sync>,
     // A Mock Server, so we don't have to use a real email server.
     pub email_server: MockServer,
     // The interface to email
@@ -166,21 +166,23 @@ pub async fn spawn_app() -> TestApp {
     let settings: Settings = opts.try_into().expect("settings");
 
     let builder = Application::builder()
-        .storage(settings.database.clone())
+        .authentication(settings.database.clone())
         .await
-        .expect("getting storage")
+        .expect("authentication service")
+        .subscription(settings.database.clone())
+        .await
+        .expect("subscription service")
         .email(settings.email_client.clone())
         .await
         .expect("getting email client")
         .listener(settings.application.clone())
         .expect("getting listener")
         .url(settings.application.base_url.clone())
-        .static_dir(settings.application.static_dir.clone())
-        .expect("getting static dir")
         .secret("secret".to_string());
 
     // Before building the app, we extract a copy of storage and email.
-    let storage = builder.storage.clone().unwrap();
+    let authentication = builder.authentication.clone().unwrap();
+    let subscription = builder.subscription.clone().unwrap();
     let email_client = builder.email.clone().unwrap();
 
     // Now build the app, and launch it.
@@ -199,7 +201,7 @@ pub async fn spawn_app() -> TestApp {
     // to authorize the API calls that need to have valid credentials.
     let user: TestUser = TestUserGenerator(EN).fake();
 
-    storage
+    authentication
         .store_credentials(user.id, &user.email, &user.credentials)
         .await
         .expect("Store credentials");
@@ -207,7 +209,8 @@ pub async fn spawn_app() -> TestApp {
     TestApp {
         address,
         port,
-        storage,
+        authentication,
+        subscription,
         email_server,
         api_client,
         email_client,

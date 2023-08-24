@@ -1,6 +1,4 @@
-FROM node:lts-alpine
-# install simple http server for serving static content
-RUN npm install -g http-server
+FROM node:lts-alpine as builder
 # make the 'app' folder the current working directory
 WORKDIR /app
 # copy 'package.json' to install dependencies
@@ -11,5 +9,10 @@ RUN npm install
 COPY . .
 # build app for production with minification
 RUN npm run build
-EXPOSE 8080
-CMD [ "http-server", "dist" ]
+
+FROM nginx:stable
+RUN rm -f /etc/nginx/conf.d/default.conf
+RUN ln -sf /dev/stdout /var/log/nginx/access.log && ln -sf /dev/stderr /var/log/nginx/error.log
+
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist /var/www/html/

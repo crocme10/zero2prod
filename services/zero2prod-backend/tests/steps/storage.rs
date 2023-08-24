@@ -25,7 +25,7 @@ async fn check_stored_subscription_for_username_email(
 ) {
     let subscription = world
         .app
-        .storage
+        .subscription
         .get_subscription_by_email(&email)
         .await
         .expect("get subscription");

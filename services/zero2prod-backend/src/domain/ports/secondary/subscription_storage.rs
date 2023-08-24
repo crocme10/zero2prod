@@ -1,16 +1,15 @@
 use async_trait::async_trait;
-use secrecy::Secret;
+use common::err_context::ErrorContext;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
 
-use crate::domain::{ConfirmedSubscriber, Credentials, NewSubscription, Subscription};
-use common::err_context::ErrorContext;
+use crate::domain::{ConfirmedSubscriber, NewSubscription, Subscription};
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
-pub trait Storage {
+pub trait SubscriptionStorage {
     /// Store a new subscription, and a token, and return the subscription
     async fn create_subscription_and_store_token(
         &self,
@@ -31,26 +30,6 @@ pub trait Storage {
     async fn delete_confirmation_token(&self, id: &Uuid) -> Result<(), Error>;
 
     async fn get_confirmed_subscribers_email(&self) -> Result<Vec<ConfirmedSubscriber>, Error>;
-
-    async fn get_credentials(
-        &self,
-        username: &str,
-    ) -> Result<Option<(Uuid, Secret<String>)>, Error>;
-
-    async fn id_exists(&self, id: &Uuid) -> Result<bool, Error>;
-
-    // Strre credentials (register new user)
-    // TODO Maybe should return the id
-    async fn store_credentials(
-        &self,
-        id: Uuid,
-        email: &str,
-        credentials: &Credentials,
-    ) -> Result<(), Error>;
-
-    async fn email_exists(&self, email: &str) -> Result<bool, Error>;
-
-    async fn username_exists(&self, username: &str) -> Result<bool, Error>;
 }
 
 #[derive(Debug)]
@@ -64,7 +43,7 @@ pub enum Error {
     Validation {
         context: String,
     },
-    /// Connection issue with the databas
+    /// Connection issue with the database
     Connection {
         context: String,
         source: sqlx::Error,

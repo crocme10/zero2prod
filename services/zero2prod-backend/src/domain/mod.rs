@@ -1,5 +1,6 @@
 pub mod confirmed_subscriber;
 pub mod new_subscription;
+pub mod ports;
 pub mod subscriber_email;
 pub mod subscriber_name;
 pub mod subscription;

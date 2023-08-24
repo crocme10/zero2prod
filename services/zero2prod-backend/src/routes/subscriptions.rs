@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
 
+use crate::domain::ports::secondary::SubscriptionError;
+use crate::domain::ports::secondary::{Email, EmailError};
 use crate::domain::{NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus};
-use crate::email_service::{Email, Error as EmailError};
 use crate::server::{AppState, ApplicationBaseUrl};
-use crate::storage::Error as StorageError;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user subscriptions
@@ -30,7 +30,7 @@ pub async fn subscriptions(
         .context("Could not get valid subscription".to_string())?;
 
     match state
-        .storage
+        .subscription
         .get_subscription_by_email(subscription.email.as_ref())
         .await
         .context("Could not get subscription by email".to_string())?
@@ -40,7 +40,7 @@ pub async fn subscriptions(
             let token = generate_subscription_token();
 
             let subscription = state
-                .storage
+                .subscription
                 .create_subscription_and_store_token(&subscription, &token)
                 .await
                 .context("Could not create new subscription".to_string())?;
@@ -66,7 +66,7 @@ pub async fn subscriptions(
             match subscription.status {
                 SubscriptionStatus::PendingConfirmation => {
                     match state
-                        .storage
+                        .subscription
                         .get_token_by_subscriber_id(&subscription.id)
                         .await
                         .context("Could not get token by subscriber's id".to_string())?
@@ -169,7 +169,7 @@ pub enum Error {
     },
     Data {
         context: String,
-        source: StorageError,
+        source: SubscriptionError,
     },
     Email {
         context: String,
@@ -207,8 +207,8 @@ impl From<ErrorContext<String, String>> for Error {
     }
 }
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, SubscriptionError>> for Error {
+    fn from(err: ErrorContext<String, SubscriptionError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -296,11 +296,12 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
+        domain::ports::secondary::{
+            MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
+        },
         domain::{NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus},
-        email_service::MockEmailService,
         routes::subscriptions::SubscriptionRequest,
         server::{AppState, ApplicationBaseUrl},
-        storage::{Error as StorageError, MockStorage},
     };
 
     use super::*;
@@ -352,8 +353,10 @@ mod tests {
         let username = new_subscription.username.clone();
         let email = new_subscription.email.clone();
         let email_clone = email.clone();
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let authentication_mock = MockAuthenticationStorage::new();
+        let mut subscription_mock = MockSubscriptionStorage::new();
+
+        subscription_mock
             .expect_create_subscription_and_store_token()
             .withf(move |subscription: &NewSubscription, _token: &str| {
                 subscription == &new_subscription
@@ -366,7 +369,7 @@ mod tests {
                     status: SubscriptionStatus::PendingConfirmation,
                 })
             });
-        storage_mock
+        subscription_mock
             .expect_get_subscription_by_email()
             .withf(move |email: &str| email == email_clone.as_ref())
             .return_once(|_| Ok(None));
@@ -375,7 +378,8 @@ mod tests {
         email_mock.expect_send_email().return_once(|_| Ok(()));
 
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -437,8 +441,10 @@ mod tests {
             .return_once(|_| Ok(()));
 
         // We also need a storage mock that returns 'Ok(())'
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let authentication_mock = MockAuthenticationStorage::new();
+        let mut subscription_mock = MockSubscriptionStorage::new();
+
+        subscription_mock
             .expect_create_subscription_and_store_token()
             .return_once(move |_, _| {
                 Ok(Subscription {
@@ -449,13 +455,14 @@ mod tests {
                 })
             });
 
-        storage_mock
+        subscription_mock
             .expect_get_subscription_by_email()
             .withf(move |email: &str| email == email_clone.as_ref())
             .return_once(|_| Ok(None));
 
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl(base_url),
             secret: Secret::new("secret".to_string()),
@@ -488,19 +495,21 @@ mod tests {
 
         // This mock storage returns an error which does not really makes
         // sense.
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let authentication_mock = MockAuthenticationStorage::new();
+        let mut subscription_mock = MockSubscriptionStorage::new();
+
+        subscription_mock
             .expect_create_subscription_and_store_token()
             .withf(move |subscription: &NewSubscription, _token: &str| {
                 subscription == &new_subscription
             })
             .return_once(|_, _| {
-                Err(StorageError::Database {
+                Err(SubscriptionError::Database {
                     context: "subscription context".to_string(),
                     source: sqlx::Error::RowNotFound,
                 })
             });
-        storage_mock
+        subscription_mock
             .expect_get_subscription_by_email()
             .return_once(|_| Ok(None));
 
@@ -508,7 +517,8 @@ mod tests {
         email_mock.expect_send_email().return_once(|_| Ok(()));
 
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -532,12 +542,14 @@ mod tests {
 
         let request = SubscriptionRequest { username, email };
 
-        let storage_mock = MockStorage::new();
+        let authentication_mock = MockAuthenticationStorage::new();
+        let subscription_mock = MockSubscriptionStorage::new();
 
         let email_mock = MockEmailService::new();
 
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),

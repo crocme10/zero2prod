@@ -14,7 +14,7 @@ pub struct Subscription {
 }
 
 #[derive(sqlx::Type, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[sqlx(type_name = "subscription_status")]
+#[sqlx(type_name = "main.subscription_status")]
 #[sqlx(rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub enum SubscriptionStatus {

@@ -7,7 +7,7 @@ use std::fmt;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::storage::{Error as StorageError, Storage};
+use crate::domain::ports::secondary::{AuthenticationError, AuthenticationStorage};
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -41,7 +41,7 @@ pub fn build_token(id: Uuid, secret: Secret<String>) -> String {
 // validate_credentials could be a free function, but for mocking
 // it should be either a struct or a trait.
 pub struct Authenticator {
-    pub storage: Arc<dyn Storage + Send + Sync>,
+    pub storage: Arc<dyn AuthenticationStorage + Send + Sync>,
     pub secret: Secret<String>,
 }
 
@@ -78,7 +78,7 @@ pub enum Error {
     InvalidToken,
     Data {
         context: String,
-        source: StorageError,
+        source: AuthenticationError,
     },
 }
 
@@ -89,7 +89,7 @@ impl fmt::Display for Error {
                 write!(fmt, "Invalid Token")
             }
             Error::Data { context, source } => {
-                write!(fmt, "Storage Error: {context} | {source}")
+                write!(fmt, "Authentication Error: {context} | {source}")
             }
         }
     }
@@ -97,8 +97,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, AuthenticationError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,

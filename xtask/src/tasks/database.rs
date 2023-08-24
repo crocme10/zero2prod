@@ -77,8 +77,7 @@ pub fn postgres_db() -> Result<(), anyhow::Error> {
                 "-p",
                 &format!("{}:5432", settings.port),
                 "-d",
-                "postgres",
-                "postgres",
+                "zero2prod/postgres:latest",
                 "-N",
                 "1000",
             ])
@@ -90,7 +89,7 @@ pub fn postgres_db() -> Result<(), anyhow::Error> {
     }
 
     // Migrate the database automatically as part of initialization
-    migrate_postgres_db()?;
+    // migrate_postgres_db()?;
 
     println!("Set DATABASE_URL=\"{}\"", settings.connection_string());
 

@@ -1,8 +1,7 @@
 use axum::extract::{Json, State};
-use axum::http::{header, status::StatusCode};
+use axum::http::{header, status::StatusCode, HeaderMap};
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::cookie::{Cookie, SameSite};
-use hyper::header::HeaderMap;
 use secrecy::Secret;
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize, Serializer};
@@ -10,10 +9,10 @@ use std::fmt;
 use uuid::Uuid;
 
 use crate::authentication::jwt::build_token;
-use crate::authentication::password::{Authenticator, Error as AuthenticationError};
+use crate::authentication::password::{Authenticator, Error as PasswordError};
+use crate::domain::ports::secondary::AuthenticationError;
 use crate::domain::Credentials;
 use crate::server::AppState;
-use crate::storage::Error as StorageError;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user login
@@ -37,7 +36,7 @@ pub async fn login(
     tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
 
     let authenticator = Authenticator {
-        storage: state.storage.clone(),
+        storage: state.authentication.clone(),
     };
 
     let id = authenticator
@@ -76,6 +75,16 @@ impl IntoResponse for LoginResp {
             .finish();
         let mut headers = HeaderMap::new();
         headers.insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
+        headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
+        headers.insert("X-Frame-Options", "DENY".parse().unwrap());
+        headers.insert("X-XSS-Protection", "0".parse().unwrap());
+        headers.insert("Cache-Control", "no-store".parse().unwrap());
+        headers.insert(
+            "Content-Security-Policy",
+            "default-src 'none'; frame-ancestors 'none'; sandbox"
+                .parse()
+                .unwrap(),
+        );
         (StatusCode::OK, headers, json).into_response()
     }
 }
@@ -91,11 +100,11 @@ pub struct LoginRequest {
 pub enum Error {
     InvalidCredentials {
         context: String,
-        source: AuthenticationError,
+        source: PasswordError,
     },
     Data {
         context: String,
-        source: StorageError,
+        source: AuthenticationError,
     },
 }
 
@@ -114,8 +123,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, AuthenticationError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -123,8 +132,8 @@ impl From<ErrorContext<String, StorageError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, AuthenticationError>> for Error {
-    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
+impl From<ErrorContext<String, PasswordError>> for Error {
+    fn from(err: ErrorContext<String, PasswordError>) -> Self {
         Error::InvalidCredentials {
             context: err.0,
             source: err.1,
@@ -155,9 +164,21 @@ impl Serialize for Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
+        headers.insert("X-Frame-Options", "DENY".parse().unwrap());
+        headers.insert("X-XSS-Protection", "0".parse().unwrap());
+        headers.insert("Cache-Control", "no-store".parse().unwrap());
+        headers.insert(
+            "Content-Security-Policy",
+            "default-src 'none'; frame-ancestors 'none'; sandbox"
+                .parse()
+                .unwrap(),
+        );
         match self {
             Error::InvalidCredentials { context, source: _ } => (
                 StatusCode::UNAUTHORIZED,
+                headers,
                 Json(serde_json::json!({
                     "status": "fail",
                     "message": context,
@@ -167,6 +188,7 @@ impl IntoResponse for Error {
                 .into_response(),
             Error::Data { context, source: _ } => (
                 StatusCode::INTERNAL_SERVER_ERROR,
+                headers,
                 Json(serde_json::json!({
                     "status": "fail",
                     "message": context,
@@ -195,10 +217,11 @@ mod tests {
 
     use crate::{
         authentication::password::compute_password_hash,
-        email_service::MockEmailService,
+        domain::ports::secondary::{
+            MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
+        },
         routes::login::LoginRequest,
         server::{AppState, ApplicationBaseUrl},
-        storage::MockStorage,
     };
 
     use super::*;
@@ -240,14 +263,15 @@ mod tests {
 
         let id = Uuid::new_v4();
 
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        authentication_mock
             .expect_get_credentials()
             .return_once(move |_| Ok(Some((id, password_hash))));
-
+        let subscription_mock = MockSubscriptionStorage::new();
         let email_mock = MockEmailService::new();
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),
@@ -278,14 +302,16 @@ mod tests {
 
         let id = Uuid::new_v4();
 
-        let mut storage_mock = MockStorage::new();
-        storage_mock
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        authentication_mock
             .expect_get_credentials()
             .return_once(move |_| Ok(Some((id, password_hash))));
+        let subscription_mock = MockSubscriptionStorage::new();
 
         let email_mock = MockEmailService::new();
         let state = AppState {
-            storage: Arc::new(storage_mock),
+            authentication: Arc::new(authentication_mock),
+            subscription: Arc::new(subscription_mock),
             email: Arc::new(email_mock),
             base_url: ApplicationBaseUrl("http://127.0.0.1".to_string()),
             secret: Secret::new("secret".to_string()),

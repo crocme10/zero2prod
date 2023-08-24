@@ -1,13 +1,10 @@
 pub mod application;
 pub mod authentication;
 pub mod domain;
-pub mod email_service;
-pub mod email_service_impl;
 pub mod error;
 pub mod listener;
 pub mod opts;
-pub mod postgres;
 pub mod routes;
 pub mod server;
-pub mod storage;
+pub mod services;
 pub mod telemetry;

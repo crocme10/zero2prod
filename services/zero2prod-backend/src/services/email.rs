@@ -4,8 +4,8 @@ use common::settings::EmailClientSettings;
 use reqwest::Client;
 use serde::Serialize;
 
+use crate::domain::ports::secondary::{Email, EmailError as Error, EmailService};
 use crate::domain::SubscriberEmail;
-use crate::email_service::{Email, EmailService, Error};
 
 #[derive(Debug, Clone)]
 pub struct EmailClient {
@@ -84,9 +84,9 @@ struct SendEmailRequest<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::domain::ports::secondary::{Email, EmailService};
     use crate::domain::SubscriberEmail;
-    use crate::email_service::{Email, EmailService};
-    use crate::email_service_impl::EmailClient;
+    use crate::services::email::EmailClient;
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::lorem::en::{Paragraph, Sentence};
     use fake::{Fake, Faker};

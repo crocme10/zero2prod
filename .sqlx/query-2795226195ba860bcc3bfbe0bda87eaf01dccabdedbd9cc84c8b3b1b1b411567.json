@@ -1,16 +1,14 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT email FROM subscriptions WHERE status = $1",
+  "query": "INSERT INTO main.subscriptions (id, email, username, subscribed_at, status) VALUES ($1, $2, $3, $4, $5)",
   "describe": {
-    "columns": [
-      {
-        "ordinal": 0,
-        "name": "email",
-        "type_info": "Text"
-      }
-    ],
+    "columns": [],
     "parameters": {
       "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Timestamptz",
         {
           "Custom": {
             "name": "subscription_status",
@@ -24,9 +22,7 @@
         }
       ]
     },
-    "nullable": [
-      false
-    ]
+    "nullable": []
   },
-  "hash": "8f7a7c3d0a038751a88723e3f8d6097f8c1d136a3f197208dbc6d2c726f17232"
+  "hash": "2795226195ba860bcc3bfbe0bda87eaf01dccabdedbd9cc84c8b3b1b1b411567"
 }

@@ -8,8 +8,8 @@ use std::fmt;
 use std::sync::Arc;
 use uuid::Uuid;
 
+use crate::domain::ports::secondary::{AuthenticationError, AuthenticationStorage};
 use crate::domain::Credentials;
-use crate::storage::{Error as StorageError, Storage};
 use crate::telemetry::spawn_blocking_with_tracing;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
@@ -17,7 +17,7 @@ use common::err_context::{ErrorContext, ErrorContextExt};
 // validate_credentials could be a free function, but for mocking
 // it should be either a struct or a trait.
 pub struct Authenticator {
-    pub storage: Arc<dyn Storage + Send + Sync>,
+    pub storage: Arc<dyn AuthenticationStorage + Send + Sync>,
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -119,7 +119,7 @@ pub enum Error {
     },
     Data {
         context: String,
-        source: StorageError,
+        source: AuthenticationError,
     },
 }
 
@@ -141,8 +141,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, StorageError>> for Error {
-    fn from(err: ErrorContext<String, StorageError>) -> Self {
+impl From<ErrorContext<String, AuthenticationError>> for Error {
+    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -157,8 +157,8 @@ mod tests {
     use speculoos::prelude::*;
     use uuid::Uuid;
 
+    use crate::domain::ports::secondary::authentication_storage::MockAuthenticationStorage;
     use crate::domain::{Credentials, CredentialsGenerator};
-    use crate::storage::MockStorage;
 
     use super::*;
 
@@ -167,7 +167,7 @@ mod tests {
         let credentials: Credentials = CredentialsGenerator(EN).fake();
         let hashed_password = compute_password_hash(credentials.password.clone()).unwrap();
         let id = Uuid::new_v4();
-        let mut storage_mock = MockStorage::new();
+        let mut storage_mock = MockAuthenticationStorage::new();
         storage_mock
             .expect_get_credentials()
             .return_once(move |_| Ok(Some((id, hashed_password))));
