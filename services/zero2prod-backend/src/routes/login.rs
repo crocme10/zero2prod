@@ -75,10 +75,6 @@ impl IntoResponse for LoginResp {
             .finish();
         let mut headers = HeaderMap::new();
         headers.insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
-        headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
-        headers.insert("X-Frame-Options", "DENY".parse().unwrap());
-        headers.insert("X-XSS-Protection", "0".parse().unwrap());
-        headers.insert("Cache-Control", "no-store".parse().unwrap());
         headers.insert(
             "Content-Security-Policy",
             "default-src 'none'; frame-ancestors 'none'; sandbox"

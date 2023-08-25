@@ -4,11 +4,14 @@ use axum::{
     routing::{get, post, IntoMakeService, Router},
     Server,
 };
+use hyper::header::{HeaderName, HeaderValue};
 use hyper::server::conn::AddrIncoming;
 use secrecy::Secret;
 use std::{fmt, net::TcpListener};
 use std::{fmt::Display, sync::Arc};
+use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
+use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::domain::ports::secondary::{AuthenticationStorage, EmailService, SubscriptionStorage};
@@ -53,10 +56,40 @@ pub fn new(
 
     let cors = CorsLayer::permissive();
 
+    let content_type_options = HeaderName::from_static("x-content-type-options");
+    let frame_options = HeaderName::from_static("x-frame-options");
+    let xss_protection = HeaderName::from_static("x-xss-protection");
+    let cache_control = HeaderName::from_static("cache-control");
+    let content_security_policy = HeaderName::from_static("content-security-policy");
+
+    //let mut svc = ServiceBuilder::new()
     let app = Router::new()
         .merge(router_no_session)
         .layer(cors)
         .layer(TraceLayer::new_for_http())
+        .layer(
+            ServiceBuilder::new()
+                .layer(SetResponseHeaderLayer::overriding(
+                    content_type_options,
+                    HeaderValue::from_static("nosniff"),
+                ))
+                .layer(SetResponseHeaderLayer::overriding(
+                    frame_options,
+                    HeaderValue::from_static("deny"),
+                ))
+                .layer(SetResponseHeaderLayer::overriding(
+                    xss_protection,
+                    HeaderValue::from_static("0"),
+                ))
+                .layer(SetResponseHeaderLayer::overriding(
+                    cache_control,
+                    HeaderValue::from_static("no-store"),
+                ))
+                .layer(SetResponseHeaderLayer::overriding(
+                    content_security_policy,
+                    HeaderValue::from_static("default-src 'none'; frame-ancestors 'none'; sandbox")
+                ))
+            )
         .with_state(app_state);
 
     // Start the axum server and set up to use supplied listener
