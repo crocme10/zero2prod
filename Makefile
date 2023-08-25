@@ -1,6 +1,7 @@
 .PHONY: \
 	database \
 	gateway \
+	auth \
 	frontend \
 	backend
 
@@ -11,6 +12,9 @@ database:
 
 gateway:
 	docker buildx build --load --tag zero2prod/gateway:latest -f services/zero2prod-gateway/Dockerfile services/zero2prod-gateway
+
+auth:
+	docker buildx build --load --tag zero2prod/auth:latest -f services/zero2prod-auth/Dockerfile services/zero2prod-auth
 
 frontend:
 	docker buildx build --load --tag zero2prod/frontend:latest -f services/zero2prod-frontend/Dockerfile services/zero2prod-frontend

@@ -43,3 +43,38 @@ services:
     volumes:
       - ./logs:/var/log/nginx
 
+  keycloak-store:
+    image: postgres:13.7
+    volumes:
+      - ./keycloak-db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: my_keycloak
+      POSTGRES_PASSWORD: My863Keycloak
+
+  keycloak:
+    image:
+      zero2prod/auth:latest
+    environment:
+      #Admin Credentials
+      KC_HOSTNAME_STRICT: 'false'
+      KC_HOSTNAME_STRICT_HTTPS: 'false'
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+        # KEYCLOAK_USER: bob
+        #KEYCLOAK_PASSWORD: MyKeycloak493
+      KC_DB: postgres
+      KC_DB_URL: 'jdbc:postgresql://keycloak-store:5432/keycloak'
+      KC_DB_USERNAME: my_keycloak
+      KC_DB_PASSWORD: My863Keycloak
+      KC_HEALTH_ENABLED: 'true'
+      KC_METRICS_ENABLED: 'true'
+      KC_HOSTNAME: localhost
+      PROXY_ADDRESS_FORWARDING: "true"
+    command:
+      - "start-dev"
+    ports:
+      - 28443:8443
+      - 28080:8080
+    depends_on:
+      - keycloak-store
