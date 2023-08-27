@@ -35,9 +35,12 @@ impl std::error::Error for Error {}
 pub struct ApplicationSettings {
     pub host: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub port: u16,
+    pub http: u16,
+    pub https: u16,
     pub base_url: String,
     pub static_dir: String,
+    pub cert: String,
+    pub key: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

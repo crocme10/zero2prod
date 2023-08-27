@@ -6,10 +6,11 @@ pub use self::error::Error;
 use axum::{
     error_handling::HandleErrorLayer,
     http::{header, HeaderValue, Method, StatusCode},
-    routing::{get, get_service, post, IntoMakeService, Router},
-    BoxError, Server,
+    routing::{get, get_service, post, Router},
+    BoxError,
 };
-use hyper::server::conn::AddrIncoming;
+use axum_server::tls_rustls::{RustlsAcceptor, RustlsConfig};
+use axum_server::Server;
 use secrecy::Secret;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -36,7 +37,8 @@ pub fn new(
     base_url: String,
     static_dir: PathBuf,
     secret: Secret<String>,
-) -> AppServer {
+    tls: RustlsConfig,
+) -> (Router, Server<RustlsAcceptor>) {
     // Build app state
     let app_state = AppState {
         authentication,
@@ -60,6 +62,7 @@ pub fn new(
         .route("/api/v1/register", post(register))
         .route("/api/v1/authenticate", get(authenticate));
 
+    // FIXME Hardcoded origin
     let cors = CorsLayer::new()
         .allow_origin("http://127.0.0.1:5173".parse::<HeaderValue>().unwrap())
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
@@ -74,7 +77,7 @@ pub fn new(
 
     // Create a router that will contain and match all routes for the application
     // and a fallback service that will serve the static directory
-    tracing::info!("Serving static: {}", static_dir.display());
+    tracing::info!("Serving static directory: {}", static_dir.display());
     let app = Router::new()
         .merge(router_no_session)
         .fallback_service(get_service(serve_dir).handle_error(|_| async {
@@ -90,10 +93,12 @@ pub fn new(
         )
         .with_state(app_state);
 
+
     // Start the axum server and set up to use supplied listener
-    axum::Server::from_tcp(listener)
-        .expect("failed to create server from listener")
-        .serve(app.into_make_service())
+    // axum::Server::from_tcp(listener)
+    let server = axum_server::from_tcp_rustls(listener, tls);
+
+    (app, server)
 }
 
 pub type DynAuthentication = Arc<dyn AuthenticationStorage + Send + Sync>;
@@ -109,7 +114,7 @@ pub struct AppState {
     pub secret: Secret<String>,
 }
 
-pub type AppServer = Server<AddrIncoming, IntoMakeService<Router>>;
+pub type AppServer = Server<RustlsAcceptor>;
 
 #[derive(Clone)]
 pub struct ApplicationBaseUrl(pub String);

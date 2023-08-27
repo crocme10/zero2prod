@@ -126,3 +126,20 @@ pub fn check_npm_exists() -> Result<(), anyhow::Error> {
 
     Ok(())
 }
+
+pub fn check_openssl_exists() -> Result<(), anyhow::Error> {
+    let status = Command::new("openssl")
+        .current_dir(project_root())
+        .args(["--version"])
+        .status();
+
+    match status {
+        Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
+            anyhow::bail!("Error: 'openssl' is not found on the PATH. Please install it to continue.",);
+        }
+        Err(e) => anyhow::bail!(format!("An unknown error occurred: {}", e)),
+        _ => {}
+    };
+
+    Ok(())
+}

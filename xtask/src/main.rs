@@ -4,6 +4,7 @@ use xtask::tasks::ci::ci;
 use xtask::tasks::coverage::coverage;
 use xtask::tasks::database::{migrate_postgres_db, postgres_db, sqlx_prepare};
 use xtask::tasks::frontend::frontend;
+use xtask::tasks::certificate::certificate;
 
 fn main() {
     if let Err(e) = try_main() {
@@ -18,6 +19,7 @@ fn try_main() -> Result<(), anyhow::Error> {
         Some("ci") => ci(),
         Some("coverage") => coverage(),
         Some("frontend") => frontend(),
+        Some("certificate") => certificate(),
         // Some("db") => db_command(),
         // Some("dist") => dist(),
         Some("migrate") => migrate_postgres_db(),
@@ -36,6 +38,7 @@ Usage: cargo xtask <task>
 
 Tasks:
   test            runs tests on binary and xtask (uses nextest if installed)
+  certificate     generate certificates for TLS
   ci              runs all necessary checks to avoid CI errors when git pushed
   coverage        runs test coverage analysis
   dist            builds application and man pages

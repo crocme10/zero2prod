@@ -10,12 +10,13 @@ use axum::{
     handler::HandlerWithoutStateExt,
     http::{StatusCode, Uri},
     response::Redirect,
-    BoxError, Server,
+    routing::Router,
+    BoxError,
 };
+use axum_server::tls_rustls::RustlsConfig;
 use common::err_context::ErrorContextExt;
 use common::settings::{ApplicationSettings, DatabaseSettings, EmailClientSettings, Settings};
 use secrecy::Secret;
-use std::net::SocketAddr;
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -28,6 +29,7 @@ use crate::services::postgres::PostgresStorage;
 pub struct Application {
     http: u16,
     https: u16,
+    app: Router,
     server: server::AppServer,
 }
 
@@ -48,6 +50,7 @@ pub struct ApplicationBuilder {
     pub url: Option<String>,
     pub static_dir: Option<PathBuf>,
     pub secret: Option<Secret<String>>,
+    pub tls: Option<RustlsConfig>,
 }
 
 impl ApplicationBuilder {
@@ -64,6 +67,8 @@ impl ApplicationBuilder {
             .subscription(database)
             .await?
             .email(email_client)
+            .await?
+            .tls(application.clone())
             .await?
             .listener(application.clone())?
             .http(application.http)
@@ -111,7 +116,40 @@ impl ApplicationBuilder {
                 "Could not create listener for {}:{}",
                 settings.host, settings.https
             ))?;
+        tracing::info!("Created listener on port: {}", settings.https);
         self.listener = Some(listener);
+        Ok(self)
+    }
+
+    pub async fn tls(mut self, settings: ApplicationSettings) -> Result<Self, Error> {
+        let path = PathBuf::from(&settings.cert);
+        let path = if path.is_absolute() {
+            path
+        } else {
+            let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            root.push(&path);
+            root
+        };
+        let cert_path = path
+            .canonicalize()
+            .context("Could not canonicalize certificate path".to_string())?;
+        let path = PathBuf::from(&settings.key);
+        let path = if path.is_absolute() {
+            path
+        } else {
+            let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            root.push(&path);
+            root
+        };
+        let key_path = path
+            .canonicalize()
+            .context("Could not canonicalize private key path".to_string())?;
+
+        let config = RustlsConfig::from_pem_file(cert_path, key_path)
+            .await
+            .unwrap();
+
+        self.tls = Some(config);
         Ok(self)
     }
 
@@ -162,9 +200,10 @@ impl ApplicationBuilder {
             url,
             static_dir,
             secret,
+            tls,
         } = self;
         let listener = listener.expect("listener");
-        let server = server::new(
+        let (app, server) = server::new(
             listener,
             authentication.expect("authentication"),
             subscription.expect("subscription"),
@@ -172,10 +211,12 @@ impl ApplicationBuilder {
             url.expect("url"),
             static_dir.expect("static dir"),
             secret.expect("secret"),
+            tls.expect("tls"),
         );
         Application {
             http: http.expect("http"),
             https: https.expect("https"),
+            app,
             server,
         }
     }
@@ -191,7 +232,9 @@ impl Application {
             http: self.http,
             https: self.https,
         }));
+
         self.server
+            .serve(self.app.into_make_service())
             .await
             .context("server execution error".to_string())?;
         Ok(())
@@ -205,6 +248,7 @@ struct Ports {
 }
 
 async fn redirect_http_to_https(ports: Ports) {
+    tracing::info!("redirecting ports {} -> {}", ports.http, ports.https);
     fn make_https(host: String, uri: Uri, ports: Ports) -> Result<Uri, BoxError> {
         let mut parts = uri.into_parts();
 
@@ -230,10 +274,10 @@ async fn redirect_http_to_https(ports: Ports) {
         }
     };
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], ports.http));
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    tracing::debug!("listening on {}", listener.local_addr().unwrap());
-    let server = Server::bind(&addr).serve(redirect.into_make_service());
+    // FIXME Hardcoded host.
+    let listener = listen_with_host_port("127.0.0.1", ports.http).unwrap();
+    tracing::info!("Created listener on port: {}", ports.http);
+    let server = axum_server::from_tcp(listener).serve(redirect.into_make_service());
 
     if let Err(err) = server.await {
         eprintln!("Server error: {}", err);

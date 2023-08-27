@@ -1,3 +1,4 @@
 **/target
 /dist
 services/dist
+services/zero2prod-backend/certs/
