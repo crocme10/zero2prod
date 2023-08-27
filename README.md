@@ -24,14 +24,14 @@ This is such a project, in which I have
 | Traits for improved testing        | [Motivation](/documentation/architecture-for-testing.md) |
 | s / claim / speculoos / g          | claim does not seem to be maintained                     |
 | Maybe opentelemetry?               |                                                          |
-| Maybe frontend?                    |                                                          |
+| frontend                           | vue.js                                                   |
 
 [![CI/CD Prechecks](https://github.com/crocme10/zero2prod/actions/workflows/general.yml/badge.svg)](https://github.com/crocme10/zero2prod/actions/workflows/general.yml)
 [![Security audit](https://github.com/crocme10/zero2prod/actions/workflows/audit.yml/badge.svg)](https://github.com/crocme10/zero2prod/actions/workflows/audit.yml)
 
 ## Introduction
 
-This project implements the backend of a newsletter website
+This project implements the backend and the frontend of a newsletter website
 
 ## Installation
 
@@ -40,10 +40,18 @@ This project implements the backend of a newsletter website
 This is a rust application, so we need to have the following setup:
 
 - The [rust toolchain](https://www.rust-lang.org/tools/install)
-- Git
-- Docker
+- git
+- docker
+- openssl (generate certificates)
+- npm (build the frontend)
 
-### From Source
+To install this website, we need to setup 3 components:
+
+1. A database, where we store all the details.
+2. The backend, which is webserver providing a REST API.
+3. The frontend, which is a client-side rendering webapplication
+
+### Database
 
 Clone the repository:
 
@@ -60,8 +68,9 @@ running database. So we have the choice,
 
 Let's go with the second option. We use
 [cargo xtask](https://github.com/matklad/cargo-xtask) to add automation tasks to
-this project. The following command will start a docker container for postgres,
-and run the migrations to setup the database.
+this project. The TLDR is `cargo install cargo-xtask`. Then the following
+command will start a docker container for postgres, and run the migrations to
+setup the database.
 
 ```sh
 cargo xtask postgres
@@ -70,7 +79,8 @@ cargo xtask postgres
 This will take some time to build a part of the project (the common workspace)
 which does not depend on the database (otherwise, it would fail because the
 database is not there yet), and the xtask workspace. The database is configured
-with the files found in `./config/database`.
+with the files found in `./config/database`. It will launch a docker container
+with postgres, and run the migrations to setup the database.
 
 Now we should have a running database, we can compile the rest of the project.
 sqlx knows about the database through the environment variable `DATABASE_URL`,
@@ -88,10 +98,28 @@ or for fish users:
 set DATABASE_URL "postgres://postgres:password@localhost:5462/newsletter"
 ```
 
-Then compile zero2prod:
+### Frontend
+
+The frontend will compile into a directory, that will be served by the frontend.
 
 ```sh
-cargo build
+cargo xtask frontend
+```
+
+### Backend
+
+The database is a prerequisite for compiling the backend, because sqlx makes
+compile time checks against the database. So with the `DATABASE_URL` set, we
+can compile the application:
+
+```sh
+cargo build --release
+```
+
+You may also need to generate certificates:
+
+```sh
+cargo xtask certificate
 ```
 
 ### Build for Docker
@@ -122,8 +150,8 @@ This configuration can be overriden with local configuration files, and with
 environment variables.
 
 Environment variables use `__` to separate sections, and ZERO2PROD for the
-prefix. So to modify the database's name, which is in the database section,
-we should set `ZERO2PROD\_\_DATABASE\_\_DATABASE_NAME=newsletter`
+prefix. So to modify the database's name, which is in the database section, we
+should set `ZERO2PROD\_\_DATABASE\_\_DATABASE_NAME=newsletter`
 
 The server takes two commands:
 
@@ -137,7 +165,7 @@ The server takes two commands:
 If you want to modify configuration, you can easily do that on the command line:
 
 ```sh
-./target/debug/zero2prod -c ./config -s database.require_ssl=false -s application.port=8082 run
+./target/debug/zero2prod -c ./config -s database.require_ssl=false -s application.http=8080 -s application.https=8443 run
 ```
 
 ```sh
@@ -163,20 +191,13 @@ cargo xtask ci
 
 ## File Organization
 
-
-zero2prod/
-├─ services/
-│  ├─ zero2prod_backend/           backend server
-│  ├─ zero2prod_frontend/          frontend wasm
-│  ├─ zero2prod_common/            structures shared by backend and frontend
-│  ├─ zero2prod_fakeemail/         simple server to mock external email service.
-├─ config/                         configuration
-├─ docker/                         Dockerfiles and entrypoints
-├─ documentation/                  Additional documentation
-├─ common/                         code shared between xtask and services
-├─ xtask/                          tasks implementation.
-├─ dev.sh/                         script to start services 
-├─ spec.yaml/                      digital ocean deployment
+zero2prod/ ├─ services/ │ ├─ zero2prod_backend/ backend server │ ├─
+zero2prod_frontend/ frontend wasm │ ├─ zero2prod_common/ structures shared by
+backend and frontend │ ├─ zero2prod_fakeemail/ simple server to mock external
+email service. ├─ config/ configuration ├─ docker/ Dockerfiles and entrypoints
+├─ documentation/ Additional documentation ├─ common/ code shared between xtask
+and services ├─ xtask/ tasks implementation. ├─ dev.sh/ script to start services
+├─ spec.yaml/ digital ocean deployment
 
 ## Release History
 
