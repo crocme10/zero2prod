@@ -5,7 +5,10 @@ pub use self::error::Error;
 
 use axum::{
     error_handling::HandleErrorLayer,
-    http::{header, HeaderValue, Method, StatusCode},
+    extract::{Host, State},
+    handler::{HandlerService, Handler},
+    http::{header, HeaderValue, Method, StatusCode, Uri},
+    response::Redirect,
     routing::{get, get_service, post, IntoMakeService, Router},
     BoxError, Server,
 };
@@ -67,7 +70,9 @@ pub fn new(
         .allow_headers([header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE]);
     // let cors = CorsLayer::permissive();
 
-    let not_found_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pages").join("404.html");
+    let not_found_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("pages")
+        .join("404.html");
     let serve_dir = ServeDir::new(&static_dir).not_found_service(ServeFile::new(&not_found_path));
 
     // Create a router that will contain and match all routes for the application
@@ -108,6 +113,7 @@ pub struct AppState {
 }
 
 pub type AppServer = Server<AddrIncoming, IntoMakeService<Router>>;
+pub type RedirectServer = IntoMakeService<HandlerService< fn(Host, Uri, State<Ports>) -> Result<Redirect, hyper::StatusCode>>>;
 
 #[derive(Clone)]
 pub struct ApplicationBaseUrl(pub String);
@@ -118,12 +124,54 @@ impl Display for ApplicationBaseUrl {
     }
 }
 
-// TODO Investigate:
-// impl FromRef<AppState> for PgPool {
-//
 async fn handle_timeout_error(err: BoxError) -> (StatusCode, String) {
     (
         StatusCode::INTERNAL_SERVER_ERROR,
         format!("Unhandled internal error: {}", err),
     )
+}
+
+fn make_https(host: String, uri: Uri, http: u16, https: u16) -> Result<Uri, BoxError> {
+    let mut parts = uri.into_parts();
+
+    parts.scheme = Some(axum::http::uri::Scheme::HTTPS);
+
+    if parts.path_and_query.is_none() {
+        parts.path_and_query = Some("/".parse().unwrap());
+    }
+
+    let https_host = host.replace(&http.to_string(), &https.to_string());
+    parts.authority = Some(https_host.parse()?);
+
+    Ok(Uri::from_parts(parts)?)
+}
+
+#[derive(Clone, Copy)]
+struct Ports {
+    http: u16,
+    https: u16,
+}
+
+pub fn redirect_handler(
+    Host(host): Host,
+    uri: Uri,
+    ports: State<Ports>,
+) -> Result<Redirect, StatusCode> {
+    match make_https(host, uri, ports.http, ports.https) {
+        Ok(uri) => Ok(Redirect::permanent(&uri.to_string())),
+        Err(error) => {
+            tracing::warn!(%error, "failed to convert URI to HTTPS");
+            Err(StatusCode::BAD_REQUEST)
+        }
+    }
+}
+
+pub fn redirect(listener: TcpListener, http: u16, https: u16) -> RedirectServer {
+    axum::Server::from_tcp(listener)
+        .expect("failed to create redirect from listener")
+        .serve(
+            redirect_handler
+                .with_state(Ports { http, https })
+                .into_make_service(),
+        )
 }

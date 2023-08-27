@@ -33,7 +33,8 @@ pub struct ApplicationBuilder {
     pub authentication: Option<Arc<dyn AuthenticationStorage + Send + Sync>>,
     pub subscription: Option<Arc<dyn SubscriptionStorage + Send + Sync>>,
     pub email: Option<Arc<dyn EmailService + Send + Sync>>,
-    pub listener: Option<TcpListener>,
+    pub https_listener: Option<TcpListener>,
+    pub http_listener: Option<TcpListener>,
     pub url: Option<String>,
     pub static_dir: Option<PathBuf>,
     pub secret: Option<Secret<String>>,
@@ -54,7 +55,8 @@ impl ApplicationBuilder {
             .await?
             .email(email_client)
             .await?
-            .listener(application.clone())?
+            .https_listener(application.clone())?
+            .http_listener(application.clone())?
             .url(application.base_url)
             .static_dir(application.static_dir)?
             .secret("Secret".to_string());
@@ -92,13 +94,23 @@ impl ApplicationBuilder {
         Ok(self)
     }
 
-    pub fn listener(mut self, settings: ApplicationSettings) -> Result<Self, Error> {
+    pub fn https_listener(mut self, settings: ApplicationSettings) -> Result<Self, Error> {
         let listener =
-            listen_with_host_port(settings.host.as_str(), settings.port).context(format!(
+            listen_with_host_port(settings.host.as_str(), settings.https).context(format!(
                 "Could not create listener for {}:{}",
-                settings.host, settings.port
+                settings.host, settings.https
             ))?;
-        self.listener = Some(listener);
+        self.https_listener = Some(listener);
+        Ok(self)
+    }
+
+    pub fn http_listener(mut self, settings: ApplicationSettings) -> Result<Self, Error> {
+        let listener =
+            listen_with_host_port(settings.host.as_str(), settings.http).context(format!(
+                "Could not create listener for {}:{}",
+                settings.host, settings.http
+            ))?;
+        self.http_listener = Some(listener);
         Ok(self)
     }
 
@@ -133,15 +145,18 @@ impl ApplicationBuilder {
             authentication,
             subscription,
             email,
-            listener,
+            http_listener,
+            https_listener,
             url,
             static_dir,
             secret,
         } = self;
-        let listener = listener.expect("listener");
-        let port = listener.local_addr().expect("listener local addr").port();
+        let http_listener = http_listener.expect("listener");
+        let http = http_listener.local_addr().expect("listener local addr").port();
+        let https_listener = https_listener.expect("listener");
+        let https = https_listener.local_addr().expect("listener local addr").port();
         let server = server::new(
-            listener,
+            https_listener,
             authentication.expect("authentication"),
             subscription.expect("subscription"),
             email.expect("email"),
@@ -149,7 +164,7 @@ impl ApplicationBuilder {
             static_dir.expect("static dir"),
             secret.expect("secret"),
         );
-        Application { port, server }
+        Application { port: https, server }
     }
 }
 
