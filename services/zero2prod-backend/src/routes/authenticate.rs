@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::authentication::jwt::{Authenticator, Error as JwtError};
 use crate::domain::ports::secondary::AuthenticationError;
-use crate::server::AppState;
+use crate::application::server::AppState;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// GET handler for user authentication

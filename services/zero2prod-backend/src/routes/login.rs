@@ -12,7 +12,7 @@ use crate::authentication::jwt::build_token;
 use crate::authentication::password::{Authenticator, Error as PasswordError};
 use crate::domain::ports::secondary::AuthenticationError;
 use crate::domain::Credentials;
-use crate::server::AppState;
+use crate::application::server::AppState;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user login
@@ -211,7 +211,7 @@ mod tests {
             MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
         },
         routes::login::LoginRequest,
-        server::{AppState, ApplicationBaseUrl},
+        application::server::{AppState, ApplicationBaseUrl},
     };
 
     use super::*;

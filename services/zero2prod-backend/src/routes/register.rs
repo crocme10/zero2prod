@@ -14,7 +14,7 @@ use uuid::Uuid;
 use crate::authentication::jwt::build_token;
 use crate::domain::ports::secondary::AuthenticationError;
 use crate::domain::Credentials;
-use crate::server::AppState;
+use crate::application::server::AppState;
 
 /// POST handler for user registration
 #[allow(clippy::unused_async)]
@@ -261,7 +261,7 @@ mod tests {
         },
         domain::Credentials,
         routes::register::RegistrationRequest,
-        server::{AppState, ApplicationBaseUrl},
+        application::server::{AppState, ApplicationBaseUrl},
     };
 
     use super::*;

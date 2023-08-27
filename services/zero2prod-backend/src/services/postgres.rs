@@ -529,7 +529,7 @@ mod tests {
 
     use crate::{
         domain::NewSubscription,
-        opts::{Command, Opts},
+        application::opts::{Command, Opts},
         routes::subscriptions::SubscriptionRequest,
     };
 

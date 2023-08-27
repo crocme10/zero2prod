@@ -2,7 +2,7 @@ use common::settings;
 use cucumber::when;
 use std::path::PathBuf;
 use std::time;
-use zero2prod::opts;
+use zero2prod::application::opts;
 
 use crate::state::TestWorld;
 

@@ -7,7 +7,7 @@ use std::fmt;
 use uuid::Uuid;
 
 use crate::domain::ports::secondary::SubscriptionError;
-use crate::server::AppState;
+use crate::application::server::AppState;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user subscription confirmation
@@ -159,7 +159,7 @@ mod tests {
         domain::ports::secondary::{
             MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
         },
-        server::{AppState, ApplicationBaseUrl},
+        application::server::{AppState, ApplicationBaseUrl},
     };
 
     use super::*;

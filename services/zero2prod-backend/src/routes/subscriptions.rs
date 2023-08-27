@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::domain::ports::secondary::SubscriptionError;
 use crate::domain::ports::secondary::{Email, EmailError};
 use crate::domain::{NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus};
-use crate::server::{AppState, ApplicationBaseUrl};
+use crate::application::server::{AppState, ApplicationBaseUrl};
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user subscriptions
@@ -301,7 +301,7 @@ mod tests {
         },
         domain::{NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus},
         routes::subscriptions::SubscriptionRequest,
-        server::{AppState, ApplicationBaseUrl},
+        application::server::{AppState, ApplicationBaseUrl},
     };
 
     use super::*;

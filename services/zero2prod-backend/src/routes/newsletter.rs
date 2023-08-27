@@ -13,7 +13,7 @@ use crate::authentication::{
 use crate::domain::ports::secondary::SubscriptionError;
 use crate::domain::ports::secondary::{Email, EmailError};
 use crate::domain::SubscriberEmail;
-use crate::server::AppState;
+use crate::application::server::AppState;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for newsletter publishing
@@ -206,7 +206,7 @@ mod tests {
         domain::ports::secondary::MockEmailService,
         domain::ports::secondary::MockSubscriptionStorage,
         domain::{ConfirmedSubscriber, Credentials, CredentialsGenerator, SubscriberEmail},
-        server::{AppState, ApplicationBaseUrl},
+        application::server::{AppState, ApplicationBaseUrl},
     };
 
     use super::*;

@@ -1,5 +1,8 @@
 /// This module holds the webserver specific details,
 /// in our case all (most?) the axum related code.
+mod error;
+pub use self::error::Error;
+
 use axum::{
     error_handling::HandleErrorLayer,
     http::{header, HeaderValue, Method, StatusCode},
@@ -24,7 +27,6 @@ use crate::routes::{
     newsletter::publish_newsletter, register::register,
     subscription_confirmation::subscriptions_confirmation, subscriptions::subscriptions,
 };
-use common::err_context::ErrorContext;
 
 pub fn new(
     listener: TcpListener,
@@ -124,33 +126,4 @@ async fn handle_timeout_error(err: BoxError) -> (StatusCode, String) {
         StatusCode::INTERNAL_SERVER_ERROR,
         format!("Unhandled internal error: {}", err),
     )
-}
-
-#[derive(Debug)]
-pub enum Error {
-    Server {
-        context: String,
-        source: hyper::Error,
-    },
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::Server { context, source } => {
-                write!(fmt, "Server: {context} | {source}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl From<ErrorContext<String, hyper::Error>> for Error {
-    fn from(err: ErrorContext<String, hyper::Error>) -> Self {
-        Error::Server {
-            context: err.0,
-            source: err.1,
-        }
-    }
 }
