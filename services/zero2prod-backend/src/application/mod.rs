@@ -1,13 +1,21 @@
 mod error;
 mod listener;
-pub mod server;
 pub mod opts;
+pub mod server;
 
 pub use self::error::Error;
 
+use axum::{
+    extract::Host,
+    handler::HandlerWithoutStateExt,
+    http::{StatusCode, Uri},
+    response::Redirect,
+    BoxError, Server,
+};
 use common::err_context::ErrorContextExt;
 use common::settings::{ApplicationSettings, DatabaseSettings, EmailClientSettings, Settings};
 use secrecy::Secret;
+use std::net::SocketAddr;
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -18,7 +26,8 @@ use crate::services::email::EmailClient;
 use crate::services::postgres::PostgresStorage;
 
 pub struct Application {
-    port: u16,
+    http: u16,
+    https: u16,
     server: server::AppServer,
 }
 
@@ -33,8 +42,9 @@ pub struct ApplicationBuilder {
     pub authentication: Option<Arc<dyn AuthenticationStorage + Send + Sync>>,
     pub subscription: Option<Arc<dyn SubscriptionStorage + Send + Sync>>,
     pub email: Option<Arc<dyn EmailService + Send + Sync>>,
-    pub https_listener: Option<TcpListener>,
-    pub http_listener: Option<TcpListener>,
+    pub listener: Option<TcpListener>,
+    pub http: Option<u16>,
+    pub https: Option<u16>,
     pub url: Option<String>,
     pub static_dir: Option<PathBuf>,
     pub secret: Option<Secret<String>>,
@@ -55,8 +65,9 @@ impl ApplicationBuilder {
             .await?
             .email(email_client)
             .await?
-            .https_listener(application.clone())?
-            .http_listener(application.clone())?
+            .listener(application.clone())?
+            .http(application.http)
+            .https(application.https)
             .url(application.base_url)
             .static_dir(application.static_dir)?
             .secret("Secret".to_string());
@@ -94,24 +105,24 @@ impl ApplicationBuilder {
         Ok(self)
     }
 
-    pub fn https_listener(mut self, settings: ApplicationSettings) -> Result<Self, Error> {
+    pub fn listener(mut self, settings: ApplicationSettings) -> Result<Self, Error> {
         let listener =
             listen_with_host_port(settings.host.as_str(), settings.https).context(format!(
                 "Could not create listener for {}:{}",
                 settings.host, settings.https
             ))?;
-        self.https_listener = Some(listener);
+        self.listener = Some(listener);
         Ok(self)
     }
 
-    pub fn http_listener(mut self, settings: ApplicationSettings) -> Result<Self, Error> {
-        let listener =
-            listen_with_host_port(settings.host.as_str(), settings.http).context(format!(
-                "Could not create listener for {}:{}",
-                settings.host, settings.http
-            ))?;
-        self.http_listener = Some(listener);
-        Ok(self)
+    pub fn http(mut self, port: u16) -> Self {
+        self.http = Some(port);
+        self
+    }
+
+    pub fn https(mut self, port: u16) -> Self {
+        self.https = Some(port);
+        self
     }
 
     pub fn url(mut self, url: String) -> Self {
@@ -145,18 +156,16 @@ impl ApplicationBuilder {
             authentication,
             subscription,
             email,
-            http_listener,
-            https_listener,
+            listener,
+            http,
+            https,
             url,
             static_dir,
             secret,
         } = self;
-        let http_listener = http_listener.expect("listener");
-        let http = http_listener.local_addr().expect("listener local addr").port();
-        let https_listener = https_listener.expect("listener");
-        let https = https_listener.local_addr().expect("listener local addr").port();
+        let listener = listener.expect("listener");
         let server = server::new(
-            https_listener,
+            listener,
             authentication.expect("authentication"),
             subscription.expect("subscription"),
             email.expect("email"),
@@ -164,19 +173,69 @@ impl ApplicationBuilder {
             static_dir.expect("static dir"),
             secret.expect("secret"),
         );
-        Application { port: https, server }
+        Application {
+            http: http.expect("http"),
+            https: https.expect("https"),
+            server,
+        }
     }
 }
 
 impl Application {
     pub fn port(&self) -> u16 {
-        self.port
+        self.https
     }
 
     pub async fn run_until_stopped(self) -> Result<(), Error> {
+        tokio::spawn(redirect_http_to_https(Ports {
+            http: self.http,
+            https: self.https,
+        }));
         self.server
             .await
             .context("server execution error".to_string())?;
         Ok(())
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Ports {
+    http: u16,
+    https: u16,
+}
+
+async fn redirect_http_to_https(ports: Ports) {
+    fn make_https(host: String, uri: Uri, ports: Ports) -> Result<Uri, BoxError> {
+        let mut parts = uri.into_parts();
+
+        parts.scheme = Some(axum::http::uri::Scheme::HTTPS);
+
+        if parts.path_and_query.is_none() {
+            parts.path_and_query = Some("/".parse().unwrap());
+        }
+
+        let https_host = host.replace(&ports.http.to_string(), &ports.https.to_string());
+        parts.authority = Some(https_host.parse()?);
+
+        Ok(Uri::from_parts(parts)?)
+    }
+
+    let redirect = move |Host(host): Host, uri: Uri| async move {
+        match make_https(host, uri, ports) {
+            Ok(uri) => Ok(Redirect::permanent(&uri.to_string())),
+            Err(error) => {
+                tracing::warn!(%error, "failed to convert URI to HTTPS");
+                Err(StatusCode::BAD_REQUEST)
+            }
+        }
+    };
+
+    let addr = SocketAddr::from(([127, 0, 0, 1], ports.http));
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    tracing::debug!("listening on {}", listener.local_addr().unwrap());
+    let server = Server::bind(&addr).serve(redirect.into_make_service());
+
+    if let Err(err) = server.await {
+        eprintln!("Server error: {}", err);
     }
 }
