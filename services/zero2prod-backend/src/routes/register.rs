@@ -11,10 +11,10 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
 
+use crate::application::server::AppState;
 use crate::authentication::jwt::build_token;
 use crate::domain::ports::secondary::AuthenticationError;
 use crate::domain::Credentials;
-use crate::application::server::AppState;
 
 /// POST handler for user registration
 #[allow(clippy::unused_async)]
@@ -256,12 +256,12 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
+        application::server::{AppState, ApplicationBaseUrl},
         domain::ports::secondary::{
             MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
         },
         domain::Credentials,
         routes::register::RegistrationRequest,
-        application::server::{AppState, ApplicationBaseUrl},
     };
 
     use super::*;

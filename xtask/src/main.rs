@@ -1,10 +1,10 @@
 use std::env;
 
+use xtask::tasks::certificate::certificate;
 use xtask::tasks::ci::ci;
 use xtask::tasks::coverage::coverage;
 use xtask::tasks::database::{migrate_postgres_db, postgres_db, sqlx_prepare};
 use xtask::tasks::frontend::frontend;
-use xtask::tasks::certificate::certificate;
 
 fn main() {
     if let Err(e) = try_main() {

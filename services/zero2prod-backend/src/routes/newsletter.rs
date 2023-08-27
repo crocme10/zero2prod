@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
 
+use crate::application::server::AppState;
 use crate::authentication::{
     basic::{basic_authentication, Error as AuthenticationSchemeError},
     password::{Authenticator, Error as CredentialsError},
@@ -13,7 +14,6 @@ use crate::authentication::{
 use crate::domain::ports::secondary::SubscriptionError;
 use crate::domain::ports::secondary::{Email, EmailError};
 use crate::domain::SubscriberEmail;
-use crate::application::server::AppState;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for newsletter publishing
@@ -201,12 +201,12 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
+        application::server::{AppState, ApplicationBaseUrl},
         authentication::password::compute_password_hash,
         domain::ports::secondary::MockAuthenticationStorage,
         domain::ports::secondary::MockEmailService,
         domain::ports::secondary::MockSubscriptionStorage,
         domain::{ConfirmedSubscriber, Credentials, CredentialsGenerator, SubscriberEmail},
-        application::server::{AppState, ApplicationBaseUrl},
     };
 
     use super::*;

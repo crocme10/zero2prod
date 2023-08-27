@@ -203,16 +203,21 @@ impl ApplicationBuilder {
             tls,
         } = self;
         let listener = listener.expect("listener");
+        let state = server::AppState {
+            authentication: authentication.expect("authentication"),
+            subscription: subscription.expect("subscription"),
+            email: email.expect("email"),
+            base_url: server::ApplicationBaseUrl(url.expect("url")),
+            secret: secret.expect("secret"),
+        };
+
         let (app, server) = server::new(
             listener,
-            authentication.expect("authentication"),
-            subscription.expect("subscription"),
-            email.expect("email"),
-            url.expect("url"),
+            state,
             static_dir.expect("static dir"),
-            secret.expect("secret"),
             tls.expect("tls"),
         );
+
         Application {
             http: http.expect("http"),
             https: https.expect("https"),

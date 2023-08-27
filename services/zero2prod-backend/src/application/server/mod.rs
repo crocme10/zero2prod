@@ -31,23 +31,10 @@ use crate::routes::{
 
 pub fn new(
     listener: TcpListener,
-    authentication: Arc<dyn AuthenticationStorage + Send + Sync>,
-    subscription: Arc<dyn SubscriptionStorage + Send + Sync>,
-    email: Arc<dyn EmailService + Send + Sync>,
-    base_url: String,
+    state: AppState,
     static_dir: PathBuf,
-    secret: Secret<String>,
     tls: RustlsConfig,
 ) -> (Router, Server<RustlsAcceptor>) {
-    // Build app state
-    let app_state = AppState {
-        authentication,
-        subscription,
-        email,
-        base_url: ApplicationBaseUrl(base_url),
-        secret,
-    };
-
     // Routes that need to not have a session applied
     let router_no_session = Router::new()
         .route("/health", get(health))
@@ -73,12 +60,12 @@ pub fn new(
     let not_found_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("pages")
         .join("404.html");
-    let serve_dir = ServeDir::new(&static_dir).not_found_service(ServeFile::new(&not_found_path));
+    let serve_dir = ServeDir::new(&static_dir).not_found_service(ServeFile::new(not_found_path));
 
     // Create a router that will contain and match all routes for the application
     // and a fallback service that will serve the static directory
     tracing::info!("Serving static directory: {}", static_dir.display());
-    let app = Router::new()
+    let router = Router::new()
         .merge(router_no_session)
         .fallback_service(get_service(serve_dir).handle_error(|_| async {
             (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong...")
@@ -91,14 +78,13 @@ pub fn new(
                 .layer(BufferLayer::new(1024))
                 .layer(RateLimitLayer::new(5, Duration::from_secs(1))),
         )
-        .with_state(app_state);
-
+        .with_state(state);
 
     // Start the axum server and set up to use supplied listener
     // axum::Server::from_tcp(listener)
     let server = axum_server::from_tcp_rustls(listener, tls);
 
-    (app, server)
+    (router, server)
 }
 
 pub type DynAuthentication = Arc<dyn AuthenticationStorage + Send + Sync>;

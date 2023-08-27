@@ -7,9 +7,9 @@ use serde::{Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
 
+use crate::application::server::AppState;
 use crate::authentication::jwt::{Authenticator, Error as JwtError};
 use crate::domain::ports::secondary::AuthenticationError;
-use crate::application::server::AppState;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// GET handler for user authentication
@@ -59,17 +59,20 @@ pub async fn authenticate<B: fmt::Debug>(
         "id": id.to_string()
     });
 
-
     Ok::<_, Error>((
-            StatusCode::OK,
-            [
+        StatusCode::OK,
+        [
             ("X-Content-Type-Options", "nosniff"),
             ("X-Frame-Options", "DENY"),
             ("X-XSS-Protection", "0"),
             ("Cache-Control", "no-store"),
-            ("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; sandbox")
-            ],
-            Json(resp)))
+            (
+                "Content-Security-Policy",
+                "default-src 'none'; frame-ancestors 'none'; sandbox",
+            ),
+        ],
+        Json(resp),
+    ))
 }
 
 #[derive(Debug)]

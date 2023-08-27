@@ -135,7 +135,9 @@ pub fn check_openssl_exists() -> Result<(), anyhow::Error> {
 
     match status {
         Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
-            anyhow::bail!("Error: 'openssl' is not found on the PATH. Please install it to continue.",);
+            anyhow::bail!(
+                "Error: 'openssl' is not found on the PATH. Please install it to continue.",
+            );
         }
         Err(e) => anyhow::bail!(format!("An unknown error occurred: {}", e)),
         _ => {}

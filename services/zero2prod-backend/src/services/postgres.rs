@@ -528,8 +528,8 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-        domain::NewSubscription,
         application::opts::{Command, Opts},
+        domain::NewSubscription,
         routes::subscriptions::SubscriptionRequest,
     };
 

@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
 
-use crate::domain::ports::secondary::SubscriptionError;
 use crate::application::server::AppState;
+use crate::domain::ports::secondary::SubscriptionError;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user subscription confirmation
@@ -156,10 +156,10 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
+        application::server::{AppState, ApplicationBaseUrl},
         domain::ports::secondary::{
             MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
         },
-        application::server::{AppState, ApplicationBaseUrl},
     };
 
     use super::*;

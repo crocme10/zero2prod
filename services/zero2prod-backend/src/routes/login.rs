@@ -8,11 +8,11 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::fmt;
 use uuid::Uuid;
 
+use crate::application::server::AppState;
 use crate::authentication::jwt::build_token;
 use crate::authentication::password::{Authenticator, Error as PasswordError};
 use crate::domain::ports::secondary::AuthenticationError;
 use crate::domain::Credentials;
-use crate::application::server::AppState;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user login
@@ -79,7 +79,12 @@ impl IntoResponse for LoginResp {
         headers.insert("X-Frame-Options", "DENY".parse().unwrap());
         headers.insert("X-XSS-Protection", "0".parse().unwrap());
         headers.insert("Cache-Control", "no-store".parse().unwrap());
-        headers.insert("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; sandbox".parse().unwrap());
+        headers.insert(
+            "Content-Security-Policy",
+            "default-src 'none'; frame-ancestors 'none'; sandbox"
+                .parse()
+                .unwrap(),
+        );
         (StatusCode::OK, headers, json).into_response()
     }
 }
@@ -164,7 +169,12 @@ impl IntoResponse for Error {
         headers.insert("X-Frame-Options", "DENY".parse().unwrap());
         headers.insert("X-XSS-Protection", "0".parse().unwrap());
         headers.insert("Cache-Control", "no-store".parse().unwrap());
-        headers.insert("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; sandbox".parse().unwrap());
+        headers.insert(
+            "Content-Security-Policy",
+            "default-src 'none'; frame-ancestors 'none'; sandbox"
+                .parse()
+                .unwrap(),
+        );
         match self {
             Error::InvalidCredentials { context, source: _ } => (
                 StatusCode::UNAUTHORIZED,
@@ -206,12 +216,12 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
+        application::server::{AppState, ApplicationBaseUrl},
         authentication::password::compute_password_hash,
         domain::ports::secondary::{
             MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
         },
         routes::login::LoginRequest,
-        application::server::{AppState, ApplicationBaseUrl},
     };
 
     use super::*;
