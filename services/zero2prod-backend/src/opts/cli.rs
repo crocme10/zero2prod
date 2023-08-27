@@ -1,38 +1,11 @@
-//use serde::{Deserialize, Serialize};
-use std::{env, fmt, path::PathBuf};
-
 use common::config;
 use common::settings;
+use std::{env, path::PathBuf};
+
+use super::Error;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
-
-#[derive(Debug)]
-pub enum Error {
-    Merging {
-        context: String,
-        source: config::Error,
-    },
-    Deserializing {
-        context: String,
-        source: ::config::ConfigError,
-    },
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::Merging { context, source } => {
-                write!(fmt, "Could not build client request: {context} | {source}")
-            }
-            Error::Deserializing { context, source } => {
-                write!(fmt, "Could not build client request: {context} | {source}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for Error {}
 
 #[derive(Debug, Clone, clap::Parser)]
 #[clap(
@@ -43,14 +16,12 @@ impl std::error::Error for Error {}
     )]
 pub struct Opts {
     /// Defines the config directory
-    ///
     #[arg(value_parser = clap::value_parser!(PathBuf), short = 'c', long = "config-dir")]
     pub config_dir: PathBuf,
 
     /// Defines the run mode in {testing, dev, prod, ...}
     ///
-    /// If no run mode is provided, a default behavior will be used.
-    // #[arg(short = 'm', long = common::config::ENV_VAR_ENV_NAME.to_lowercase())]
+    /// If no run mode is provided, the default behavior will be used.
     #[arg(short = 'm', long = "run-mode")]
     pub run_mode: Option<String>,
 
@@ -64,9 +35,9 @@ pub struct Opts {
 
 #[derive(Debug, Clone, clap::Parser)]
 pub enum Command {
-    /// Execute osm2mimir with the given configuration
+    /// Execute zero2prod with the given configuration
     Run,
-    /// Prints osm2mimir's configuration
+    /// Prints zero2prod configuration
     Config,
 }
 
