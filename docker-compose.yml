@@ -2,79 +2,31 @@ version: '3.8'
 
 services:
 
-  backend:
-    image:
-      zero2prod/backend:latest
-    ports:
-      - 8083:8080
-    depends_on:
-      - db
-
-  db:
-    image:
-      zero2prod/postgres:latest
-    ports:
-      - 5434:5432
-    command: ["postgres", "-c", "log_statement=all"]
-    volumes:
-      - ./data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_USER=bob
-      - POSTGRES_PASSWORD=secret
-      - POSTGRES_DB=newsletter
-
   frontend:
-    image:
-      zero2prod/frontend:latest
+    build:
+      context: ./services/zero2prod-frontend
+      dockerfile: Dockerfile
     ports:
       - 80
-    depends_on:
-      - backend
 
   gateway:
-    image:
-      zero2prod/gateway:latest 
+    build:
+      context: ./services/zero2prod-gateway
+      dockerfile: Dockerfile
     ports:
-      - 8084:80
-      - 8443:443
+      - 80:80
+      - 443:443
     depends_on:
-      - backend
       - frontend
     volumes:
       - ./logs:/var/log/nginx
+      - /etc/letsencrypt
+      - /var/www/certbot/live/area403.org
 
-  keycloak-store:
-    image: postgres:13.7
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
     volumes:
-      - ./keycloak-db-data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: keycloak
-      POSTGRES_USER: my_keycloak
-      POSTGRES_PASSWORD: My863Keycloak
-
-  keycloak:
-    image:
-      zero2prod/auth:latest
-    environment:
-      #Admin Credentials
-      KC_HOSTNAME_STRICT: 'false'
-      KC_HOSTNAME_STRICT_HTTPS: 'false'
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-        # KEYCLOAK_USER: bob
-        #KEYCLOAK_PASSWORD: MyKeycloak493
-      KC_DB: postgres
-      KC_DB_URL: 'jdbc:postgresql://keycloak-store:5432/keycloak'
-      KC_DB_USERNAME: my_keycloak
-      KC_DB_PASSWORD: My863Keycloak
-      KC_HEALTH_ENABLED: 'true'
-      KC_METRICS_ENABLED: 'true'
-      KC_HOSTNAME: localhost
-      PROXY_ADDRESS_FORWARDING: "true"
-    command:
-      - "start-dev"
-    ports:
-      - 28443:8443
-      - 28080:8080
-    depends_on:
-      - keycloak-store
+      - /etc/letsencrypt
+      - /var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"

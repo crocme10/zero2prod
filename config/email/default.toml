@@ -1,6 +1,0 @@
-[email_client]
-# This is used to send a link to an API endpoint to the user.
-server_url = "http://localhost:8083"
-sender_email = "matt@test.com"
-authorization_token = "secret-token"
-timeout = 10 # sec

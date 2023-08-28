@@ -1,3 +1,0 @@
-[database]
-executor = "transaction"
-require_ssl = false

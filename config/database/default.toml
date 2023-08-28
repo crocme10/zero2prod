@@ -1,9 +1,0 @@
-[database]
-host = "localhost"
-port = 5462
-username = "bob"
-password = "secret"
-database_name = "newsletter"
-connection_timeout = 2000 # ms
-require_ssl = true
-executor = "connection"

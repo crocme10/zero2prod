@@ -1,7 +1,0 @@
-mode = "default"
-
-[application]
-port = 8080
-host = "0.0.0.0"
-base_url = "http://127.0.0.1"
-requests_per_sec = 20
