@@ -4,6 +4,7 @@ use argon2::{
 };
 use secrecy::{ExposeSecret, Secret};
 use serde::Serialize;
+use serde_with::{serde_as, DisplayFromStr};
 use std::fmt;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -94,21 +95,18 @@ fn verify_password_hash(
 
 pub fn compute_password_hash(password: Secret<String>) -> Result<Secret<String>, Error> {
     let salt = SaltString::generate(&mut rand::thread_rng());
-    let argon_params = Params::new(15000, 2, 1, None).map_err(|_| Error::UnexpectedError {
-        context: "Hasher parameters".to_string(),
-    })?;
+    let argon_params = Params::new(15000, 2, 1, None)
+        .context("Creating hashing parameters".to_string())?;
 
     let hasher = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon_params);
     let password_hash = hasher
         .hash_password(password.expose_secret().as_bytes(), &salt)
-        .map_err(|_| Error::UnexpectedError {
-            context: "Hasher password".to_string(),
-        })?
-        .to_string();
+        .context("Hashing password".to_string())?;
 
-    Ok(Secret::new(password_hash))
+    Ok(Secret::new(password_hash.to_string()))
 }
 
+#[serde_as]
 #[derive(Debug, Serialize)]
 pub enum Error {
     InvalidCredentials {
@@ -116,6 +114,16 @@ pub enum Error {
     },
     UnexpectedError {
         context: String,
+    },
+    Hasher {
+        context: String,
+        #[serde_as(as = "DisplayFromStr")]
+        source: argon2::Error,
+    },
+    Hashing {
+        context: String,
+        #[serde_as(as = "DisplayFromStr")]
+        source: argon2::password_hash::errors::Error,
     },
     Data {
         context: String,
@@ -132,6 +140,12 @@ impl fmt::Display for Error {
             Error::UnexpectedError { context } => {
                 write!(fmt, "Unexpected Error: {context} ")
             }
+            Error::Hasher { context, source } => {
+                write!(fmt, "Hasher Error: {context} | {source}")
+            }
+            Error::Hashing { context, source } => {
+                write!(fmt, "Hashing Error: {context} | {source}")
+            }
             Error::Data { context, source } => {
                 write!(fmt, "Storage Error: {context} | {source}")
             }
@@ -144,6 +158,24 @@ impl std::error::Error for Error {}
 impl From<ErrorContext<String, AuthenticationError>> for Error {
     fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
         Error::Data {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<String, argon2::Error>> for Error {
+    fn from(err: ErrorContext<String, argon2::Error>) -> Self {
+        Error::Hasher {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<String, argon2::password_hash::errors::Error>> for Error {
+    fn from(err: ErrorContext<String, argon2::password_hash::errors::Error>) -> Self {
+        Error::Hashing {
             context: err.0,
             source: err.1,
         }

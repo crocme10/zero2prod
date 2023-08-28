@@ -1,3 +1,6 @@
+/// Implementation of authentication_store and subscriptions_store
+/// using postgres
+
 use async_trait::async_trait;
 use chrono::Utc;
 use common::err_context::ErrorContext;
@@ -145,7 +148,7 @@ impl SubscriptionStorage for PostgresStorage {
         .execute(&mut **conn)
         .await
         .context(format!(
-                "Could not create new subscription for {}", new_subscription.username.as_ref()
+                "Could not store new subscription for {}", new_subscription.username.as_ref()
                 ))?;
 
         sqlx::query!(
@@ -164,16 +167,16 @@ impl SubscriptionStorage for PostgresStorage {
         .context(format!("Could not get subscription for {id}"))?;
         let username =
             SubscriberName::parse(saved.username).map_err(|err| SubscriptionError::Validation {
-                context: format!("Invalid username: {err}"),
+                context: format!("Invalid username stored in the database: {err}"),
             })?;
         let email =
             SubscriberEmail::parse(saved.email).map_err(|err| SubscriptionError::Validation {
-                context: format!("Invalid email: {err}"),
+                context: format!("Invalid email stored in the database: {err}"),
             })?;
         let status =
             SubscriptionStatus::from_str(&saved.status.unwrap_or_default()).map_err(|err| {
                 SubscriptionError::Validation {
-                    context: format!("Invalid status: {err}"),
+                    context: format!("Invalid status stored in the database: {err}"),
                 }
             })?;
         Ok(Subscription {
@@ -203,17 +206,17 @@ impl SubscriptionStorage for PostgresStorage {
             Some(rec) => {
                 let username = SubscriberName::parse(rec.username).map_err(|err| {
                     SubscriptionError::Validation {
-                        context: format!("Invalid username: {err}"),
+                        context: format!("Invalid username stored in the database: {err}"),
                     }
                 })?;
                 let email = SubscriberEmail::parse(rec.email).map_err(|err| {
                     SubscriptionError::Validation {
-                        context: format!("Invalid email: {err}"),
+                        context: format!("Invalid email stored in the database: {err}"),
                     }
                 })?;
                 let status = SubscriptionStatus::from_str(&rec.status.unwrap_or_default())
                     .map_err(|err| SubscriptionError::Validation {
-                        context: format!("Invalid status: {err}"),
+                        context: format!("Invalid status stored in the database: {err}"),
                     })?;
                 Ok(Some(Subscription {
                     id: rec.id,
@@ -348,7 +351,11 @@ impl AuthenticationStorage for PostgresStorage {
         Ok(row)
     }
 
-    #[tracing::instrument(name = "Storing credentials in postgres")]
+    // We skip email and credentials in the log for security.
+    #[tracing::instrument(
+        name = "Storing credentials in postgres",
+        skip(email, credentials)
+    )]
     async fn store_credentials(
         &self,
         id: Uuid,
@@ -359,14 +366,10 @@ impl AuthenticationStorage for PostgresStorage {
         let Credentials { username, password } = credentials.clone();
         let password_hash = spawn_blocking_with_tracing(move || compute_password_hash(password))
             .await
-            .map_err(|_| AuthenticationError::Validation {
-                // FIXME Not really validation
-                context: "Could not spawn blocking task".to_string(),
+            .map_err(|_| AuthenticationError::Miscellaneous {
+                context: "Could not spawn task to compute hash password".to_string(),
             })?
-            .map_err(|_| AuthenticationError::Validation {
-                // FIXME Not really validation
-                context: "Could not compute password hash".to_string(),
-            })?;
+            .context("Could not compute hash password".to_string())?;
 
         sqlx::query!(
             r#"INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4)"#,

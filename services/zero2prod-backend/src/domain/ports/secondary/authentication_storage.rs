@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use common::err_context::ErrorContext;
 use secrecy::Secret;
-use serde::ser::SerializeStruct;
-use serde::{Serialize, Serializer};
+use serde::Serialize;
+use serde_with::{serde_as, DisplayFromStr};
 use std::fmt;
 use uuid::Uuid;
 
@@ -32,29 +32,39 @@ pub trait AuthenticationStorage {
     async fn username_exists(&self, username: &str) -> Result<bool, Error>;
 }
 
-/// This is the error used by secondary ports...
-/// TODO Probably split.
-#[derive(Debug)]
+#[serde_as]
+#[derive(Debug, Serialize)]
 pub enum Error {
     /// Error returned by sqlx
+    // *
     Database {
         context: String,
+        #[serde_as(as = "DisplayFromStr")]
         source: sqlx::Error,
     },
     /// Data store cannot be validated
-    Validation {
-        context: String,
-    },
+    // Validation {
+    //     context: String,
+    // },
     /// Connection issue with the database
+    // *
     Connection {
         context: String,
+        #[serde_as(as = "DisplayFromStr")]
         source: sqlx::Error,
     },
-    Configuration {
+    // Configuration {
+    //     context: String,
+    // },
+    Miscellaneous {
         context: String,
     },
-    Missing {
+    Password {
         context: String,
+        // We could put `source: PasswordError`, but That
+        // would make the definition of the error circular:
+        // it would depend on pass:error, which depends on 
+        // error
     },
 }
 
@@ -64,17 +74,20 @@ impl fmt::Display for Error {
             Error::Database { context, source } => {
                 write!(fmt, "Database: {context} | {source}")
             }
-            Error::Validation { context } => {
-                write!(fmt, "Data: {context}")
-            }
+            // Error::Validation { context } => {
+            //     write!(fmt, "Data: {context}")
+            // }
             Error::Connection { context, source } => {
                 write!(fmt, "Database Connection: {context} | {source}")
             }
-            Error::Configuration { context } => {
-                write!(fmt, "Database Configuration: {context}")
+            // Error::Configuration { context } => {
+            //     write!(fmt, "Database Configuration: {context}")
+            // }
+            Error::Miscellaneous { context } => {
+                write!(fmt, "Miscellaneous: {context}")
             }
-            Error::Missing { context } => {
-                write!(fmt, "Missing: {context}")
+            Error::Password { context } => {
+                write!(fmt, "Password Error: {context}")
             }
         }
     }
@@ -93,9 +106,9 @@ impl From<ErrorContext<String, sqlx::Error>> for Error {
                 context: format!("PostgreSQL Storage: Database: {}", err.0),
                 source: err.1,
             },
-            _ => Error::Connection {
+            _ => Error::Database {
                 context: format!(
-                    "PostgreSQL Storage: Could not establish a connection: {}",
+                    "PostgreSQL Storage: Miscellaneous: {}",
                     err.0
                 ),
                 source: err.1,
@@ -104,31 +117,3 @@ impl From<ErrorContext<String, sqlx::Error>> for Error {
     }
 }
 
-/// FIXME This is an oversimplified serialization for the Error.
-/// I had to do this because some fields (source) where not 'Serialize'
-impl Serialize for Error {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("Error", 1)?;
-        match self {
-            Error::Database { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::Validation { context } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::Connection { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::Configuration { context } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::Missing { context } => {
-                state.serialize_field("description", context)?;
-            }
-        }
-        state.end()
-    }
-}
