@@ -97,8 +97,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, AuthenticationError>> for Error {
-    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
+impl From<ErrorContext<AuthenticationError>> for Error {
+    fn from(err: ErrorContext<AuthenticationError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,

@@ -120,7 +120,7 @@ pub struct RegistrationRequest {
     pub password: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum Error {
     DuplicateEmail {
         context: String,
@@ -158,39 +158,12 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, AuthenticationError>> for Error {
-    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
+impl From<ErrorContext<AuthenticationError>> for Error {
+    fn from(err: ErrorContext<AuthenticationError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
         }
-    }
-}
-
-/// FIXME This is an oversimplified serialization for the Error.
-/// I had to do this because some fields (source) where not 'Serialize'
-impl Serialize for Error {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("Error", 1)?;
-        state.serialize_field("status", "fail")?;
-        match self {
-            Error::DuplicateEmail { context } => {
-                state.serialize_field("message", context)?;
-            }
-            Error::DuplicateUsername { context } => {
-                state.serialize_field("message", context)?;
-            }
-            Error::WeakPassword { context } => {
-                state.serialize_field("message", context)?;
-            }
-            Error::Data { context, source: _ } => {
-                state.serialize_field("message", context)?;
-            }
-        }
-        state.end()
     }
 }
 

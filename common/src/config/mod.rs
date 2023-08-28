@@ -1,43 +1,14 @@
-use config::{Config, ConfigError, Environment, File};
-use std::{env, fmt, path::Path};
+mod error;
+pub use self::error::Error;
+
+use config::{Config, Environment, File};
+use std::{env, path::Path};
 use tracing::trace;
 
-use crate::err_context::{ErrorContext, ErrorContextExt};
+use crate::err_context::ErrorContextExt;
 
 static DEFAULT_ENV_NAME: &str = "default";
 static LOCAL_ENV_NAME: &str = "local";
-
-#[derive(Debug)]
-pub enum Error {
-    Configuration {
-        context: &'static str,
-        source: ConfigError,
-    },
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::Configuration { context, source } => {
-                write!(
-                    fmt,
-                    "Could not create configuration: {context} | source: {source}"
-                )
-            }
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl From<ErrorContext<&'static str, ConfigError>> for Error {
-    fn from(context: ErrorContext<&'static str, ConfigError>) -> Error {
-        Error::Configuration {
-            context: context.0,
-            source: context.1,
-        }
-    }
-}
 
 pub fn merge_configuration<
     'a,

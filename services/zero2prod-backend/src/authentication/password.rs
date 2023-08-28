@@ -155,8 +155,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, AuthenticationError>> for Error {
-    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
+impl From<ErrorContext<AuthenticationError>> for Error {
+    fn from(err: ErrorContext<AuthenticationError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -164,8 +164,8 @@ impl From<ErrorContext<String, AuthenticationError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, argon2::Error>> for Error {
-    fn from(err: ErrorContext<String, argon2::Error>) -> Self {
+impl From<ErrorContext<argon2::Error>> for Error {
+    fn from(err: ErrorContext<argon2::Error>) -> Self {
         Error::Hasher {
             context: err.0,
             source: err.1,
@@ -173,8 +173,8 @@ impl From<ErrorContext<String, argon2::Error>> for Error {
     }
 }
 
-impl From<ErrorContext<String, argon2::password_hash::errors::Error>> for Error {
-    fn from(err: ErrorContext<String, argon2::password_hash::errors::Error>) -> Self {
+impl From<ErrorContext<argon2::password_hash::errors::Error>> for Error {
+    fn from(err: ErrorContext<argon2::password_hash::errors::Error>) -> Self {
         Error::Hashing {
             context: err.0,
             source: err.1,

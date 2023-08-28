@@ -1,8 +1,8 @@
 use base64::{DecodeError, Engine};
 use hyper::header::{HeaderMap, ToStrError, AUTHORIZATION};
 use secrecy::Secret;
-use serde::ser::SerializeStruct;
-use serde::{Serialize, Serializer};
+use serde::Serialize;
+use serde_with::{serde_as, DisplayFromStr};
 use std::{fmt, string::FromUtf8Error};
 
 use crate::domain::Credentials;
@@ -53,13 +53,15 @@ pub fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, Error> {
     })
 }
 
-#[derive(Debug)]
+#[serde_as]
+#[derive(Debug, Serialize)]
 pub enum Error {
     MissingHeader {
         context: String,
     },
     InvalidAuthenticationString {
         context: String,
+        #[serde_as(as = "DisplayFromStr")]
         source: ToStrError,
     },
     InvalidAuthenticationScheme {
@@ -67,10 +69,12 @@ pub enum Error {
     },
     Base64 {
         context: String,
+        #[serde_as(as = "DisplayFromStr")]
         source: DecodeError,
     },
     CredentialString {
         context: String,
+        #[serde_as(as = "DisplayFromStr")]
         source: FromUtf8Error,
     },
     InvalidCredentials {
@@ -105,8 +109,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, ToStrError>> for Error {
-    fn from(err: ErrorContext<String, ToStrError>) -> Self {
+impl From<ErrorContext<ToStrError>> for Error {
+    fn from(err: ErrorContext<ToStrError>) -> Self {
         Error::InvalidAuthenticationString {
             context: err.0,
             source: err.1,
@@ -114,8 +118,8 @@ impl From<ErrorContext<String, ToStrError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, DecodeError>> for Error {
-    fn from(err: ErrorContext<String, DecodeError>) -> Self {
+impl From<ErrorContext<DecodeError>> for Error {
+    fn from(err: ErrorContext<DecodeError>) -> Self {
         Error::Base64 {
             context: err.0,
             source: err.1,
@@ -123,44 +127,12 @@ impl From<ErrorContext<String, DecodeError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, FromUtf8Error>> for Error {
-    fn from(err: ErrorContext<String, FromUtf8Error>) -> Self {
+impl From<ErrorContext<FromUtf8Error>> for Error {
+    fn from(err: ErrorContext<FromUtf8Error>) -> Self {
         Error::CredentialString {
             context: err.0,
             source: err.1,
         }
-    }
-}
-
-/// FIXME This is an oversimplified serialization for the Error.
-/// I had to do this because some fields (source) where not 'Serialize'
-impl Serialize for Error {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("Error", 1)?;
-        match self {
-            Error::MissingHeader { context } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::InvalidAuthenticationString { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::InvalidAuthenticationScheme { context } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::Base64 { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::CredentialString { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::InvalidCredentials { context } => {
-                state.serialize_field("description", context)?;
-            }
-        }
-        state.end()
     }
 }
 

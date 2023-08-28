@@ -1,15 +1,16 @@
 /// A module for providing error context
 
 /// An error (E), and some context (C)
-pub struct ErrorContext<C, E>(pub C, pub E);
+pub struct ErrorContext<E>(pub String, pub E);
 
 /// Creating a trait to extend an API by adding a context. method.
 pub trait ErrorContextExt<T, E> {
-    fn context<C>(self, c: C) -> Result<T, ErrorContext<C, E>>;
+    fn context<C: AsRef<str> + 'static>(self, c: C) -> Result<T, ErrorContext<E>>;
 }
 
 impl<T, E> ErrorContextExt<T, E> for Result<T, E> {
-    fn context<C>(self, c: C) -> Result<T, ErrorContext<C, E>> {
-        self.map_err(|e| ErrorContext(c, e))
+    fn context<C: AsRef<str> + 'static>(self, c: C) -> Result<T, ErrorContext<E>> {
+        let s = c.as_ref();
+        self.map_err(|e| ErrorContext(s.into(), e))
     }
 }

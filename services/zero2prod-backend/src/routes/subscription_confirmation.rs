@@ -61,7 +61,7 @@ pub struct SubscriptionConfirmationRequest {
     pub token: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum Error {
     MissingToken {
         context: String,
@@ -87,32 +87,12 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, SubscriptionError>> for Error {
-    fn from(err: ErrorContext<String, SubscriptionError>) -> Self {
+impl From<ErrorContext<SubscriptionError>> for Error {
+    fn from(err: ErrorContext<SubscriptionError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
         }
-    }
-}
-
-/// FIXME This is an oversimplified serialization for the Error.
-/// I had to do this because some fields (source) where not 'Serialize'
-impl Serialize for Error {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("Error", 1)?;
-        match self {
-            Error::MissingToken { context } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::Data { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-        }
-        state.end()
     }
 }
 

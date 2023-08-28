@@ -67,8 +67,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, AuthenticationError>> for Error {
-    fn from(err: ErrorContext<String, AuthenticationError>) -> Self {
+impl From<ErrorContext<AuthenticationError>> for Error {
+    fn from(err: ErrorContext<AuthenticationError>) -> Self {
         Error::Authentication {
             context: err.0,
             source: err.1,
@@ -76,8 +76,8 @@ impl From<ErrorContext<String, AuthenticationError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, PostgresError>> for Error {
-    fn from(err: ErrorContext<String, PostgresError>) -> Self {
+impl From<ErrorContext<PostgresError>> for Error {
+    fn from(err: ErrorContext<PostgresError>) -> Self {
         Error::Postgres {
             context: err.0,
             source: err.1,
@@ -85,8 +85,8 @@ impl From<ErrorContext<String, PostgresError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, SubscriptionError>> for Error {
-    fn from(err: ErrorContext<String, SubscriptionError>) -> Self {
+impl From<ErrorContext<SubscriptionError>> for Error {
+    fn from(err: ErrorContext<SubscriptionError>) -> Self {
         Error::Subscription {
             context: err.0,
             source: err.1,
@@ -94,8 +94,8 @@ impl From<ErrorContext<String, SubscriptionError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, EmailError>> for Error {
-    fn from(err: ErrorContext<String, EmailError>) -> Self {
+impl From<ErrorContext<EmailError>> for Error {
+    fn from(err: ErrorContext<EmailError>) -> Self {
         Error::Email {
             context: err.0,
             source: err.1,
@@ -103,8 +103,8 @@ impl From<ErrorContext<String, EmailError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, ListenerError>> for Error {
-    fn from(err: ErrorContext<String, ListenerError>) -> Self {
+impl From<ErrorContext<ListenerError>> for Error {
+    fn from(err: ErrorContext<ListenerError>) -> Self {
         Error::Listener {
             context: err.0,
             source: err.1,
@@ -112,8 +112,8 @@ impl From<ErrorContext<String, ListenerError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, hyper::Error>> for Error {
-    fn from(err: ErrorContext<String, hyper::Error>) -> Self {
+impl From<ErrorContext<hyper::Error>> for Error {
+    fn from(err: ErrorContext<hyper::Error>) -> Self {
         Error::Server {
             context: err.0,
             source: err.1,
@@ -121,8 +121,8 @@ impl From<ErrorContext<String, hyper::Error>> for Error {
     }
 }
 
-impl From<ErrorContext<String, std::io::Error>> for Error {
-    fn from(err: ErrorContext<String, std::io::Error>) -> Self {
+impl From<ErrorContext<std::io::Error>> for Error {
+    fn from(err: ErrorContext<std::io::Error>) -> Self {
         Error::Path {
             context: err.0,
             source: err.1,

@@ -1,8 +1,9 @@
 use std::fmt;
+use serde::Serialize;
 
 use common::err_context::ErrorContext;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum Error {
     Server {
         context: String,
@@ -22,8 +23,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, hyper::Error>> for Error {
-    fn from(err: ErrorContext<String, hyper::Error>) -> Self {
+impl From<ErrorContext<hyper::Error>> for Error {
+    fn from(err: ErrorContext<hyper::Error>) -> Self {
         Error::Server {
             context: err.0,
             source: err.1,

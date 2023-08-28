@@ -95,19 +95,19 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, sqlx::Error>> for Error {
-    fn from(err: ErrorContext<String, sqlx::Error>) -> Self {
+impl From<ErrorContext<sqlx::Error>> for Error {
+    fn from(err: ErrorContext<sqlx::Error>) -> Self {
         match err.1 {
             sqlx::Error::PoolTimedOut => Error::Connection {
-                context: format!("PostgreSQL Storage: Connection Timeout: {}", err.0),
+                context: &format!("PostgreSQL Storage: Connection Timeout: {}", err.0),
                 source: err.1,
             },
             sqlx::Error::Database(_) => Error::Database {
-                context: format!("PostgreSQL Storage: Database: {}", err.0),
+                context: &format!("PostgreSQL Storage: Database: {}", err.0),
                 source: err.1,
             },
             _ => Error::Database {
-                context: format!(
+                context: &format!(
                     "PostgreSQL Storage: Miscellaneous: {}",
                     err.0
                 ),

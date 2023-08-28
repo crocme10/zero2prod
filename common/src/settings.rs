@@ -2,34 +2,6 @@ use serde::{Deserialize, Serialize};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::postgres::PgSslMode;
-use std::fmt;
-
-#[derive(Debug)]
-pub enum Error {
-    Building {
-        context: String,
-        source: crate::config::Error,
-    },
-    Deserializing {
-        context: String,
-        source: ::config::ConfigError,
-    },
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::Building { context, source } => {
-                write!(fmt, "Could not build client request: {context} | {source}")
-            }
-            Error::Deserializing { context, source } => {
-                write!(fmt, "Could not build client request: {context} | {source}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for Error {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApplicationSettings {

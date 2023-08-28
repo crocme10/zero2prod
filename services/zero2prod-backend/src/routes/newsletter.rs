@@ -118,8 +118,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, AuthenticationSchemeError>> for Error {
-    fn from(err: ErrorContext<String, AuthenticationSchemeError>) -> Self {
+impl From<ErrorContext<AuthenticationSchemeError>> for Error {
+    fn from(err: ErrorContext<AuthenticationSchemeError>) -> Self {
         Error::AuthenticationScheme {
             context: err.0,
             source: err.1,
@@ -127,8 +127,8 @@ impl From<ErrorContext<String, AuthenticationSchemeError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, CredentialsError>> for Error {
-    fn from(err: ErrorContext<String, CredentialsError>) -> Self {
+impl From<ErrorContext<CredentialsError>> for Error {
+    fn from(err: ErrorContext<CredentialsError>) -> Self {
         Error::Credentials {
             context: err.0,
             source: err.1,
@@ -136,8 +136,8 @@ impl From<ErrorContext<String, CredentialsError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, SubscriptionError>> for Error {
-    fn from(err: ErrorContext<String, SubscriptionError>) -> Self {
+impl From<ErrorContext<SubscriptionError>> for Error {
+    fn from(err: ErrorContext<SubscriptionError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -145,8 +145,8 @@ impl From<ErrorContext<String, SubscriptionError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, EmailError>> for Error {
-    fn from(err: ErrorContext<String, EmailError>) -> Self {
+impl From<ErrorContext<EmailError>> for Error {
+    fn from(err: ErrorContext<EmailError>) -> Self {
         Error::Email {
             context: err.0,
             source: err.1,

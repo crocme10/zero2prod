@@ -158,7 +158,7 @@ fn generate_subscription_token() -> String {
         .collect()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum Error {
     InvalidRequest {
         context: String,
@@ -198,8 +198,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, String>> for Error {
-    fn from(err: ErrorContext<String, String>) -> Self {
+impl From<ErrorContext<String>> for Error {
+    fn from(err: ErrorContext<String>) -> Self {
         Error::InvalidRequest {
             context: err.0,
             source: err.1,
@@ -207,8 +207,8 @@ impl From<ErrorContext<String, String>> for Error {
     }
 }
 
-impl From<ErrorContext<String, SubscriptionError>> for Error {
-    fn from(err: ErrorContext<String, SubscriptionError>) -> Self {
+impl From<ErrorContext<SubscriptionError>> for Error {
+    fn from(err: ErrorContext<SubscriptionError>) -> Self {
         Error::Data {
             context: err.0,
             source: err.1,
@@ -216,38 +216,12 @@ impl From<ErrorContext<String, SubscriptionError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, EmailError>> for Error {
-    fn from(err: ErrorContext<String, EmailError>) -> Self {
+impl From<ErrorContext<EmailError>> for Error {
+    fn from(err: ErrorContext<EmailError>) -> Self {
         Error::Email {
             context: err.0,
             source: err.1,
         }
-    }
-}
-
-/// FIXME This is an oversimplified serialization for the Error.
-/// I had to do this because some fields (source) where not 'Serialize'
-impl Serialize for Error {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("Error", 1)?;
-        match self {
-            Error::InvalidRequest { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::MissingToken { context } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::Data { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-            Error::Email { context, source: _ } => {
-                state.serialize_field("description", context)?;
-            }
-        }
-        state.end()
     }
 }
 
