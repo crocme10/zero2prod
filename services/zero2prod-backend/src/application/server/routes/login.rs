@@ -199,7 +199,6 @@ mod tests {
         domain::ports::secondary::{
             MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
         },
-        routes::login::LoginRequest,
     };
 
     use super::*;

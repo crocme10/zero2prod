@@ -233,7 +233,6 @@ mod tests {
             MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
         },
         domain::Credentials,
-        routes::register::RegistrationRequest,
     };
 
     use super::*;

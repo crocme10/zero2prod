@@ -508,7 +508,7 @@ mod tests {
     use crate::{
         application::opts::{Command, Opts},
         domain::NewSubscription,
-        routes::subscriptions::SubscriptionRequest,
+        domain::SubscriptionRequest,
     };
 
     use super::*;

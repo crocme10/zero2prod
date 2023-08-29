@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::application::server::{AppState, ApplicationBaseUrl};
 use crate::domain::ports::secondary::SubscriptionError;
 use crate::domain::ports::secondary::{Email, EmailError};
-use crate::domain::{NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus};
+use crate::domain::{SubscriptionRequest, NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus};
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user subscriptions
@@ -141,13 +141,6 @@ pub struct SubscriptionsResp {
     pub subscription: Subscription,
 }
 
-/// This is the information sent by the user to request a subscription.
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct SubscriptionRequest {
-    pub username: String,
-    pub email: String,
-}
-
 /// Generates a token (32 Alphanumeric String)
 fn generate_subscription_token() -> String {
     let mut rng = thread_rng();
@@ -274,7 +267,6 @@ mod tests {
             MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
         },
         domain::{NewSubscription, SubscriberEmail, Subscription, SubscriptionStatus},
-        routes::subscriptions::SubscriptionRequest,
     };
 
     use super::*;

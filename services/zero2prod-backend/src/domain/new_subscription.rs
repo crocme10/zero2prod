@@ -1,6 +1,6 @@
 use crate::domain::SubscriberEmail;
 use crate::domain::SubscriberName;
-use crate::routes::subscriptions::SubscriptionRequest;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NewSubscription {
@@ -20,4 +20,11 @@ impl TryFrom<SubscriptionRequest> for NewSubscription {
 
         Ok(NewSubscription { username, email })
     }
+}
+
+/// This is the information sent by the user to request a subscription.
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct SubscriptionRequest {
+    pub username: String,
+    pub email: String,
 }

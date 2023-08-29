@@ -14,6 +14,7 @@ use crate::authentication::{
 use crate::domain::ports::secondary::SubscriptionError;
 use crate::domain::ports::secondary::{Email, EmailError};
 use crate::domain::SubscriberEmail;
+use crate::domain::BodyData;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for newsletter publishing
@@ -62,18 +63,6 @@ pub async fn publish_newsletter(
             .context("Cannot send newsletter email")?;
     }
     Ok::<axum::Json<()>, Error>(Json(()))
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BodyData {
-    pub title: String,
-    pub content: Content,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Content {
-    pub html: String,
-    pub text: String,
 }
 
 #[derive(Debug, Serialize)]

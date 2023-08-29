@@ -6,7 +6,7 @@ use wiremock::{
 };
 
 use crate::state;
-use zero2prod::routes::newsletter::{BodyData, Content};
+use zero2prod::domain::{BodyData, Content};
 
 #[when(regex = r#"the admin notifies subscribers of a new issue of the newsletter"#)]
 async fn notify_newsletter(world: &mut state::TestWorld) {
