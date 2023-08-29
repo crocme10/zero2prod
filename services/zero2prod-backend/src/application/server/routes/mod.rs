@@ -1,6 +1,8 @@
 pub mod login;
+mod error;
 pub mod static_dir;
 
+pub use self::error::Error;
 use self::login::login;
 use super::AppState;
 use axum::routing::{post, Router};

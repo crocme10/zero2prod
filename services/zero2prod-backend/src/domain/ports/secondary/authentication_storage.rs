@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use common::err_context::ErrorContext;
 use secrecy::Secret;
 use serde::Serialize;
-use serde_with::{serde_as, DisplayFromStr};
 use std::fmt;
 use uuid::Uuid;
 
@@ -18,7 +17,7 @@ pub trait AuthenticationStorage {
 
     async fn id_exists(&self, id: &Uuid) -> Result<bool, Error>;
 
-    // Strre credentials (register new user)
+    // Store credentials (register new user)
     // TODO Maybe should return the id
     async fn store_credentials(
         &self,
@@ -32,30 +31,18 @@ pub trait AuthenticationStorage {
     async fn username_exists(&self, username: &str) -> Result<bool, Error>;
 }
 
-#[serde_as]
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub enum Error {
     /// Error returned by sqlx
     // *
     Database {
         context: String,
-        #[serde_as(as = "DisplayFromStr")]
-        source: sqlx::Error,
+        source: String,
     },
-    /// Data store cannot be validated
-    // Validation {
-    //     context: String,
-    // },
-    /// Connection issue with the database
-    // *
     Connection {
         context: String,
-        #[serde_as(as = "DisplayFromStr")]
-        source: sqlx::Error,
+        source: String,
     },
-    // Configuration {
-    //     context: String,
-    // },
     Miscellaneous {
         context: String,
     },
@@ -74,15 +61,9 @@ impl fmt::Display for Error {
             Error::Database { context, source } => {
                 write!(fmt, "Database: {context} | {source}")
             }
-            // Error::Validation { context } => {
-            //     write!(fmt, "Data: {context}")
-            // }
             Error::Connection { context, source } => {
                 write!(fmt, "Database Connection: {context} | {source}")
             }
-            // Error::Configuration { context } => {
-            //     write!(fmt, "Database Configuration: {context}")
-            // }
             Error::Miscellaneous { context } => {
                 write!(fmt, "Miscellaneous: {context}")
             }
@@ -100,15 +81,15 @@ impl From<ErrorContext<sqlx::Error>> for Error {
         match err.1 {
             sqlx::Error::PoolTimedOut => Error::Connection {
                 context: format!("PostgreSQL Storage: Connection Timeout: {}", err.0),
-                source: err.1,
+                source: err.1.to_string(),
             },
             sqlx::Error::Database(_) => Error::Database {
                 context: format!("PostgreSQL Storage: Database: {}", err.0),
-                source: err.1,
+                source: err.1.to_string(),
             },
             _ => Error::Database {
                 context: format!("PostgreSQL Storage: Miscellaneous: {}", err.0),
-                source: err.1,
+                source: err.1.to_string(),
             },
         }
     }

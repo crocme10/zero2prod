@@ -1,14 +1,14 @@
 pub mod cookies;
-mod error;
 mod middleware;
 pub mod routes;
-pub use self::error::Error;
+pub mod context;
 
 use axum::{
     error_handling::HandleErrorLayer,
     http::{header, HeaderValue, Method, StatusCode},
     routing::Router,
     BoxError,
+    middleware::{from_fn_with_state, map_response},
 };
 use axum_server::tls_rustls::{RustlsAcceptor, RustlsConfig};
 use axum_server::Server;
@@ -21,8 +21,11 @@ use tower::ServiceBuilder;
 use tower::{buffer::BufferLayer, limit::RateLimitLayer};
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
+use tower_cookies::CookieManagerLayer;
 
 use crate::domain::ports::secondary::{AuthenticationStorage, EmailService, SubscriptionStorage};
+use self::middleware::response_map::error;
+use self::middleware::resolve_context::resolve_context;
 
 pub fn new(
     listener: TcpListener,
@@ -30,7 +33,6 @@ pub fn new(
     static_dir: PathBuf,
     tls: RustlsConfig,
 ) -> (Router, Server<RustlsAcceptor>) {
-    // Routes that need to not have a session applied
 
     // FIXME Hardcoded origin
     let cors = CorsLayer::new()
@@ -38,16 +40,17 @@ pub fn new(
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
         .allow_credentials(true)
         .allow_headers([header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE]);
-    // let cors = CorsLayer::permissive();
 
-    // Create a router that will contain and match all routes for the application
-    // and a fallback service that will serve the static directory
     tracing::info!("Serving static directory: {}", static_dir.display());
+
     let router = Router::new()
-        .merge(routes::routes(state))
+        .merge(routes::routes(state.clone()))
         .fallback_service(routes::static_dir::static_dir(static_dir))
+        .layer(map_response(error))
+        .layer(from_fn_with_state(state.clone(), resolve_context))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
+        .layer(CookieManagerLayer::new())
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(handle_timeout_error))

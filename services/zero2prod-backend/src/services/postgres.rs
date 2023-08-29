@@ -7,7 +7,6 @@ use common::err_context::ErrorContextExt;
 use common::settings::DatabaseSettings;
 use secrecy::{ExposeSecret, Secret};
 use serde::Serialize;
-use serde_with::{serde_as, DisplayFromStr};
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::fmt;
 use std::ops::{Deref, DerefMut};
@@ -429,14 +428,12 @@ impl AuthenticationStorage for PostgresStorage {
     }
 }
 
-#[serde_as]
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub enum Error {
     /// Error returned by sqlx
     Database {
         context: String,
-        #[serde_as(as = "DisplayFromStr")]
-        source: sqlx::Error,
+        source: String,
     },
     Validation {
         context: String,
@@ -444,8 +441,7 @@ pub enum Error {
     /// Connection issue with the database
     Connection {
         context: String,
-        #[serde_as(as = "DisplayFromStr")]
-        source: sqlx::Error,
+        source: String,
     },
     Configuration {
         context: String,
@@ -478,18 +474,18 @@ impl From<ErrorContext<sqlx::Error>> for Error {
         match err.1 {
             sqlx::Error::PoolTimedOut => Error::Connection {
                 context: format!("PostgreSQL Storage: Connection Timeout: {}", err.0),
-                source: err.1,
+                source: err.1.to_string(),
             },
             sqlx::Error::Database(_) => Error::Database {
                 context: format!("PostgreSQL Storage: Database: {}", err.0),
-                source: err.1,
+                source: err.1.to_string(),
             },
             _ => Error::Connection {
                 context: format!(
                     "PostgreSQL Storage: Could not establish a connection: {}",
                     err.0
                 ),
-                source: err.1,
+                source: err.1.to_string(),
             },
         }
     }

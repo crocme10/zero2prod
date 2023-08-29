@@ -51,16 +51,19 @@ impl Authenticator {
             expected_password_hash = stored_password_hash
         }
 
-        spawn_blocking_with_tracing(move || verify_password_hash(expected_password_hash, password))
+        spawn_blocking_with_tracing(move || verify_password_hash(id, expected_password_hash, password))
             .await
-            .map_err(|_| Error::UnexpectedError {
+            .map_err(|_| Error::Miscellaneous {
+                user: id,
                 context: "Could not spawn blocking task".to_string(),
             })?
             .map_err(|_| Error::InvalidCredentials {
+                user: id,
                 context: "Could not verify password".to_string(),
             })?;
 
         id.ok_or_else(|| Error::InvalidCredentials {
+            user: None,
             context: "Could not verify password".to_string(),
         })
     }
@@ -71,11 +74,13 @@ impl Authenticator {
     skip(expected_password_hash, password_candidate)
 )]
 fn verify_password_hash(
+    user: Option<Uuid>,
     expected_password_hash: Secret<String>,
     password_candidate: Secret<String>,
 ) -> Result<(), Error> {
     let expected_password_hash = PasswordHash::new(expected_password_hash.expose_secret())
-        .map_err(|_| Error::UnexpectedError {
+        .map_err(|_| Error::Miscellaneous {
+            user,
             context: "Could not compute password hash".to_string(),
         })?;
 
@@ -87,6 +92,7 @@ fn verify_password_hash(
         .map_err(|_| {
             tracing::info!("argon2 could not verify password");
             Error::InvalidCredentials {
+                user,
                 context: "Password verification".to_string(),
             }
         })?;
@@ -106,12 +112,14 @@ pub fn compute_password_hash(password: Secret<String>) -> Result<Secret<String>,
 }
 
 #[serde_as]
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub enum Error {
     InvalidCredentials {
+        user: Option<Uuid>,
         context: String,
     },
-    UnexpectedError {
+    Miscellaneous {
+        user: Option<Uuid>,
         context: String,
     },
     Hasher {
@@ -124,7 +132,8 @@ pub enum Error {
         #[serde_as(as = "DisplayFromStr")]
         source: argon2::password_hash::errors::Error,
     },
-    Data {
+    // Error occurs when we try to retrieve credentials from Storage.
+    Storage {
         context: String,
         source: AuthenticationError,
     },
@@ -133,11 +142,11 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::InvalidCredentials { context } => {
-                write!(fmt, "Invalid Credentials: {context} ")
+            Error::InvalidCredentials { user, context } => {
+                write!(fmt, "Invalid Credentials: {} {context} ", user.map_or_else(|| "none".to_string(), |id| id.to_string()))
             }
-            Error::UnexpectedError { context } => {
-                write!(fmt, "Unexpected Error: {context} ")
+            Error::Miscellaneous { user, context } => {
+                write!(fmt, "Unexpected Error: {} {context} ", user.map_or_else(|| "none".to_string(), |id| id.to_string()))
             }
             Error::Hasher { context, source } => {
                 write!(fmt, "Hasher Error: {context} | {source}")
@@ -145,7 +154,7 @@ impl fmt::Display for Error {
             Error::Hashing { context, source } => {
                 write!(fmt, "Hashing Error: {context} | {source}")
             }
-            Error::Data { context, source } => {
+            Error::Storage { context, source } => {
                 write!(fmt, "Storage Error: {context} | {source}")
             }
         }
@@ -156,7 +165,7 @@ impl std::error::Error for Error {}
 
 impl From<ErrorContext<AuthenticationError>> for Error {
     fn from(err: ErrorContext<AuthenticationError>) -> Self {
-        Error::Data {
+        Error::Storage {
             context: err.0,
             source: err.1,
         }
