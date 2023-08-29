@@ -1,35 +1,15 @@
+<script setup lang="ts">
+  import {RouterView } from 'vue-router'
+</script>
+
 <template>
-  <main class="bg-white font-text relative">
-    <!--<header class="h-24 sm:h-32 flex items-center absolute top-0 right-0 z-20">
-        <div class="container mx-auto px-6 sm:px-12 flex items-center justify-end">
-            <nav class="flex items-center">
-                <a href="#" class="hidden xl:block font-text uppercase text-gray-800 tracking-wider px-4 xl:px-8 py-2 text-lg hover:underline">Home</a>
-                <a href="#" class="hidden xl:block font-text uppercase text-gray-800 tracking-wider px-4 xl:px-8 py-2 text-lg hover:underline">About</a>
-                <a href="#" class="hidden xl:block font-text uppercase text-gray-800 tracking-wider px-4 xl:px-8 py-2 text-lg hover:underline">Gallery</a>
-                <a href="#" class="hidden xl:block font-text uppercase text-gray-800 tracking-wider px-4 xl:px-8 py-2 text-lg hover:underline">Contact</a>
-                <button class="ml-4 xl:ml-8 flex flex-col">
-                    <span class="w-8 h-1 bg-gray-800 mb-1 rounded">
-</span>
-                    <span class="w-8 h-1 bg-gray-800 mb-1 rounded">
-</span>
-                    <span class="w-8 h-1 bg-gray-800 mb-1 rounded">
-</span>
-                </button>
-            </nav>
-        </div>
-    </header>-->
-    <div class="container mx-auto px-6 sm:px-12 flex flex-col sm:flex-row items-center relative z-10">
-        <div class="sm:w-1/2 xl:w-2/6 flex flex-col items-start py-24 sm:py-0">
-            <h1 class="text-6xl xl:text-10xl font-text text-slate-900 font-bold leading-none mb-8">Area 403</h1>
-            <!--<h2 class="text-xl xl:text-3xl font-text text-slate-900 uppercase font-bold leading-none tracking-widest mt-2 mb-6">Landing page</h2>-->
-            <p class="xl:text-lg tracking-wider text-slate-700 font-text font-bold">Software Development Consulting Company</p>
-            <a href="#" class="font-text text-white sm:font-xl uppercase py-3 px-6 sm:py-4 sm:px-8 rounded-full shadow-lg bg-slate-900 hover:bg-slate-800 mt-8 sm:mt-16">Coming Soon</a>
-        </div>
-        <div class="hidden sm:flex items-center justify-center xl:justify-end w-1/2 xl:w-4/6 py-32">
-          <!-- Image based on Photo by <a href="https://unsplash.com/@davidclode?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">David Clode</a> on <a href="https://unsplash.com/photos/8KbzBHA3ENc?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Unsplash</a> -->
-  
-          <img src="/tree-1.png" class="h-full w-4/5"/>
-        </div>
+  <main class="bg-white font-text relative h-screen">
+    <div class="container h-screen mx-auto px-6 sm:px-12 flex flex-col sm:flex-row items-center relative z-10">
+      <RouterView class="sm:w-1/2 lg:w-2/6"/>
+      <div class="hidden sm:flex items-center justify-center xl:justify-end w-1/2 lg:w-4/6 py-8">
+        <!-- Image based on Photo by <a href="https://unsplash.com/@davidclode?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">David Clode</a> on <a href="https://unsplash.com/photos/8KbzBHA3ENc?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Unsplash</a> -->
+        <img src="/tree-1.png" class="h-full w-4/5"/>
+      </div>
     </div>
 </main>
 </template>

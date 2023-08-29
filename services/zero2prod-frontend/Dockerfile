@@ -1,4 +1,4 @@
-FROM node:lts-alpine as builder
+FROM node:lts-alpine3.18 as builder
 # make the 'app' folder the current working directory
 WORKDIR /app
 # copy 'package.json' to install dependencies

@@ -6,7 +6,7 @@ export default {
 	],
 	theme: {
 		fontFamily: {
-			text: ['FiraSans']
+			text: ['ZillaSlab']
 		},
 		extend: {
       backgroundImage: {
