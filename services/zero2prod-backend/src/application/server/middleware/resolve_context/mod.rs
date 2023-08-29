@@ -1,25 +1,58 @@
 mod error;
 
 pub use self::error::Error;
-use crate::application::server::AppState;
-use crate::authentication::jwt::Authenticator;
-use common::err_context::ErrorContextExt;
-
 use crate::application::server::context::Context;
+use crate::application::server::cookies::JWT;
+use crate::application::server::AppState;
+use crate::application::server::routes::Error as RoutesError;
+use crate::authentication::jwt::Authenticator;
+
 use axum::extract::State;
 use axum::http::{header, Request};
+use axum::middleware::Next;
+use axum::response::Response;
+use common::err_context::ErrorContextExt;
 use std::fmt;
-use tower_cookies::Cookies;
+use tower_cookies::{Cookie, Cookies};
 
-#[allow(clippy::unused_async)]
+// #[allow(dead_code)] // For now, until we have the rpc.
+// pub async fn mw_ctx_require<B>(
+// 	ctx: Result<Ctx>,
+// 	req: Request<B>,
+// 	next: Next<B>,
+// ) -> Result<Response> {
+// 	debug!("{:<12} - mw_ctx_require - {ctx:?}", "MIDDLEWARE");
+//
+// 	ctx?;
+//
+// 	Ok(next.run(req).await)
+// }
+
 #[tracing::instrument(
     name = "Context Resolution"
-    skip(state, cookies)
+    skip(state, cookies, req, next)
 )]
 pub async fn resolve_context<B: fmt::Debug>(
+    state: State<AppState>,
+    cookies: Cookies,
+    mut req: Request<B>,
+    next: Next<B>,
+) -> Result<Response, RoutesError> {
+    let context = resolve(&cookies, state, &req).await;
+
+    if context.is_err() && !matches!(context, Err(Error::TokenNotFound)) {
+        cookies.remove(Cookie::named(JWT))
+    }
+
+    req.extensions_mut().insert(context);
+
+    Ok(next.run(req).await)
+}
+
+pub async fn resolve<B: fmt::Debug>(
     cookies: &Cookies,
     State(state): State<AppState>,
-    req: Request<B>,
+    req: &Request<B>,
 ) -> Result<Context, Error> {
     let token = cookies
         .get("jwt") // FIXME hardcoded
