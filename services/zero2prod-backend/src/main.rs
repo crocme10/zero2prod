@@ -63,9 +63,7 @@ async fn main() -> Result<(), Error> {
 
     let cmd = opts.cmd.clone();
 
-    let settings: Settings = opts
-        .try_into()
-        .context("Compiling Application Settings")?;
+    let settings: Settings = opts.try_into().context("Compiling Application Settings")?;
 
     match cmd {
         Command::Config => {

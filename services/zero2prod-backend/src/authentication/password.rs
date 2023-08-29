@@ -95,8 +95,7 @@ fn verify_password_hash(
 
 pub fn compute_password_hash(password: Secret<String>) -> Result<Secret<String>, Error> {
     let salt = SaltString::generate(&mut rand::thread_rng());
-    let argon_params =
-        Params::new(15000, 2, 1, None).context("Creating hashing parameters")?;
+    let argon_params = Params::new(15000, 2, 1, None).context("Creating hashing parameters")?;
 
     let hasher = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon_params);
     let password_hash = hasher

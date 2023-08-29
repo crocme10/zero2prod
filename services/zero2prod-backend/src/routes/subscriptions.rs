@@ -25,8 +25,8 @@ pub async fn subscriptions(
     State(state): State<AppState>,
     Json(request): Json<SubscriptionRequest>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let subscription = NewSubscription::try_from(request)
-        .context("Could not get valid subscription")?;
+    let subscription =
+        NewSubscription::try_from(request).context("Could not get valid subscription")?;
 
     match state
         .subscription

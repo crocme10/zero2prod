@@ -32,8 +32,7 @@ pub async fn publish_newsletter(
     State(state): State<AppState>,
     Json(request): Json<BodyData>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let credentials =
-        basic_authentication(&headers).context("Publishing newsletter")?;
+    let credentials = basic_authentication(&headers).context("Publishing newsletter")?;
 
     tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
 
