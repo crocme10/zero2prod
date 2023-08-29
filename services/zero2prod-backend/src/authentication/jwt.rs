@@ -64,7 +64,7 @@ impl Authenticator {
             .storage
             .id_exists(&user_id)
             .await
-            .context("Could not check if the id exists".to_string())?
+            .context("Could not check if the id exists")?
         {
             Ok(user_id)
         } else {

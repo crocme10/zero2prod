@@ -3,8 +3,7 @@ use axum::http::{header, status::StatusCode, HeaderMap};
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use secrecy::Secret;
-use serde::ser::SerializeStruct;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
 
@@ -42,7 +41,7 @@ pub async fn login(
     let id = authenticator
         .validate_credentials(&credentials)
         .await
-        .context("Could not validate credentials".to_string())?;
+        .context("Could not validate credentials")?;
 
     let token = build_token(id, state.secret);
 

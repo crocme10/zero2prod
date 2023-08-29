@@ -2,7 +2,7 @@ use clap::Parser;
 use std::fmt;
 
 use common::err_context::{ErrorContext, ErrorContextExt};
-use common::settings::{Error as SettingsError, Settings};
+use common::settings::Settings;
 use zero2prod::application::opts::{Command, Error as OptsError, Opts};
 use zero2prod::application::{ApplicationBuilder, Error as ApplicationError};
 use zero2prod::telemetry;
@@ -17,21 +17,11 @@ pub enum Error {
         context: String,
         source: ApplicationError,
     },
-    Configuration {
-        context: String,
-        source: SettingsError,
-    },
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Configuration { context, source } => {
-                write!(
-                    fmt,
-                    "REST Server: Could not build configuration: {context} | {source}"
-                )
-            }
             Error::Application { context, source } => {
                 write!(fmt, "Could not build application: {context} | {source}")
             }
@@ -44,17 +34,8 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-impl From<ErrorContext<String, SettingsError>> for Error {
-    fn from(err: ErrorContext<String, SettingsError>) -> Self {
-        Error::Configuration {
-            context: err.0,
-            source: err.1,
-        }
-    }
-}
-
-impl From<ErrorContext<String, ApplicationError>> for Error {
-    fn from(err: ErrorContext<String, ApplicationError>) -> Self {
+impl From<ErrorContext<ApplicationError>> for Error {
+    fn from(err: ErrorContext<ApplicationError>) -> Self {
         Error::Application {
             context: err.0,
             source: err.1,
@@ -62,8 +43,8 @@ impl From<ErrorContext<String, ApplicationError>> for Error {
     }
 }
 
-impl From<ErrorContext<String, OptsError>> for Error {
-    fn from(err: ErrorContext<String, OptsError>) -> Self {
+impl From<ErrorContext<OptsError>> for Error {
+    fn from(err: ErrorContext<OptsError>) -> Self {
         Error::Options {
             context: err.0,
             source: err.1,
@@ -84,7 +65,7 @@ async fn main() -> Result<(), Error> {
 
     let settings: Settings = opts
         .try_into()
-        .context("Compiling Application Settings".to_string())?;
+        .context("Compiling Application Settings")?;
 
     match cmd {
         Command::Config => {
@@ -93,11 +74,11 @@ async fn main() -> Result<(), Error> {
         Command::Run => {
             let app = ApplicationBuilder::new(settings)
                 .await
-                .context("could not build application".to_string())?
+                .context("could not build application")?
                 .build();
             app.run_until_stopped()
                 .await
-                .context("application runtime error".to_string())?;
+                .context("application runtime error")?;
         }
     }
     Ok(())

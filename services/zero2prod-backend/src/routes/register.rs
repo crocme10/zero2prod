@@ -6,8 +6,7 @@ use common::err_context::{ErrorContext, ErrorContextExt};
 use hyper::header::HeaderMap;
 use passwords::{analyzer, scorer};
 use secrecy::Secret;
-use serde::ser::SerializeStruct;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
 
@@ -33,7 +32,7 @@ pub async fn register(
         .authentication
         .email_exists(&request.email)
         .await
-        .context("Could not check if the email exists".to_string())?
+        .context("Could not check if the email exists")?
     {
         return Err(Error::DuplicateEmail {
             context: "Unable to register new user".to_string(),
@@ -44,7 +43,7 @@ pub async fn register(
         .authentication
         .username_exists(&request.username)
         .await
-        .context("Could not check if the username exists".to_string())?
+        .context("Could not check if the username exists")?
     {
         return Err(Error::DuplicateUsername {
             context: "Unable to register new user".to_string(),
@@ -69,7 +68,7 @@ pub async fn register(
         .authentication
         .store_credentials(id, &request.email, &credentials)
         .await
-        .context("Could not store credentials".to_string())?;
+        .context("Could not store credentials")?;
 
     let token = build_token(id, state.secret);
 

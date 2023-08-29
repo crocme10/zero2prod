@@ -2,8 +2,8 @@
 use crate::domain::SubscriberEmail;
 use async_trait::async_trait;
 use common::err_context::ErrorContext;
-use serde_with::{serde_as, DisplayFromStr};
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 use std::fmt;
 
 #[cfg(test)]

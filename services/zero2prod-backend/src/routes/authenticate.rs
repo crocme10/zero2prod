@@ -2,8 +2,7 @@ use axum::extract::{Json, State};
 use axum::http::{header, status::StatusCode, Request};
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::cookie::CookieJar;
-use serde::ser::SerializeStruct;
-use serde::{Serialize, Serializer};
+use serde::Serialize;
 use std::fmt;
 use uuid::Uuid;
 
@@ -52,7 +51,7 @@ pub async fn authenticate<B: fmt::Debug>(
     let id = authenticator
         .validate_token(&token)
         .await
-        .context("Could not validate token".to_string())?;
+        .context("Could not validate token")?;
 
     let resp = serde_json::json!({
         "status": "success",

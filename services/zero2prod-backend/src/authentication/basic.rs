@@ -17,7 +17,7 @@ pub fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, Error> {
             context: "The Authorization Header was missing".to_string(),
         })?
         .to_str()
-        .context("The 'Authorization' header was not a valid UTF8 string.".to_string())?;
+        .context("The 'Authorization' header was not a valid UTF8 string.")?;
 
     let base64encoded_segment =
         header_value
@@ -28,10 +28,10 @@ pub fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, Error> {
 
     let decoded_bytes = base64::engine::general_purpose::STANDARD
         .decode(base64encoded_segment)
-        .context("Failed to base64-decode 'Basic' credentials.".to_string())?;
+        .context("Failed to base64-decode 'Basic' credentials.")?;
 
     let decoded_credentials = String::from_utf8(decoded_bytes)
-        .context("The decoded credential string is not valid UTF8.".to_string())?;
+        .context("The decoded credential string is not valid UTF8.")?;
 
     // Split into two segments, using ':' as delimiter
     let mut credentials = decoded_credentials.splitn(2, ':');

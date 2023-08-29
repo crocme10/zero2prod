@@ -1,8 +1,7 @@
 use axum::extract::{Json, Query, State};
 use axum::http::status::StatusCode;
 use axum::response::{IntoResponse, Response};
-use serde::ser::SerializeStruct;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
 
@@ -28,7 +27,7 @@ pub async fn subscriptions_confirmation(
         .subscription
         .get_subscriber_id_by_token(&request.token)
         .await
-        .context("Could not get subscriber id by token".to_string())?
+        .context("Could not get subscriber id by token")?
     {
         None => Err(Error::MissingToken {
             context: "Expected token".to_string(),
@@ -38,7 +37,7 @@ pub async fn subscriptions_confirmation(
                 .subscription
                 .confirm_subscriber_by_id_and_delete_token(&id)
                 .await
-                .context("Could not confirm subscriber".to_string())?;
+                .context("Could not confirm subscriber")?;
             let resp = SubscriptionConfirmationResp {
                 status: "OK".to_string(),
             };

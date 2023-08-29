@@ -33,7 +33,7 @@ pub async fn publish_newsletter(
     Json(request): Json<BodyData>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let credentials =
-        basic_authentication(&headers).context("Publishing newsletter".to_string())?;
+        basic_authentication(&headers).context("Publishing newsletter")?;
 
     tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
 
@@ -44,7 +44,7 @@ pub async fn publish_newsletter(
     let id = authenticator
         .validate_credentials(&credentials)
         .await
-        .context("Could not validate credentials".to_string())?;
+        .context("Could not validate credentials")?;
 
     tracing::Span::current().record("id", &tracing::field::display(&id));
 
@@ -52,7 +52,7 @@ pub async fn publish_newsletter(
         .subscription
         .get_confirmed_subscribers_email()
         .await
-        .context("Could not retrieve list of confirmed subscribers".to_string())?;
+        .context("Could not retrieve list of confirmed subscribers")?;
 
     for subscriber in subscribers {
         let email = create_newsletter_email(&subscriber.email, &request);
@@ -60,7 +60,7 @@ pub async fn publish_newsletter(
             .email
             .send_email(email)
             .await
-            .context("Cannot send newsletter email".to_string())?;
+            .context("Cannot send newsletter email")?;
     }
     Ok::<axum::Json<()>, Error>(Json(()))
 }

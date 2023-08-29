@@ -64,9 +64,9 @@ impl EmailService for EmailClient {
             .json(&request_body)
             .send()
             .await
-            .context("http client request to email service".to_string())?
+            .context("http client request to email service")?
             .error_for_status()
-            .context("http client response".to_string())?;
+            .context("http client response")?;
 
         Ok(())
     }

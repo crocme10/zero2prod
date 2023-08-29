@@ -84,7 +84,7 @@ impl ApplicationBuilder {
         let storage = Arc::new(
             PostgresStorage::new(settings)
                 .await
-                .context("Establishing a database connection".to_string())?,
+                .context("Establishing a database connection")?,
         );
         self.authentication = Some(storage);
         Ok(self)
@@ -94,7 +94,7 @@ impl ApplicationBuilder {
         let storage = Arc::new(
             PostgresStorage::new(settings)
                 .await
-                .context("Establishing a database connection".to_string())?,
+                .context("Establishing a database connection")?,
         );
         self.subscription = Some(storage);
         Ok(self)
@@ -104,7 +104,7 @@ impl ApplicationBuilder {
         let email = Arc::new(
             EmailClient::new(settings)
                 .await
-                .context("Establishing an email service connection".to_string())?,
+                .context("Establishing an email service connection")?,
         );
         self.email = Some(email);
         Ok(self)
@@ -132,7 +132,7 @@ impl ApplicationBuilder {
         };
         let cert_path = path
             .canonicalize()
-            .context("Could not canonicalize certificate path".to_string())?;
+            .context("Could not canonicalize certificate path")?;
         let path = PathBuf::from(&settings.key);
         let path = if path.is_absolute() {
             path
@@ -143,7 +143,7 @@ impl ApplicationBuilder {
         };
         let key_path = path
             .canonicalize()
-            .context("Could not canonicalize private key path".to_string())?;
+            .context("Could not canonicalize private key path")?;
 
         let config = RustlsConfig::from_pem_file(cert_path, key_path)
             .await
@@ -179,7 +179,7 @@ impl ApplicationBuilder {
         };
         let path = path
             .canonicalize()
-            .context("Could not canonicalize static dir".to_string())?;
+            .context("Could not canonicalize static dir")?;
         self.static_dir = Some(path);
         Ok(self)
     }
@@ -241,7 +241,7 @@ impl Application {
         self.server
             .serve(self.app.into_make_service())
             .await
-            .context("server execution error".to_string())?;
+            .context("server execution error")?;
         Ok(())
     }
 }

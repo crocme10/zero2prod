@@ -45,7 +45,7 @@ impl Authenticator {
             .storage
             .get_credentials(&username)
             .await
-            .context("Retrieving credentials for validation".to_string())?
+            .context("Retrieving credentials for validation")?
         {
             id = Some(stored_user_id);
             expected_password_hash = stored_password_hash
@@ -95,13 +95,13 @@ fn verify_password_hash(
 
 pub fn compute_password_hash(password: Secret<String>) -> Result<Secret<String>, Error> {
     let salt = SaltString::generate(&mut rand::thread_rng());
-    let argon_params = Params::new(15000, 2, 1, None)
-        .context("Creating hashing parameters".to_string())?;
+    let argon_params =
+        Params::new(15000, 2, 1, None).context("Creating hashing parameters")?;
 
     let hasher = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon_params);
     let password_hash = hasher
         .hash_password(password.expose_secret().as_bytes(), &salt)
-        .context("Hashing password".to_string())?;
+        .context("Hashing password")?;
 
     Ok(Secret::new(password_hash.to_string()))
 }

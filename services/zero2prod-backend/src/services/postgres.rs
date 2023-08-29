@@ -1,14 +1,12 @@
 /// Implementation of authentication_store and subscriptions_store
 /// using postgres
-
 use async_trait::async_trait;
 use chrono::Utc;
 use common::err_context::ErrorContext;
 use common::err_context::ErrorContextExt;
 use common::settings::DatabaseSettings;
 use secrecy::{ExposeSecret, Secret};
-use serde::ser::SerializeStruct;
-use serde::{Serialize, Serializer};
+use serde::Serialize;
 use serde_with::{serde_as, DisplayFromStr};
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::fmt;
@@ -317,7 +315,7 @@ impl SubscriptionStorage for PostgresStorage {
         )
         .fetch_all(&mut **conn)
         .await
-        .context("Could not get a list of confirmed subscribers".to_string())?;
+        .context("Could not get a list of confirmed subscribers")?;
         saved
             .into_iter()
             .map(|r| match SubscriberEmail::try_from(r.email) {
@@ -346,17 +344,14 @@ impl AuthenticationStorage for PostgresStorage {
         )
         .fetch_optional(&mut **conn)
         .await
-        .context("Could not retrieve credentials".to_string())?
+        .context("Could not retrieve credentials")?
         .map(|row| (row.id, Secret::new(row.password_hash)));
 
         Ok(row)
     }
 
     // We skip email and credentials in the log for security.
-    #[tracing::instrument(
-        name = "Storing credentials in postgres",
-        skip(email, credentials)
-    )]
+    #[tracing::instrument(name = "Storing credentials in postgres", skip(email, credentials))]
     async fn store_credentials(
         &self,
         id: Uuid,
@@ -383,7 +378,7 @@ impl AuthenticationStorage for PostgresStorage {
         )
         .execute(&mut **conn)
         .await
-        .context("Could not create credentials".to_string())?;
+        .context("Could not create credentials")?;
 
         Ok(())
     }
@@ -395,7 +390,7 @@ impl AuthenticationStorage for PostgresStorage {
         let exist = sqlx::query_scalar!(r#"SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)"#, id,)
             .fetch_one(&mut **conn)
             .await
-            .context("Could not check id exists".to_string())?
+            .context("Could not check id exists")?
             .unwrap();
 
         Ok(exist)
@@ -411,7 +406,7 @@ impl AuthenticationStorage for PostgresStorage {
         )
         .fetch_one(&mut **conn)
         .await
-        .context("Could not check email exists".to_string())?
+        .context("Could not check email exists")?
         .unwrap();
 
         Ok(exist)
@@ -427,7 +422,7 @@ impl AuthenticationStorage for PostgresStorage {
         )
         .fetch_one(&mut **conn)
         .await
-        .context("Could not check username exists".to_string())?
+        .context("Could not check username exists")?
         .unwrap();
 
         Ok(exist)

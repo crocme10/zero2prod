@@ -63,7 +63,7 @@ pub enum Error {
         context: String,
         // We could put `source: PasswordError`, but That
         // would make the definition of the error circular:
-        // it would depend on pass:error, which depends on 
+        // it would depend on pass:error, which depends on
         // error
     },
 }
@@ -99,21 +99,17 @@ impl From<ErrorContext<sqlx::Error>> for Error {
     fn from(err: ErrorContext<sqlx::Error>) -> Self {
         match err.1 {
             sqlx::Error::PoolTimedOut => Error::Connection {
-                context: &format!("PostgreSQL Storage: Connection Timeout: {}", err.0),
+                context: format!("PostgreSQL Storage: Connection Timeout: {}", err.0),
                 source: err.1,
             },
             sqlx::Error::Database(_) => Error::Database {
-                context: &format!("PostgreSQL Storage: Database: {}", err.0),
+                context: format!("PostgreSQL Storage: Database: {}", err.0),
                 source: err.1,
             },
             _ => Error::Database {
-                context: &format!(
-                    "PostgreSQL Storage: Miscellaneous: {}",
-                    err.0
-                ),
+                context: format!("PostgreSQL Storage: Miscellaneous: {}", err.0),
                 source: err.1,
             },
         }
     }
 }
-

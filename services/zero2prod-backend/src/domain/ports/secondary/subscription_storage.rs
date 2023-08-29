@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use common::err_context::ErrorContext;
-use serde::ser::SerializeStruct;
-use serde::{Serialize, Serializer};
+use serde::Serialize;
 use serde_with::{serde_as, DisplayFromStr};
 use std::fmt;
 use uuid::Uuid;

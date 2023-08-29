@@ -1,12 +1,15 @@
-use std::fmt;
 use serde::Serialize;
+use serde_with::{serde_as, DisplayFromStr};
+use std::fmt;
 
 use common::err_context::ErrorContext;
 
+#[serde_as]
 #[derive(Debug, Serialize)]
 pub enum Error {
     Server {
         context: String,
+        #[serde_as(as = "DisplayFromStr")]
         source: hyper::Error,
     },
 }

@@ -2,8 +2,7 @@ use axum::extract::{Json, State};
 use axum::http::status::StatusCode;
 use axum::response::{IntoResponse, Response};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use serde::ser::SerializeStruct;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
 
@@ -27,13 +26,13 @@ pub async fn subscriptions(
     Json(request): Json<SubscriptionRequest>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let subscription = NewSubscription::try_from(request)
-        .context("Could not get valid subscription".to_string())?;
+        .context("Could not get valid subscription")?;
 
     match state
         .subscription
         .get_subscription_by_email(subscription.email.as_ref())
         .await
-        .context("Could not get subscription by email".to_string())?
+        .context("Could not get subscription by email")?
     {
         None => {
             tracing::info!("No prior subscription found");
@@ -43,7 +42,7 @@ pub async fn subscriptions(
                 .subscription
                 .create_subscription_and_store_token(&subscription, &token)
                 .await
-                .context("Could not create new subscription".to_string())?;
+                .context("Could not create new subscription")?;
 
             let email = create_confirmation_email(&state.base_url, &subscription.email, &token);
 
@@ -51,7 +50,7 @@ pub async fn subscriptions(
                 .email
                 .send_email(email)
                 .await
-                .context("Could not send confirmation email".to_string())?;
+                .context("Could not send confirmation email")?;
 
             let resp = SubscriptionsResp { subscription };
             Ok::<axum::Json<SubscriptionsResp>, Error>(Json(resp))
@@ -69,7 +68,7 @@ pub async fn subscriptions(
                         .subscription
                         .get_token_by_subscriber_id(&subscription.id)
                         .await
-                        .context("Could not get token by subscriber's id".to_string())?
+                        .context("Could not get token by subscriber's id")?
                     {
                         None => Err(Error::MissingToken {
                             context: "Expected token".to_string(),
@@ -85,7 +84,7 @@ pub async fn subscriptions(
                                 .email
                                 .send_email(email)
                                 .await
-                                .context("Could not send confirmation email".to_string())?;
+                                .context("Could not send confirmation email")?;
                             let resp = SubscriptionsResp { subscription };
                             Ok::<axum::Json<SubscriptionsResp>, Error>(Json(resp))
                         }
@@ -102,7 +101,7 @@ pub async fn subscriptions(
                         .email
                         .send_email(email)
                         .await
-                        .context("Could not send confirmation email".to_string())?;
+                        .context("Could not send confirmation email")?;
                     let resp = SubscriptionsResp { subscription };
                     Ok::<axum::Json<SubscriptionsResp>, Error>(Json(resp))
                 }
