@@ -1,12 +1,13 @@
 use axum::extract::{Json, State};
-use axum::http::{header, status::StatusCode, HeaderMap};
+use axum::http::{status::StatusCode, HeaderMap};
 use axum::response::{IntoResponse, Response};
-use axum_extra::extract::cookie::{Cookie, SameSite};
 use secrecy::Secret;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use tower_cookies::Cookies;
 use uuid::Uuid;
 
+use crate::application::server::cookies;
 use crate::application::server::AppState;
 use crate::authentication::jwt::build_token;
 use crate::authentication::password::{Authenticator, Error as PasswordError};
@@ -15,6 +16,9 @@ use crate::domain::Credentials;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 /// POST handler for user login
+/// The user submits credentials in a request.
+/// The response can be:
+/// - On success (valid credentials...)
 #[allow(clippy::unused_async)]
 #[tracing::instrument(
     name = "User Login"
@@ -25,6 +29,7 @@ use common::err_context::{ErrorContext, ErrorContextExt};
 )]
 pub async fn login(
     State(state): State<AppState>,
+    cookies: Cookies,
     Json(request): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let credentials = Credentials {
@@ -45,47 +50,11 @@ pub async fn login(
 
     let token = build_token(id, state.secret);
 
-    let resp = LoginResp {
-        status: "success".to_string(),
-        token,
-    };
+    cookies::set_token_cookie(&cookies, &token);
 
-    Ok::<_, Error>(resp)
-}
-
-/// This is what we return to the user in response to the subscription request.
-/// Currently this is just a placeholder, and it does not return any useful
-/// information.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LoginResp {
-    pub status: String, // FIXME Placeholder
-    pub token: String,
-}
-
-impl IntoResponse for LoginResp {
-    fn into_response(self) -> Response {
-        let LoginResp { status: _, token } = self.clone();
-        let json = serde_json::to_string(&self).unwrap();
-        let cookie = Cookie::build("jwt", token)
-            .path("/")
-            .max_age(time::Duration::hours(1))
-            .same_site(SameSite::Lax)
-            .http_only(true)
-            .finish();
-        let mut headers = HeaderMap::new();
-        headers.insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
-        headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
-        headers.insert("X-Frame-Options", "DENY".parse().unwrap());
-        headers.insert("X-XSS-Protection", "0".parse().unwrap());
-        headers.insert("Cache-Control", "no-store".parse().unwrap());
-        headers.insert(
-            "Content-Security-Policy",
-            "default-src 'none'; frame-ancestors 'none'; sandbox"
-                .parse()
-                .unwrap(),
-        );
-        (StatusCode::OK, headers, json).into_response()
-    }
+    Ok::<_, Error>(Json(serde_json::json!({
+        "status": "success"
+    })))
 }
 
 /// This is the information sent by the user to login.

@@ -1,7 +1,6 @@
+pub mod cookies;
 mod error;
 mod middleware;
-/// This module holds the webserver specific details,
-/// in our case all (most?) the axum related code.
 pub mod routes;
 pub use self::error::Error;
 
