@@ -5,7 +5,7 @@ use common::err_context::{ErrorContext, ErrorContextExt};
 use common::settings::Settings;
 use zero2prod::application::opts::{Command, Error as OptsError, Opts};
 use zero2prod::application::{ApplicationBuilder, Error as ApplicationError};
-use zero2prod::telemetry;
+use zero2prod::utils::telemetry;
 
 #[derive(Debug)]
 pub enum Error {

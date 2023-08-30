@@ -22,7 +22,7 @@ use crate::domain::{
     ConfirmedSubscriber, Credentials, NewSubscription, SubscriberEmail, SubscriberName,
     Subscription, SubscriptionStatus,
 };
-use crate::telemetry::spawn_blocking_with_tracing;
+use crate::utils::telemetry::spawn_blocking_with_tracing;
 
 /// This is the executor type, which can be either a pool connection, or a transaction.
 /// This is the sort of generic solution that I have found which allows me to use
