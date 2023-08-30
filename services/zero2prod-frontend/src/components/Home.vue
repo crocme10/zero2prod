@@ -11,7 +11,7 @@
     </div>
     <div class="w-1/2 flex flex-col items-start sm:pl-24 py-24 sm:py-0">
       <RouterLink to="/about" class="xl:block font-text font-bold uppercase text-gray-800 tracking-wider px-4 xl:px-8 py-6 text-lg hover:underline">About</RouterLink>
-      <RouterLink to="/about" class="xl:block font-text font-bold uppercase text-gray-800 tracking-wider px-4 xl:px-8 py-6 text-lg hover:underline">Projects</RouterLink>
+      <RouterLink to="/projects" class="xl:block font-text font-bold uppercase text-gray-800 tracking-wider px-4 xl:px-8 py-6 text-lg hover:underline">Projects</RouterLink>
       <RouterLink to="/contact" class="xl:block font-text font-bold uppercase text-gray-800 tracking-wider px-4 xl:px-8 py-6 text-lg hover:underline">Contact</RouterLink>
     </div>
   </div>
