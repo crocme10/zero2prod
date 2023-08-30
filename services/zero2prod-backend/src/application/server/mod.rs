@@ -26,6 +26,7 @@ use tower_http::trace::TraceLayer;
 use self::middleware::resolve_context::resolve_context;
 use self::middleware::response_map::error;
 use crate::domain::ports::secondary::{AuthenticationStorage, EmailService, SubscriptionStorage};
+use crate::utils::telemetry::make_span;
 
 pub fn new(
     listener: TcpListener,
@@ -48,7 +49,7 @@ pub fn new(
         .layer(map_response(error))
         .layer(from_fn_with_state(state.clone(), resolve_context))
         .layer(cors)
-        .layer(TraceLayer::new_for_http())
+        .layer(TraceLayer::new_for_http().make_span_with(make_span))
         .layer(CookieManagerLayer::new())
         .layer(
             ServiceBuilder::new()
