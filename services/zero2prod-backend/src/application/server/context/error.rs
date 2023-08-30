@@ -3,9 +3,7 @@ use std::fmt;
 
 #[derive(Debug, Serialize)]
 pub enum Error {
-    TBD {
-        context: String,
-    },
+    TBD { context: String },
 }
 
 impl fmt::Display for Error {

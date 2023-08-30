@@ -1,5 +1,5 @@
-pub mod login;
 mod error;
+pub mod login;
 pub mod static_dir;
 
 pub use self::error::Error;

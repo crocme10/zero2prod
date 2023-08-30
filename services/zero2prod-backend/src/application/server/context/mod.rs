@@ -1,19 +1,16 @@
 mod error;
 
-pub use self::error::Error;
-use crate::application::server::AppState;
-use crate::authentication::jwt::{Authenticator, Error as JwtError};
-use common::err_context::{ErrorContext, ErrorContextExt};
-
-use crate::application::server::routes::Error as RoutesError;
 use async_trait::async_trait;
 use axum::extract::FromRequestParts;
-use axum::extract::State;
-use axum::http::{header, request::Parts, Request};
+use axum::http::request::Parts;
 use serde::Serialize;
 use std::{convert, fmt};
-use tower_cookies::Cookies;
 use uuid::Uuid;
+
+pub use self::error::Error;
+use crate::application::server::routes::Error as RoutesError;
+use crate::authentication::jwt::Error as JwtError;
+use common::err_context::ErrorContext;
 
 #[derive(Clone, Debug)]
 pub struct Context {
@@ -26,7 +23,7 @@ impl Context {
     }
 
     pub fn new(user_id: Option<Uuid>) -> Result<Self, Error> {
-        if user_id == None {
+        if user_id.is_none() {
             Err(Error::TBD {
                 context: "Cannot assign to root context".to_string(),
             })
@@ -90,45 +87,4 @@ impl fmt::Display for ContextError {
             }
         }
     }
-}
-
-#[allow(clippy::unused_async)]
-#[tracing::instrument(
-    name = "User Authentication"
-    skip(state, cookies)
-)]
-pub async fn resolve_context<B: fmt::Debug>(
-    cookies: &Cookies,
-    State(state): State<AppState>,
-    req: Request<B>,
-) -> Result<Context, ContextError> {
-    let token = cookies
-        .get("jwt") // FIXME hardcoded
-        .map(|cookie| cookie.value().to_string())
-        .or_else(|| {
-            req.headers()
-                .get(header::AUTHORIZATION)
-                .and_then(|auth_header| auth_header.to_str().ok())
-                .and_then(|auth_value| {
-                    auth_value
-                        .strip_prefix("Bearer ")
-                        .map(|token| token.to_owned())
-                })
-        });
-
-    let token = token.ok_or_else(|| ContextError::TokenNotFound)?;
-
-    let authenticator = Authenticator {
-        storage: state.authentication.clone(),
-        secret: state.secret.clone(),
-    };
-
-    let id = authenticator
-        .validate_token(&token)
-        .await
-        .context("Could not validate token")?;
-
-    Context::new(Some(id)).map_err(|_| ContextError::InvalidUserId {
-        context: "invalid user id".to_string(),
-    })
 }

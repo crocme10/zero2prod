@@ -71,6 +71,7 @@ mod tests {
     use axum::{
         body::Body,
         http::{header, Request, StatusCode},
+        middleware::{from_fn_with_state, map_response},
         routing::{post, Router},
     };
     use fake::faker::{internet::en::Password, name::en::Name};
@@ -80,8 +81,12 @@ mod tests {
     use secrecy::Secret;
     use std::sync::Arc;
     use tower::ServiceExt;
+    use tower_cookies::CookieManagerLayer;
 
     use crate::{
+        application::server::{
+            middleware::resolve_context::resolve_context, middleware::response_map::error,
+        },
         application::server::{AppState, ApplicationBaseUrl},
         authentication::password::compute_password_hash,
         domain::ports::secondary::{
@@ -98,8 +103,13 @@ mod tests {
         pub code: String,
     }
 
-    fn login_route() -> Router<AppState> {
-        Router::new().route("/api/login", post(login))
+    fn login_route(state: AppState) -> Router {
+        Router::new()
+            .route("/api/login", post(login))
+            .layer(map_response(error))
+            .layer(from_fn_with_state(state.clone(), resolve_context))
+            .layer(CookieManagerLayer::new())
+            .with_state(state)
     }
 
     fn send_login_request(uri: &str, request: LoginRequest) -> Request<Body> {
@@ -142,7 +152,7 @@ mod tests {
             secret: Secret::new("secret".to_string()),
         };
 
-        let app = login_route().with_state(state);
+        let app = login_route(state);
 
         let response = app
             .oneshot(send_login_request("/api/login", request))
@@ -182,7 +192,7 @@ mod tests {
             secret: Secret::new("secret".to_string()),
         };
 
-        let app = login_route().with_state(state);
+        let app = login_route(state);
 
         let mut response = app
             .oneshot(send_login_request("/api/login", request))

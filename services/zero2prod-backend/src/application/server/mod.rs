@@ -1,14 +1,14 @@
+pub mod context;
 pub mod cookies;
 mod middleware;
 pub mod routes;
-pub mod context;
 
 use axum::{
     error_handling::HandleErrorLayer,
     http::{header, HeaderValue, Method, StatusCode},
+    middleware::{from_fn_with_state, map_response},
     routing::Router,
     BoxError,
-    middleware::{from_fn_with_state, map_response},
 };
 use axum_server::tls_rustls::{RustlsAcceptor, RustlsConfig};
 use axum_server::Server;
@@ -19,13 +19,13 @@ use std::{fmt, net::TcpListener};
 use std::{fmt::Display, sync::Arc};
 use tower::ServiceBuilder;
 use tower::{buffer::BufferLayer, limit::RateLimitLayer};
+use tower_cookies::CookieManagerLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
-use tower_cookies::CookieManagerLayer;
 
-use crate::domain::ports::secondary::{AuthenticationStorage, EmailService, SubscriptionStorage};
-use self::middleware::response_map::error;
 use self::middleware::resolve_context::resolve_context;
+use self::middleware::response_map::error;
+use crate::domain::ports::secondary::{AuthenticationStorage, EmailService, SubscriptionStorage};
 
 pub fn new(
     listener: TcpListener,
@@ -33,7 +33,6 @@ pub fn new(
     static_dir: PathBuf,
     tls: RustlsConfig,
 ) -> (Router, Server<RustlsAcceptor>) {
-
     // FIXME Hardcoded origin
     let cors = CorsLayer::new()
         .allow_origin("http://127.0.0.1:5173".parse::<HeaderValue>().unwrap())

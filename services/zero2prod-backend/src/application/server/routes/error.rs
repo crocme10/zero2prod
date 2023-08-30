@@ -1,14 +1,14 @@
 use axum::extract::Json;
-use serde_json::Value;
 use axum::http::status::StatusCode;
 use axum::response::{IntoResponse, Response};
+use serde_json::Value;
 
 use serde::Serialize;
 use std::fmt;
 
-use common::err_context::ErrorContext;
-use crate::authentication::password::Error as PasswordError;
 use crate::application::server::context::ContextError;
+use crate::authentication::password::Error as PasswordError;
+use common::err_context::ErrorContext;
 
 #[derive(Clone, Debug, Serialize)]
 pub enum Error {
@@ -19,7 +19,7 @@ pub enum Error {
     Context {
         context: String,
         source: ContextError,
-    }
+    },
 }
 
 impl fmt::Display for Error {
@@ -45,7 +45,10 @@ impl IntoResponse for Error {
 
 impl From<ErrorContext<ContextError>> for Error {
     fn from(err: ErrorContext<ContextError>) -> Self {
-        Error::Context { context: err.0, source: err.1 }
+        Error::Context {
+            context: err.0,
+            source: err.1,
+        }
     }
 }
 
@@ -67,7 +70,7 @@ impl Error {
                     "message": context,
                     "code": "auth/missing_credentials".to_string()
                 })),
-            )
+            ),
         }
     }
 }

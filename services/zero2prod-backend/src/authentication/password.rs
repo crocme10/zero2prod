@@ -51,16 +51,18 @@ impl Authenticator {
             expected_password_hash = stored_password_hash
         }
 
-        spawn_blocking_with_tracing(move || verify_password_hash(id, expected_password_hash, password))
-            .await
-            .map_err(|_| Error::Miscellaneous {
-                user: id,
-                context: "Could not spawn blocking task".to_string(),
-            })?
-            .map_err(|_| Error::InvalidCredentials {
-                user: id,
-                context: "Could not verify password".to_string(),
-            })?;
+        spawn_blocking_with_tracing(move || {
+            verify_password_hash(id, expected_password_hash, password)
+        })
+        .await
+        .map_err(|_| Error::Miscellaneous {
+            user: id,
+            context: "Could not spawn blocking task".to_string(),
+        })?
+        .map_err(|_| Error::InvalidCredentials {
+            user: id,
+            context: "Could not verify password".to_string(),
+        })?;
 
         id.ok_or_else(|| Error::InvalidCredentials {
             user: None,
@@ -143,10 +145,18 @@ impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::InvalidCredentials { user, context } => {
-                write!(fmt, "Invalid Credentials: {} {context} ", user.map_or_else(|| "none".to_string(), |id| id.to_string()))
+                write!(
+                    fmt,
+                    "Invalid Credentials: {} {context} ",
+                    user.map_or_else(|| "none".to_string(), |id| id.to_string())
+                )
             }
             Error::Miscellaneous { user, context } => {
-                write!(fmt, "Unexpected Error: {} {context} ", user.map_or_else(|| "none".to_string(), |id| id.to_string()))
+                write!(
+                    fmt,
+                    "Unexpected Error: {} {context} ",
+                    user.map_or_else(|| "none".to_string(), |id| id.to_string())
+                )
             }
             Error::Hasher { context, source } => {
                 write!(fmt, "Hasher Error: {context} | {source}")
