@@ -8,3 +8,7 @@ base_url = "http://127.0.0.1"
 static_dir = "../zero2prod-frontend/dist" # Relative to ??? FIXME
 cert = "certs/cert.pem"
 key = "certs/key.pem"
+
+[tracing]
+service_name = "zero2prod-backend"
+otlp_exporter_endpoint = "http://collector:4317"

@@ -63,9 +63,17 @@ pub struct EmailClientSettings {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TracingSettings {
+    pub service_name: String,
+    pub otlp_exporter_endpoint: String,
+    pub level: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub application: ApplicationSettings,
     pub database: DatabaseSettings,
     pub email_client: EmailClientSettings,
+    pub tracing: TracingSettings,
     pub mode: String,
 }
