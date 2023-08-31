@@ -3,7 +3,7 @@ use std::env;
 use xtask::tasks::certificate::certificate;
 use xtask::tasks::ci::ci;
 use xtask::tasks::coverage::coverage;
-use xtask::tasks::database::{migrate_postgres_db, postgres_db, sqlx_prepare};
+use xtask::tasks::database::{sqlx_prepare, postgres_db};
 use xtask::tasks::frontend::frontend;
 
 fn main() {
@@ -20,13 +20,8 @@ fn try_main() -> Result<(), anyhow::Error> {
         Some("coverage") => coverage(),
         Some("frontend") => frontend(),
         Some("certificate") => certificate(),
-        // Some("db") => db_command(),
-        // Some("dist") => dist(),
-        Some("migrate") => migrate_postgres_db(),
         Some("postgres") => postgres_db(),
-        // Some("redis") => xtask::tasks::database::setup_redis(),
         Some("prepare") => sqlx_prepare(),
-        // Some("test") => xtest(),
         _ => print_help(),
     }
 }
@@ -43,11 +38,8 @@ Tasks:
   coverage        runs test coverage analysis
   dist            builds application and man pages
   frontend        builds frontend
-  prepare         runs the correct sqlx prepare command
   postgres        starts up a postgres docker container and runs migrations
-  migrate         runs postgres database migrations
-  redis           starts up a redis server
-  db              alias for 'postgres' then 'redis'
+  prepare         sqlx prepare
 "#
     );
 

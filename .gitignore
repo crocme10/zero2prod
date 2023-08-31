@@ -1,4 +1,7 @@
 **/target
 /dist
+/certs
+/data
+/log
 services/dist
 services/zero2prod-backend/certs/

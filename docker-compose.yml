@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+
+  backend:
+    image: zero2prod/backend:latest
+    ports:
+      - 8081:8080
+      - 8444:443
+    volumes:
+      - "./config:/srv/zero2prod/etc/backend"
+      - "./certs:/srv/zero2prod/etc/certs"
+    command: [ "-c", "/srv/zero2prod/etc/backend", "-m", "compose", "run" ]
+    depends_on:
+      - database
+
+  database:
+    image:
+      zero2prod/postgres:latest
+    ports:
+      - 5434:5432
+    command: ["postgres", "-c", "log_statement=all"]
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=bob
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=newsletter
+
+  frontend:
+    image:
+      zero2prod/frontend:latest
+    ports:
+      - 80
+  
+  gateway:
+    image:
+      zero2prod/gateway:latest
+    ports:
+      - 8084:80
+      - 8443:443
+    depends_on:
+      - backend
+      - frontend
+    volumes:
+      - ./log/gateway:/var/log/nginx
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    volumes:
+      - "./jaeger-ui.json:/etc/jaeger/jaeger-ui.json"
+    command: --query.ui-config /etc/jaeger/jaeger-ui.json
+    environment:
+      - METRICS_STORAGE_TYPE=prometheus
+      - PROMETHEUS_SERVER_URL=http://prometheus:9090
+    ports:
+      - "14250:14250"
+      - "14268:14268"
+      - "6831:6831/udp"
+      - "16686:16686"
+      - "16685:16685"
+
+  collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    volumes:
+      - "./otel-collector-config.yml:/etc/otelcol/otel-collector-config.yml"
+    command: --config /etc/otelcol/otel-collector-config.yml
+    ports:
+      - "4317:4317"
+    depends_on:
+      - jaeger
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    depends_on:
+      - collector

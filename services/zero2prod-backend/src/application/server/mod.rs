@@ -13,7 +13,6 @@ use axum::{
 use axum_server::tls_rustls::{RustlsAcceptor, RustlsConfig};
 use axum_server::Server;
 use secrecy::Secret;
-use std::path::PathBuf;
 use std::time::Duration;
 use std::{fmt, net::TcpListener};
 use std::{fmt::Display, sync::Arc};
@@ -31,7 +30,6 @@ use crate::utils::telemetry::make_span;
 pub fn new(
     listener: TcpListener,
     state: AppState,
-    static_dir: PathBuf,
     tls: RustlsConfig,
 ) -> (Router, Server<RustlsAcceptor>) {
     // FIXME Hardcoded origin
@@ -41,11 +39,8 @@ pub fn new(
         .allow_credentials(true)
         .allow_headers([header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE]);
 
-    tracing::info!("Serving static directory: {}", static_dir.display());
-
     let router = Router::new()
         .merge(routes::routes(state.clone()))
-        .fallback_service(routes::static_dir::static_dir(static_dir))
         .layer(map_response(error))
         .layer(from_fn_with_state(state.clone(), resolve_context))
         .layer(cors)

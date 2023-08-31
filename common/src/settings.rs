@@ -10,7 +10,6 @@ pub struct ApplicationSettings {
     pub http: u16,
     pub https: u16,
     pub base_url: String,
-    pub static_dir: String,
     pub cert: String,
     pub key: String,
 }

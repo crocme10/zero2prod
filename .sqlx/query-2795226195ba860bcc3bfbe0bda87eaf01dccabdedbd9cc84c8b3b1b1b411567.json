@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO main.subscriptions (id, email, username, subscribed_at, status) VALUES ($1, $2, $3, $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Timestamptz",
+        {
+          "Custom": {
+            "name": "subscription_status",
+            "kind": {
+              "Enum": [
+                "pending_confirmation",
+                "confirmed"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2795226195ba860bcc3bfbe0bda87eaf01dccabdedbd9cc84c8b3b1b1b411567"
+}

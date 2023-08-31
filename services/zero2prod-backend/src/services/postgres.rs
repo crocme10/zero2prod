@@ -136,7 +136,7 @@ impl SubscriptionStorage for PostgresStorage {
         let id = Uuid::new_v4();
         // FIXME Use a RETURNING clause instead of using a subsequent SELECT
         sqlx::query!(
-        r#"INSERT INTO subscriptions (id, email, username, subscribed_at, status) VALUES ($1, $2, $3, $4, $5)"#,
+        r#"INSERT INTO main.subscriptions (id, email, username, subscribed_at, status) VALUES ($1, $2, $3, $4, $5)"#,
         id,
         new_subscription.email.as_ref(),
         new_subscription.username.as_ref(),
@@ -150,14 +150,14 @@ impl SubscriptionStorage for PostgresStorage {
                 ))?;
 
         sqlx::query!(
-            r#"INSERT INTO subscription_tokens (subscription_token, subscriber_id) VALUES ($1, $2)"#,
+            r#"INSERT INTO main.subscription_tokens (subscription_token, subscriber_id) VALUES ($1, $2)"#,
             token, id
         )
         .execute(&mut **conn)
         .await
         .context(format!("Could not store subscription token for subscriber id {id}"))?;
         let saved = sqlx::query!(
-            r#"SELECT id, email, username, status::text FROM subscriptions WHERE id = $1"#,
+            r#"SELECT id, email, username, status::text FROM main.subscriptions WHERE id = $1"#,
             id
         )
         .fetch_one(&mut **conn)
@@ -192,7 +192,7 @@ impl SubscriptionStorage for PostgresStorage {
     ) -> Result<Option<Subscription>, SubscriptionError> {
         let mut conn = self.exec.lock().await;
         let saved = sqlx::query!(
-            r#"SELECT id, email, username, status::text FROM subscriptions WHERE email = $1"#,
+            r#"SELECT id, email, username, status::text FROM main.subscriptions WHERE email = $1"#,
             email
         )
         .fetch_optional(&mut **conn)
@@ -233,7 +233,7 @@ impl SubscriptionStorage for PostgresStorage {
     ) -> Result<Option<Uuid>, SubscriptionError> {
         let mut conn = self.exec.lock().await;
         let saved = sqlx::query!(
-            r#"SELECT subscriber_id FROM subscription_tokens WHERE subscription_token = $1"#,
+            r#"SELECT subscriber_id FROM main.subscription_tokens WHERE subscription_token = $1"#,
             token
         )
         .fetch_optional(&mut **conn)
@@ -251,7 +251,7 @@ impl SubscriptionStorage for PostgresStorage {
         // FIXME Move to transaction
         let mut conn = self.exec.lock().await;
         let saved = sqlx::query!(
-            r#"SELECT subscription_token FROM subscription_tokens WHERE subscriber_id = $1"#,
+            r#"SELECT subscription_token FROM main.subscription_tokens WHERE subscriber_id = $1"#,
             id
         )
         .fetch_optional(&mut **conn)
@@ -264,7 +264,7 @@ impl SubscriptionStorage for PostgresStorage {
     async fn delete_confirmation_token(&self, id: &Uuid) -> Result<(), SubscriptionError> {
         let mut conn = self.exec.lock().await;
         sqlx::query!(
-            r#"DELETE FROM subscription_tokens WHERE subscriber_id = $1"#,
+            r#"DELETE FROM main.subscription_tokens WHERE subscriber_id = $1"#,
             id
         )
         .execute(&mut **conn)
@@ -282,7 +282,7 @@ impl SubscriptionStorage for PostgresStorage {
     ) -> Result<(), SubscriptionError> {
         let mut conn = self.exec.lock().await;
         sqlx::query!(
-            r#"UPDATE subscriptions SET status = $1 WHERE id = $2"#,
+            r#"UPDATE main.subscriptions SET status = $1 WHERE id = $2"#,
             SubscriptionStatus::Confirmed as SubscriptionStatus,
             id
         )
@@ -290,7 +290,7 @@ impl SubscriptionStorage for PostgresStorage {
         .await
         .context(format!("Could not confirm subscriber by id {id}"))?;
         sqlx::query!(
-            r#"DELETE FROM subscription_tokens WHERE subscriber_id = $1"#,
+            r#"DELETE FROM main.subscription_tokens WHERE subscriber_id = $1"#,
             id
         )
         .execute(&mut **conn)
@@ -309,7 +309,7 @@ impl SubscriptionStorage for PostgresStorage {
         //Create a fallback password hash to enforce doing the same amount
         //of work whether we have a user account in the db or not.
         let saved = sqlx::query!(
-            r#"SELECT email FROM subscriptions WHERE status = $1"#,
+            r#"SELECT email FROM main.subscriptions WHERE status = $1"#,
             SubscriptionStatus::Confirmed as SubscriptionStatus,
         )
         .fetch_all(&mut **conn)
@@ -336,7 +336,7 @@ impl AuthenticationStorage for PostgresStorage {
         let row: Option<_> = sqlx::query!(
             r#"
             SELECT id, password_hash
-            FROM users
+            FROM main.users
             WHERE username = $1
             "#,
             username,
@@ -369,7 +369,7 @@ impl AuthenticationStorage for PostgresStorage {
             })?;
 
         sqlx::query!(
-            r#"INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4)"#,
+            r#"INSERT INTO main.users (id, username, email, password_hash) VALUES ($1, $2, $3, $4)"#,
             id,
             username,
             email,
@@ -386,7 +386,7 @@ impl AuthenticationStorage for PostgresStorage {
     async fn id_exists(&self, id: &Uuid) -> Result<bool, AuthenticationError> {
         let mut conn = self.exec.lock().await;
 
-        let exist = sqlx::query_scalar!(r#"SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)"#, id,)
+        let exist = sqlx::query_scalar!(r#"SELECT EXISTS(SELECT 1 FROM main.users WHERE id = $1)"#, id,)
             .fetch_one(&mut **conn)
             .await
             .context("Could not check id exists")?
@@ -400,7 +400,7 @@ impl AuthenticationStorage for PostgresStorage {
         let mut conn = self.exec.lock().await;
 
         let exist = sqlx::query_scalar!(
-            r#"SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)"#,
+            r#"SELECT EXISTS(SELECT 1 FROM main.users WHERE email = $1)"#,
             email,
         )
         .fetch_one(&mut **conn)
@@ -416,7 +416,7 @@ impl AuthenticationStorage for PostgresStorage {
         let mut conn = self.exec.lock().await;
 
         let exist = sqlx::query_scalar!(
-            r#"SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)"#,
+            r#"SELECT EXISTS(SELECT 1 FROM main.users WHERE username = $1)"#,
             username
         )
         .fetch_one(&mut **conn)

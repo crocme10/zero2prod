@@ -48,7 +48,6 @@ pub struct ApplicationBuilder {
     pub http: Option<u16>,
     pub https: Option<u16>,
     pub url: Option<String>,
-    pub static_dir: Option<PathBuf>,
     pub secret: Option<Secret<String>>,
     pub tls: Option<RustlsConfig>,
 }
@@ -75,7 +74,6 @@ impl ApplicationBuilder {
             .http(application.http)
             .https(application.https)
             .url(application.base_url)
-            .static_dir(application.static_dir)?
             .secret("Secret".to_string());
 
         Ok(builder)
@@ -169,22 +167,6 @@ impl ApplicationBuilder {
         self
     }
 
-    pub fn static_dir(mut self, static_dir: String) -> Result<Self, Error> {
-        let path = PathBuf::from(&static_dir);
-        let path = if path.is_absolute() {
-            path
-        } else {
-            let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-            root.push(&path);
-            root
-        };
-        let path = path
-            .canonicalize()
-            .context("Could not canonicalize static dir")?;
-        self.static_dir = Some(path);
-        Ok(self)
-    }
-
     pub fn secret(mut self, secret: String) -> Self {
         self.secret = Some(Secret::new(secret));
         self
@@ -199,7 +181,6 @@ impl ApplicationBuilder {
             http,
             https,
             url,
-            static_dir,
             secret,
             tls,
         } = self;
@@ -215,7 +196,6 @@ impl ApplicationBuilder {
         let (app, server) = server::new(
             listener,
             state,
-            static_dir.expect("static dir"),
             tls.expect("tls"),
         );
 
