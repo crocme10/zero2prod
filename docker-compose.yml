@@ -39,11 +39,12 @@ services:
     ports:
       - 8084:80
       - 8443:443
+    volumes:
+      - ./log/gateway:/var/log/nginx
+      - "./certs:/etc/certs"
     depends_on:
       - backend
       - frontend
-    volumes:
-      - ./log/gateway:/var/log/nginx
 
   jaeger:
     image: jaegertracing/all-in-one:latest
