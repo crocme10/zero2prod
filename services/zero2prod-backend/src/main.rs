@@ -55,15 +55,14 @@ impl From<ErrorContext<OptsError>> for Error {
 #[allow(clippy::result_large_err)]
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let subscriber =
-        telemetry::get_subscriber("zero2prod".to_string(), "info".to_string(), std::io::stdout);
-    telemetry::init_subscriber(subscriber);
 
     let opts = Opts::parse();
 
     let cmd = opts.cmd.clone();
 
     let settings: Settings = opts.try_into().context("Compiling Application Settings")?;
+
+    telemetry::init_tracing(settings.tracing.clone());
 
     match cmd {
         Command::Config => {

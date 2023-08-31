@@ -5,7 +5,6 @@ use fake::locales::Data;
 use fake::locales::*;
 use fake::Dummy;
 use fake::Fake;
-use once_cell::sync::Lazy;
 use rand::prelude::SliceRandom;
 use reqwest::header;
 use secrecy::Secret;
@@ -29,7 +28,6 @@ use zero2prod::domain::ports::secondary::EmailService;
 use zero2prod::domain::ports::secondary::{AuthenticationStorage, SubscriptionStorage};
 use zero2prod::domain::BodyData;
 use zero2prod::domain::Credentials;
-use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
 /// The TestWorld contains both the context for every tests
 /// and information that needs to be kept between steps of a
@@ -118,21 +116,6 @@ impl fmt::Debug for TestApp {
             .finish()
     }
 }
-
-static TRACING: Lazy<()> = Lazy::new(|| {
-    if std::env::var("TEST_LOG").is_ok() {
-        let subscriber = get_subscriber(
-            "test".into(),
-            "zero2prod=debug,info".into(),
-            std::io::stdout,
-        );
-        init_subscriber(subscriber);
-    } else {
-        let subscriber =
-            get_subscriber("test".into(), "zero2prod=debug,info".into(), std::io::sink);
-        init_subscriber(subscriber);
-    }
-});
 
 pub async fn spawn_app() -> TestApp {
     // Set up subscriber for logging, only first time per run.

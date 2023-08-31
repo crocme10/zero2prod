@@ -59,6 +59,7 @@ impl ApplicationBuilder {
             application,
             database,
             email_client,
+            tracing: _,
             mode: _,
         } = settings;
         let builder = Self::default()
