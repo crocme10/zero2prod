@@ -4,9 +4,7 @@ mode = "default"
 http = 8080
 host = "0.0.0.0"
 base_url = "http://127.0.0.1"
-cert = "/srv/zero2prod/etc/certs/cert.pem"
-key = "/srv/zero2prod/etc/certs/key.pem"
 
 [tracing]
 service_name = "zero2prod-backend"
-otlp_exporter_endpoint = "http://collector:4317"
+endpoint = "http://jaeger:6831"

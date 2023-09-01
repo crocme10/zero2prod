@@ -8,10 +8,7 @@ pub struct ApplicationSettings {
     pub host: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub http: u16,
-    pub https: u16,
     pub base_url: String,
-    pub cert: String,
-    pub key: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,7 +61,7 @@ pub struct EmailClientSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TracingSettings {
     pub service_name: String,
-    pub otlp_exporter_endpoint: String,
+    pub endpoint: String,
     pub level: String,
 }
 

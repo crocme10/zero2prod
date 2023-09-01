@@ -22,7 +22,7 @@ async fn health_check(world: &mut TestWorld) {
     let settings: settings::Settings = opts.try_into().expect("Could not get settings");
     let url = format!(
         "{}:{}/api/health",
-        settings.application.base_url, settings.application.https
+        settings.application.base_url, settings.application.http
     );
 
     let client = reqwest::Client::builder()

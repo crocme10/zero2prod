@@ -6,10 +6,8 @@ services:
     image: zero2prod/backend:latest
     ports:
       - 8081:8080
-      - 8444:443
     volumes:
       - "./config:/srv/zero2prod/etc/backend"
-      - "./certs:/srv/zero2prod/etc/certs"
     command: [ "-c", "/srv/zero2prod/etc/backend", "-m", "compose", "run" ]
     depends_on:
       - database

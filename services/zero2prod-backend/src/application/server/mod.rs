@@ -10,8 +10,7 @@ use axum::{
     routing::Router,
     BoxError,
 };
-use axum_server::tls_rustls::{RustlsAcceptor, RustlsConfig};
-use axum_server::Server;
+use axum_server::{Server, accept::DefaultAcceptor};
 use secrecy::Secret;
 use std::time::Duration;
 use std::{fmt, net::TcpListener};
@@ -30,8 +29,7 @@ use crate::utils::telemetry::make_span;
 pub fn new(
     listener: TcpListener,
     state: AppState,
-    tls: RustlsConfig,
-) -> (Router, Server<RustlsAcceptor>) {
+) -> (Router, Server<DefaultAcceptor>) {
     // FIXME Hardcoded origin
     let cors = CorsLayer::new()
         .allow_origin("http://127.0.0.1:5173".parse::<HeaderValue>().unwrap())
@@ -53,7 +51,7 @@ pub fn new(
                 .layer(RateLimitLayer::new(5, Duration::from_secs(1))),
         );
 
-    let server = axum_server::from_tcp_rustls(listener, tls);
+    let server = axum_server::from_tcp(listener);
 
     (router, server)
 }
@@ -71,7 +69,7 @@ pub struct AppState {
     pub secret: Secret<String>,
 }
 
-pub type AppServer = Server<RustlsAcceptor>;
+pub type AppServer = Server<DefaultAcceptor>;
 
 #[derive(Clone)]
 pub struct ApplicationBaseUrl(pub String);

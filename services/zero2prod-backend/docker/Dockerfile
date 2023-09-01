@@ -7,6 +7,7 @@ WORKDIR /home/zero2prod
 
 ENV DEBIAN_FRONTEND noninteractive
 
+
 COPY . .
 
 RUN cargo build --release -p zero2prod-backend
@@ -24,7 +25,7 @@ WORKDIR /srv
 
 ENV DEBIAN_FRONTEND noninteractive
 
-ARG DEBIAN_VERSION
+RUN apt update && apt install -y libssl3 libcurl4 && apt clean;
 
 COPY --from=builder /home/zero2prod/bin/zero2prod /srv/zero2prod/bin/backend
 

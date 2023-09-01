@@ -161,7 +161,6 @@ pub async fn spawn_app() -> TestApp {
         .listener(settings.application.clone())
         .expect("getting listener")
         .url(settings.application.base_url.clone())
-        .static_dir(settings.application.static_dir.clone())
         .expect("getting static dir")
         .secret("secret".to_string());
 
