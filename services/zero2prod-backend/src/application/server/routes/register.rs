@@ -1,33 +1,39 @@
 use axum::extract::{Json, State};
-use axum::http::{header, status::StatusCode};
-use axum::response::{IntoResponse, Response};
-use axum_extra::extract::cookie::{Cookie, SameSite};
-use common::err_context::{ErrorContext, ErrorContextExt};
-use hyper::header::HeaderMap;
+use axum::response::IntoResponse;
+use common::err_context::ErrorContextExt;
 use passwords::{analyzer, scorer};
 use secrecy::Secret;
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use tower_cookies::Cookies;
 use uuid::Uuid;
 
+use super::Error;
+use crate::application::server::cookies;
 use crate::application::server::AppState;
 use crate::authentication::jwt::build_token;
-use crate::domain::ports::secondary::AuthenticationError;
 use crate::domain::Credentials;
 
 /// POST handler for user registration
+/// The user submits credentials and other information, which will be stored.
+/// The response can be:
+/// - On success (correctly stored, no duplicate, strong password, ...) => {
+///     - The user is considered logged in
+///     - { "status": "success", "id": ... } + cookie
+/// - On
 #[allow(clippy::unused_async)]
 #[tracing::instrument(
     name = "User Registration"
-    skip(state),
+    skip(state, cookies, request),
     fields(
         request_id = %Uuid::new_v4(),
     )
 )]
 pub async fn register(
     State(state): State<AppState>,
+    cookies: Cookies,
     Json(request): Json<RegistrationRequest>,
 ) -> Result<impl IntoResponse, Error> {
+    // Check for duplicates
     if state
         .authentication
         .email_exists(&request.email)
@@ -72,13 +78,14 @@ pub async fn register(
 
     let token = build_token(id, state.secret);
 
+    cookies::set_token_cookie(&cookies, &token);
+
     let resp = RegistrationResp {
         status: "success".to_string(),
-        token,
         id: id.to_string(),
     };
 
-    Ok::<_, Error>(resp)
+    Ok::<_, Error>(Json(resp))
 }
 
 /// This is what we return to the user in response to the subscription request.
@@ -87,28 +94,7 @@ pub async fn register(
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegistrationResp {
     pub status: String, // FIXME Placeholder
-    pub token: String,
     pub id: String,
-}
-
-impl IntoResponse for RegistrationResp {
-    fn into_response(self) -> Response {
-        let RegistrationResp {
-            status: _,
-            token,
-            id: _,
-        } = self.clone();
-        let json = serde_json::to_string(&self).unwrap();
-        let cookie = Cookie::build("jwt", token)
-            .path("/")
-            .max_age(time::Duration::hours(1))
-            .same_site(SameSite::Lax)
-            .http_only(true)
-            .finish();
-        let mut headers = HeaderMap::new();
-        headers.insert(header::SET_COOKIE, cookie.to_string().parse().unwrap());
-        (StatusCode::OK, headers, json).into_response()
-    }
 }
 
 /// This is the information sent by the user to login.
@@ -119,101 +105,12 @@ pub struct RegistrationRequest {
     pub password: String,
 }
 
-#[derive(Debug, Serialize)]
-pub enum Error {
-    DuplicateEmail {
-        context: String,
-    },
-    DuplicateUsername {
-        context: String,
-    },
-    WeakPassword {
-        context: String,
-    },
-    Data {
-        context: String,
-        source: AuthenticationError,
-    },
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::DuplicateEmail { context } => {
-                write!(fmt, "Duplicate email: {context} ")
-            }
-            Error::DuplicateUsername { context } => {
-                write!(fmt, "Duplicate username: {context} ")
-            }
-            Error::WeakPassword { context } => {
-                write!(fmt, "Weak password: {context} ")
-            }
-            Error::Data { context, source } => {
-                write!(fmt, "Storage Error: {context} | {source}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl From<ErrorContext<AuthenticationError>> for Error {
-    fn from(err: ErrorContext<AuthenticationError>) -> Self {
-        Error::Data {
-            context: err.0,
-            source: err.1,
-        }
-    }
-}
-
-impl IntoResponse for Error {
-    fn into_response(self) -> Response {
-        match self {
-            Error::DuplicateEmail { context } => (
-                StatusCode::CONFLICT,
-                Json(serde_json::json!({
-                    "status": "fail",
-                    "message": context,
-                    "code": "auth/duplicate_email"
-                })),
-            )
-                .into_response(),
-            Error::DuplicateUsername { context } => (
-                StatusCode::CONFLICT,
-                Json(serde_json::json!({
-                    "status": "fail",
-                    "message": context,
-                    "code": "auth/duplicate_username"
-                })),
-            )
-                .into_response(),
-            Error::WeakPassword { context } => (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({
-                    "status": "fail",
-                    "message": context,
-                    "code": "auth/weak_password"
-                })),
-            )
-                .into_response(),
-            Error::Data { .. } => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "status": "fail",
-                    "message": "unexpected error",
-                    "code": "auth/internal"
-                })),
-            )
-                .into_response(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use axum::{
         body::Body,
         http::{header, Request, StatusCode},
+        middleware::{from_fn_with_state, map_response},
         routing::{post, Router},
     };
     use fake::faker::{
@@ -226,8 +123,12 @@ mod tests {
     use secrecy::Secret;
     use std::sync::Arc;
     use tower::ServiceExt;
+    use tower_cookies::CookieManagerLayer;
 
     use crate::{
+        application::server::{
+            middleware::resolve_context::resolve_context, middleware::response_map::error,
+        },
         application::server::{AppState, ApplicationBaseUrl},
         domain::ports::secondary::{
             MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
@@ -244,8 +145,13 @@ mod tests {
         pub code: String,
     }
 
-    fn registration_route() -> Router<AppState> {
-        Router::new().route("/api/register", post(register))
+    fn registration_route(state: AppState) -> Router {
+        Router::new()
+            .route("/api/register", post(register))
+            .layer(map_response(error))
+            .layer(from_fn_with_state(state.clone(), resolve_context))
+            .layer(CookieManagerLayer::new())
+            .with_state(state)
     }
 
     /// This is a helper function to build the content of the request
@@ -308,7 +214,7 @@ mod tests {
             secret: Secret::new("secret".to_string()),
         };
 
-        let app = registration_route().with_state(state);
+        let app = registration_route(state);
 
         let response = app
             .oneshot(send_registration_request("/api/register", request))
@@ -317,6 +223,10 @@ mod tests {
 
         // Check the response status code.
         assert_eq!(response.status(), StatusCode::OK);
+
+        // Check the response has a cookie
+        // TODO make more checks on the cookie
+        assert!(response.headers().contains_key(header::SET_COOKIE))
     }
 
     #[tokio::test]
@@ -359,7 +269,7 @@ mod tests {
             secret: Secret::new("secret".to_string()),
         };
 
-        let app = registration_route().with_state(state);
+        let app = registration_route(state);
 
         let mut response = app
             .oneshot(send_registration_request("/api/register", request))
@@ -420,7 +330,7 @@ mod tests {
             secret: Secret::new("secret".to_string()),
         };
 
-        let app = registration_route().with_state(state);
+        let app = registration_route(state);
 
         let mut response = app
             .oneshot(send_registration_request("/api/register", request))
@@ -476,7 +386,7 @@ mod tests {
             secret: Secret::new("secret".to_string()),
         };
 
-        let app = registration_route().with_state(state);
+        let app = registration_route(state);
 
         let mut response = app
             .oneshot(send_registration_request("/api/register", request))

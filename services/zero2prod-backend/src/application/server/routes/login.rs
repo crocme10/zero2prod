@@ -15,8 +15,8 @@ use crate::domain::Credentials;
 /// POST handler for user login
 /// The user submits credentials in a request.
 /// The response can be:
-/// - On success (valid credentials...) => { "status": "success" }
-/// - On error
+/// - On success (valid credentials...) => { "status": "success" } + cookie
+/// - On error, an Error that will be handled by a layer on the way to the user
 /// We don't instrument the request for security purpose (including the username)
 #[allow(clippy::unused_async)]
 #[tracing::instrument(

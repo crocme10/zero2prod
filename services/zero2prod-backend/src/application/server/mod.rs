@@ -35,7 +35,7 @@ pub fn new(listener: TcpListener, state: AppState) -> (Router, Server<DefaultAcc
         .allow_headers([header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE]);
 
     let router = Router::new()
-        .merge(routes::routes(state.clone()))
+        .nest("/api/v1", routes::routes(state.clone()))
         .layer(map_response(error))
         .layer(from_fn_with_state(state.clone(), resolve_context))
         .layer(cors)
