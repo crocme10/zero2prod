@@ -10,7 +10,7 @@ use axum::{
     routing::Router,
     BoxError,
 };
-use axum_server::{Server, accept::DefaultAcceptor};
+use axum_server::{accept::DefaultAcceptor, Server};
 use secrecy::Secret;
 use std::time::Duration;
 use std::{fmt, net::TcpListener};
@@ -26,10 +26,7 @@ use self::middleware::response_map::error;
 use crate::domain::ports::secondary::{AuthenticationStorage, EmailService, SubscriptionStorage};
 use crate::utils::telemetry::make_span;
 
-pub fn new(
-    listener: TcpListener,
-    state: AppState,
-) -> (Router, Server<DefaultAcceptor>) {
+pub fn new(listener: TcpListener, state: AppState) -> (Router, Server<DefaultAcceptor>) {
     // FIXME Hardcoded origin
     let cors = CorsLayer::new()
         .allow_origin("http://127.0.0.1:5173".parse::<HeaderValue>().unwrap())

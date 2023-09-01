@@ -55,7 +55,6 @@ impl From<ErrorContext<OptsError>> for Error {
 #[allow(clippy::result_large_err)]
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-
     let opts = Opts::parse();
 
     let cmd = opts.cmd.clone();

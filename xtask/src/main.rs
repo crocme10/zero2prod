@@ -3,7 +3,7 @@ use std::env;
 use xtask::tasks::certificate::certificate;
 use xtask::tasks::ci::ci;
 use xtask::tasks::coverage::coverage;
-use xtask::tasks::database::{sqlx_prepare, postgres_db};
+use xtask::tasks::database::{postgres_db, sqlx_prepare};
 use xtask::tasks::frontend::frontend;
 
 fn main() {

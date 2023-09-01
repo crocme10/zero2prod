@@ -386,11 +386,14 @@ impl AuthenticationStorage for PostgresStorage {
     async fn id_exists(&self, id: &Uuid) -> Result<bool, AuthenticationError> {
         let mut conn = self.exec.lock().await;
 
-        let exist = sqlx::query_scalar!(r#"SELECT EXISTS(SELECT 1 FROM main.users WHERE id = $1)"#, id,)
-            .fetch_one(&mut **conn)
-            .await
-            .context("Could not check id exists")?
-            .unwrap();
+        let exist = sqlx::query_scalar!(
+            r#"SELECT EXISTS(SELECT 1 FROM main.users WHERE id = $1)"#,
+            id,
+        )
+        .fetch_one(&mut **conn)
+        .await
+        .context("Could not check id exists")?
+        .unwrap();
 
         Ok(exist)
     }

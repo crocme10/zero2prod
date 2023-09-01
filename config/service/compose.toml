@@ -7,4 +7,4 @@ base_url = "http://127.0.0.1"
 
 [tracing]
 service_name = "zero2prod-backend"
-endpoint = "http://jaeger:6831"
+endpoint = "jaeger:6831"

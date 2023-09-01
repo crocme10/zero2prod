@@ -1,21 +1,13 @@
-use tokio::task::JoinHandle;
-use axum::http::request::Request;
 use axum::body::Body;
+use axum::http::request::Request;
 use common::settings::TracingSettings;
 use opentelemetry::{
-    global, runtime,
-    sdk::{propagation::TraceContextPropagator, trace, Resource},
-    KeyValue,
-    trace::{TraceContextExt, TraceError, Tracer},
+    global,
+    sdk::{propagation::TraceContextPropagator, trace},
 };
-// use opentelemetry_otlp::WithExportConfig;
-use tracing::{error, Subscriber};
-use tracing::Span;
-use tracing::info_span;
-use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{
-    layer::SubscriberExt, registry::LookupSpan, fmt, EnvFilter, Layer
-};
+use tokio::task::JoinHandle;
+use tracing::{error, info_span, Span};
+use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter};
 
 pub fn spawn_blocking_with_tracing<F, R>(f: F) -> JoinHandle<R>
 where
@@ -35,8 +27,11 @@ pub fn make_span(request: &Request<Body>) -> Span {
 /// log levels, add a formatter layer logging trace events as JSON and on OpenTelemetry layer
 /// exporting trace data.
 pub fn init_tracing(settings: TracingSettings) {
-
-    let TracingSettings { service_name, endpoint, level } = settings;
+    let TracingSettings {
+        service_name,
+        endpoint,
+        level,
+    } = settings;
 
     global::set_text_map_propagator(TraceContextPropagator::new());
 
@@ -47,8 +42,7 @@ pub fn init_tracing(settings: TracingSettings) {
 
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
-    let filter_layer =
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(level));
+    let filter_layer = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(level));
 
     let subscriber = tracing_subscriber::Registry::default()
         .with(filter_layer)
@@ -58,33 +52,10 @@ pub fn init_tracing(settings: TracingSettings) {
     tracing::subscriber::set_global_default(subscriber).unwrap();
 }
 
-// /// Create an OTLP layer exporting tracing data.
-// fn otlp_tracer(otlp_exporter_endpoint: String, service_name: String) -> trace::Tracer {
-//     let exporter = opentelemetry_otlp::new_exporter()
-//         .http()
-//         .with_endpoint(otlp_exporter_endpoint);
-// 
-//     let trace_config = trace::config().with_resource(Resource::new(vec![KeyValue::new(
-//         "service.name",
-//         service_name,
-//     )]));
-// 
-//     opentelemetry_otlp::new_pipeline()
-//         .tracing()
-//         .with_exporter(exporter)
-//         .with_trace_config(trace_config)
-//         .install_batch(runtime::Tokio)
-//         .expect("install tracer")
-// 
-//     // tracing_opentelemetry::layer().with_tracer(tracer)
-// }
-
 fn jaeger_tracer(endpoint: String, service_name: String) -> trace::Tracer {
-
     opentelemetry_jaeger::new_agent_pipeline()
         .with_endpoint(endpoint)
         .with_service_name(service_name)
         .install_simple()
         .expect("jaeger tracer")
-
 }
