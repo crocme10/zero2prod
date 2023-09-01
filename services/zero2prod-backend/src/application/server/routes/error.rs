@@ -138,7 +138,7 @@ impl Error {
                     "message": context,
                     "code": "auth/weak_password"
                 })),
-            )
+            ),
         }
     }
 }

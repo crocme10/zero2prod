@@ -76,12 +76,12 @@ mod tests {
     };
     use fake::faker::{internet::en::Password, name::en::Name};
     use fake::Fake;
-    use hyper::body::HttpBody;
+    use hyper::{body::HttpBody, header::SET_COOKIE};
     use mockall::predicate::*;
     use secrecy::Secret;
     use std::sync::Arc;
     use tower::ServiceExt;
-    use tower_cookies::CookieManagerLayer;
+    use tower_cookies::{Cookie, CookieManagerLayer};
 
     use crate::{
         application::server::{
@@ -161,6 +161,15 @@ mod tests {
 
         // Check the response status code.
         assert_eq!(response.status(), StatusCode::OK);
+
+        let cookie = response
+            .headers()
+            .get(SET_COOKIE)
+            .unwrap()
+            .to_str()
+            .unwrap();
+        let cookie = Cookie::parse(cookie).unwrap();
+        assert_eq!(cookie.http_only(), Some(true))
     }
 
     #[tokio::test]

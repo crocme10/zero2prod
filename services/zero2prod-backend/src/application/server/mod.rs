@@ -12,14 +12,10 @@ use axum::{
 };
 use axum_server::{accept::DefaultAcceptor, Server};
 use secrecy::Secret;
-use std::time::Duration;
-use std::{fmt, net::TcpListener};
-use std::{fmt::Display, sync::Arc};
-use tower::ServiceBuilder;
-use tower::{buffer::BufferLayer, limit::RateLimitLayer};
+use std::{fmt, net::TcpListener, sync::Arc, time::Duration};
+use tower::{buffer::BufferLayer, limit::RateLimitLayer, ServiceBuilder};
 use tower_cookies::CookieManagerLayer;
-use tower_http::cors::CorsLayer;
-use tower_http::trace::TraceLayer;
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
 use self::middleware::resolve_context::resolve_context;
 use self::middleware::response_map::error;
@@ -71,7 +67,7 @@ pub type AppServer = Server<DefaultAcceptor>;
 #[derive(Clone)]
 pub struct ApplicationBaseUrl(pub String);
 
-impl Display for ApplicationBaseUrl {
+impl fmt::Display for ApplicationBaseUrl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
