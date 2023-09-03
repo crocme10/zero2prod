@@ -126,6 +126,7 @@ mod tests {
 
     #[tokio::test]
     async fn login_should_retrieve_credentials() {
+        // -- Setup & Fixtures
         let username = Name().fake::<String>();
         let password = Password(12..32).fake::<String>();
         let secret = Secret::new(password.clone());
@@ -154,14 +155,18 @@ mod tests {
 
         let app = login_route(state);
 
+        // -- Exec
         let response = app
             .oneshot(send_login_request("/api/login", request))
             .await
             .expect("response");
 
+        // -- Check
+
         // Check the response status code.
         assert_eq!(response.status(), StatusCode::OK);
 
+        // Check there is a cookie set and that it is HTTP only.
         let cookie = response
             .headers()
             .get(SET_COOKIE)

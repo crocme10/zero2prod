@@ -1,16 +1,7 @@
-DO $$
-BEGIN
-  CREATE ROLE bob WITH LOGIN PASSWORD 'secret';
-  EXCEPTION WHEN DUPLICATE_OBJECT THEN
-  RAISE NOTICE 'Not creating role ''bob'' -- it already exists';
-END
-$$;
-
 DROP SCHEMA IF EXISTS main CASCADE;
 CREATE SCHEMA main AUTHORIZATION bob;
 GRANT ALL ON SCHEMA main to bob;
 SET SEARCH_PATH = main;
-
 
 CREATE TYPE main.subscription_status AS ENUM (
     'pending_confirmation',
@@ -44,4 +35,4 @@ CREATE TABLE main.users (
     email text UNIQUE NOT NULL
 );
 
-ALTER TABLE main.users OWNER TO bob;
+ALTER TABLE main.users OWNER TO bob;---- Base app schema
