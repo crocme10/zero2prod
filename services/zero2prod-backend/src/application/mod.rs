@@ -94,6 +94,7 @@ impl ApplicationBuilder {
         Ok(self)
     }
 
+    #[allow(clippy::result_large_err)]
     pub fn listener(mut self, settings: ApplicationSettings) -> Result<Self, Error> {
         let listener =
             listen_with_host_port(settings.host.as_str(), settings.http).context(format!(

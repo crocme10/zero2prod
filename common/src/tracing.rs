@@ -10,10 +10,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter};
 /// log levels, add a formatter layer logging trace events as JSON and on OpenTelemetry layer
 /// exporting trace data.
 pub fn init_tracing(settings: TracingSettings) {
-    let TracingSettings {
-        level,
-        jaeger,
-    } = settings;
+    let TracingSettings { level, jaeger } = settings;
 
     global::set_text_map_propagator(TraceContextPropagator::new());
 
@@ -22,8 +19,7 @@ pub fn init_tracing(settings: TracingSettings) {
 
     let filter_layer = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(level));
 
-    let subscriber =
-        tracing_subscriber::Registry::default()
+    let subscriber = tracing_subscriber::Registry::default()
         .with(filter_layer)
         .with(fmt::Layer::new().with_writer(std::io::stdout));
 
@@ -35,8 +31,6 @@ pub fn init_tracing(settings: TracingSettings) {
     } else {
         tracing::subscriber::set_global_default(subscriber).unwrap();
     }
-
-
 }
 
 fn jaeger_tracer(endpoint: &str, service_name: &str) -> trace::Tracer {

@@ -3,9 +3,9 @@ use std::fmt;
 
 use common::err_context::{ErrorContext, ErrorContextExt};
 use common::settings::Settings;
+use common::tracing;
 use zero2prod::application::opts::{Command, Error as OptsError, Opts};
 use zero2prod::application::{ApplicationBuilder, Error as ApplicationError};
-use common::tracing;
 
 #[derive(Debug)]
 pub enum Error {

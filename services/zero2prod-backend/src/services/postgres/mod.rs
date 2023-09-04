@@ -6,7 +6,7 @@ mod subscription;
 pub use self::error::Error;
 
 use common::err_context::ErrorContextExt;
-use common::settings::{database_root_settings, database_dev_settings, DatabaseSettings};
+use common::settings::{database_dev_settings, database_root_settings, DatabaseSettings};
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::fs;
 use std::path::PathBuf;
@@ -80,16 +80,23 @@ pub async fn init_dev_db() -> Result<PostgresStorage, Error> {
 }
 
 async fn init_root() -> Result<PostgresStorage, Error> {
-    let settings = database_root_settings().await.context("Could not create root postgres storage")?;
+    let settings = database_root_settings()
+        .await
+        .context("Could not create root postgres storage")?;
     init_sql_with_prefix(settings, "0").await
 }
 
 async fn init_dev() -> Result<PostgresStorage, Error> {
-    let settings = database_dev_settings().await.context("Could not create dev postgres storage")?;
+    let settings = database_dev_settings()
+        .await
+        .context("Could not create dev postgres storage")?;
     init_sql_with_prefix(settings, "1").await
 }
 
-async fn init_sql_with_prefix(settings: DatabaseSettings, prefix: &str) -> Result<PostgresStorage, Error> {
+async fn init_sql_with_prefix(
+    settings: DatabaseSettings,
+    prefix: &str,
+) -> Result<PostgresStorage, Error> {
     let storage = PostgresStorage::new(settings).await?;
     let sql_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
@@ -102,8 +109,7 @@ async fn init_sql_with_prefix(settings: DatabaseSettings, prefix: &str) -> Resul
             let name = path
                 .clone()
                 .map(|p| p.into_os_string())
-                .map(|os| os.into_string().ok())
-                .flatten();
+                .and_then(|os| os.into_string().ok());
             // Note here that we filter files starting with '0'. This is the
             // xxx . Files starting with 0 are to be executed as the postgres user.
             if name.map(|s| s.starts_with(prefix)).unwrap_or(false) {
@@ -119,7 +125,7 @@ async fn init_sql_with_prefix(settings: DatabaseSettings, prefix: &str) -> Resul
         if let Some(path) = path.to_str() {
             if path.ends_with(".sql") {
                 tracing::info!("Executing {path}");
-                storage.exec_file(&path).await?;
+                storage.exec_file(path).await?;
             }
         }
     }
@@ -135,10 +141,10 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
-        domain::NewSubscription,
-        domain::{SubscriptionStatus, SubscriptionRequest},
         domain::ports::secondary::SubscriptionStorage,
         //domain::ports::secondary::AuthenticationStorage,
+        domain::NewSubscription,
+        domain::{SubscriptionRequest, SubscriptionStatus},
     };
 
     use super::*;

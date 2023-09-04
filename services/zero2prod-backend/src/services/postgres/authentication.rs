@@ -67,14 +67,11 @@ impl AuthenticationStorage for PostgresStorage {
 
     #[tracing::instrument(name = "Checking user id exists")]
     async fn id_exists(&self, id: &Uuid) -> Result<bool, AuthenticationError> {
-        let exist = sqlx::query_scalar!(
-            r#"SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)"#,
-            id,
-        )
-        .fetch_one(&self.pool)
-        .await
-        .context("Could not check id exists")?
-        .unwrap();
+        let exist = sqlx::query_scalar!(r#"SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)"#, id,)
+            .fetch_one(&self.pool)
+            .await
+            .context("Could not check id exists")?
+            .unwrap();
 
         Ok(exist)
     }

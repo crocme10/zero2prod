@@ -7,8 +7,8 @@ use uuid::Uuid;
 use super::PostgresStorage;
 use crate::domain::{
     ports::secondary::SubscriptionError, ports::secondary::SubscriptionStorage,
-    ConfirmedSubscriber, NewSubscription, SubscriberEmail, SubscriberName,
-    Subscription, SubscriptionStatus,
+    ConfirmedSubscriber, NewSubscription, SubscriberEmail, SubscriberName, Subscription,
+    SubscriptionStatus,
 };
 
 #[async_trait]

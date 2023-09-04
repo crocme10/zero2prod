@@ -21,59 +21,59 @@ services:
     volumes:
       - ./data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_USER=bob
+      - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=secret
       - POSTGRES_DB=newsletter
 
-  frontend:
-    image:
-      zero2prod/frontend:latest
-    ports:
-      - 80
-  
-  gateway:
-    image:
-      zero2prod/gateway:latest
-    ports:
-      - 8084:80
-      - 8443:443
-    volumes:
-      - ./log/gateway:/var/log/nginx
-      - "./certs:/etc/certs"
-    depends_on:
-      - backend
-      - frontend
+        # frontend:
+        #   image:
+        #     zero2prod/frontend:latest
+        #   ports:
+        #     - 80
+        # 
+        # gateway:
+        #   image:
+        #     zero2prod/gateway:latest
+        #   ports:
+        #     - 8084:80
+        #     - 8443:443
+        #   volumes:
+        #     - ./log/gateway:/var/log/nginx
+        #     - "./certs:/etc/certs"
+        #   depends_on:
+        #     - backend
+        #     - frontend
 
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    volumes:
-      - "./jaeger-ui.json:/etc/jaeger/jaeger-ui.json"
-    command: --query.ui-config /etc/jaeger/jaeger-ui.json
-    environment:
-      - METRICS_STORAGE_TYPE=prometheus
-      - PROMETHEUS_SERVER_URL=http://prometheus:9090
-    ports:
-      - "14250:14250"
-      - "14268:14268"
-      - "6831:6831/udp"
-      - "16686:16686"
-      - "16685:16685"
+        # jaeger:
+        #   image: jaegertracing/all-in-one:latest
+        #   volumes:
+        #     - "./jaeger-ui.json:/etc/jaeger/jaeger-ui.json"
+        #   command: --query.ui-config /etc/jaeger/jaeger-ui.json
+        #   environment:
+        #     - METRICS_STORAGE_TYPE=prometheus
+        #     - PROMETHEUS_SERVER_URL=http://prometheus:9090
+        #   ports:
+        #     - "14250:14250"
+        #     - "14268:14268"
+        #     - "6831:6831/udp"
+        #     - "16686:16686"
+        #     - "16685:16685"
 
-  collector:
-    image: otel/opentelemetry-collector-contrib:latest
-    volumes:
-      - "./otel-collector-config.yml:/etc/otelcol/otel-collector-config.yml"
-    command: --config /etc/otelcol/otel-collector-config.yml
-    ports:
-      - "4317:4317"
-    depends_on:
-      - jaeger
+        # collector:
+        #   image: otel/opentelemetry-collector-contrib:latest
+        #   volumes:
+        #     - "./otel-collector-config.yml:/etc/otelcol/otel-collector-config.yml"
+        #   command: --config /etc/otelcol/otel-collector-config.yml
+        #   ports:
+        #     - "4317:4317"
+        #   depends_on:
+        #     - jaeger
 
-  prometheus:
-    image: prom/prometheus:latest
-    volumes:
-      - "./prometheus.yml:/etc/prometheus/prometheus.yml"
-    ports:
-      - "9090:9090"
-    depends_on:
-      - collector
+        # prometheus:
+        #   image: prom/prometheus:latest
+        #   volumes:
+        #     - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+        #   ports:
+        #     - "9090:9090"
+        #   depends_on:
+        #     - collector

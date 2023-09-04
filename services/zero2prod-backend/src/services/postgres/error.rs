@@ -24,7 +24,7 @@ pub enum Error {
     },
     IO {
         context: String,
-    }
+    },
 }
 
 impl fmt::Display for Error {
@@ -85,7 +85,7 @@ impl From<ErrorContext<SettingsError>> for Error {
 impl From<ErrorContext<std::io::Error>> for Error {
     fn from(err: ErrorContext<std::io::Error>) -> Self {
         Error::IO {
-            context: format!("{}: {}", err.0, err.1)
+            context: format!("{}: {}", err.0, err.1),
         }
     }
 }
