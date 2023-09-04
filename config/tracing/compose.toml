@@ -1,0 +1,5 @@
+[tracing]
+service_name = "zero2prod-backend"
+
+[tracing.endpoints]
+jaeger = "jaeger:6831"

@@ -5,7 +5,7 @@ use common::err_context::{ErrorContext, ErrorContextExt};
 use common::settings::Settings;
 use zero2prod::application::opts::{Command, Error as OptsError, Opts};
 use zero2prod::application::{ApplicationBuilder, Error as ApplicationError};
-use zero2prod::utils::telemetry;
+use common::tracing;
 
 #[derive(Debug)]
 pub enum Error {
@@ -61,7 +61,7 @@ async fn main() -> Result<(), Error> {
 
     let settings: Settings = opts.try_into().context("Compiling Application Settings")?;
 
-    telemetry::init_tracing(settings.tracing.clone());
+    tracing::init_tracing(settings.tracing.clone());
 
     match cmd {
         Command::Config => {

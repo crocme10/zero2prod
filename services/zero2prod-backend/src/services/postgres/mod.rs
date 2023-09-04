@@ -5,9 +5,8 @@ mod subscription;
 
 pub use self::error::Error;
 
-use common::config;
 use common::err_context::ErrorContextExt;
-use common::settings::DatabaseSettings;
+use common::settings::{database_root_settings, database_dev_settings, DatabaseSettings};
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::fs;
 use std::path::PathBuf;
@@ -80,43 +79,13 @@ pub async fn init_dev_db() -> Result<PostgresStorage, Error> {
     init_dev().await
 }
 
-async fn database_settings_from_mode(mode: &str) -> Result<DatabaseSettings, Error> {
-    let config_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
-        .join("config");
-
-    config::merge_configuration(
-        config_dir.as_ref(),
-        &["database"],
-        mode,
-        "ZERO2PROD",
-        vec![],
-    )
-    .map_err(|_| Error::Configuration {
-        context: format!("Could not get database {mode} settings"),
-    })?
-    .try_deserialize()
-    .map_err(|_| Error::Configuration {
-        context: format!("Invalid database {mode} settings"),
-    })
-}
-
-async fn root_settings() -> Result<DatabaseSettings, Error> {
-    database_settings_from_mode("root").await
-}
-
 async fn init_root() -> Result<PostgresStorage, Error> {
-    let settings = root_settings().await?;
+    let settings = database_root_settings().await.context("Could not create root postgres storage")?;
     init_sql_with_prefix(settings, "0").await
 }
 
-async fn dev_settings() -> Result<DatabaseSettings, Error> {
-    database_settings_from_mode("dev").await
-}
-
 async fn init_dev() -> Result<PostgresStorage, Error> {
-    let settings = dev_settings().await?;
+    let settings = database_dev_settings().await.context("Could not create dev postgres storage")?;
     init_sql_with_prefix(settings, "1").await
 }
 
@@ -159,16 +128,13 @@ async fn init_sql_with_prefix(settings: DatabaseSettings, prefix: &str) -> Resul
 
 #[cfg(test)]
 mod tests {
-    use common::settings::Settings;
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::name::en::Name;
     use fake::Fake;
     use speculoos::prelude::*;
-    use std::path::PathBuf;
     use std::sync::Arc;
 
     use crate::{
-        application::opts::{Command, Opts},
         domain::NewSubscription,
         domain::{SubscriptionStatus, SubscriptionRequest},
         domain::ports::secondary::SubscriptionStorage,

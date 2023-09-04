@@ -1,27 +1,30 @@
 use std::env;
 
+use common::tracing;
 use xtask::tasks::certificate::certificate;
 use xtask::tasks::ci::ci;
 use xtask::tasks::coverage::coverage;
 use xtask::tasks::database::{postgres_db, sqlx_prepare};
 use xtask::tasks::frontend::frontend;
 
-fn main() {
-    if let Err(e) = try_main() {
-        eprintln!("{}", e);
-        std::process::exit(-1);
-    }
+#[tokio::main]
+async fn main() -> Result<(), anyhow::Error> {
+    let settings = common::settings::tracing_dev_settings()
+        .await
+        .expect("tracing dev settings");
+    tracing::init_tracing(settings);
+    try_main().await
 }
 
-fn try_main() -> Result<(), anyhow::Error> {
+async fn try_main() -> Result<(), anyhow::Error> {
     let task = env::args().nth(1);
     match task.as_deref() {
         Some("ci") => ci(),
         Some("coverage") => coverage(),
         Some("frontend") => frontend(),
         Some("certificate") => certificate(),
-        Some("postgres") => postgres_db(),
-        Some("prepare") => sqlx_prepare(),
+        Some("postgres") => postgres_db().await,
+        Some("prepare") => sqlx_prepare().await,
         _ => print_help(),
     }
 }
@@ -38,7 +41,7 @@ Tasks:
   coverage        runs test coverage analysis
   dist            builds application and man pages
   frontend        builds frontend
-  postgres        starts up a postgres docker container and runs migrations
+  postgres        starts up a postgres docker container and create the database therein
   prepare         sqlx prepare
 "#
     );

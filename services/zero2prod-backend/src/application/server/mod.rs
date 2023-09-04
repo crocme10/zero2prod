@@ -20,7 +20,7 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use self::middleware::resolve_context::resolve_context;
 use self::middleware::response_map::error;
 use crate::domain::ports::secondary::{AuthenticationStorage, EmailService, SubscriptionStorage};
-use crate::utils::telemetry::make_span;
+use crate::utils::tracing::make_span;
 
 pub fn new(listener: TcpListener, state: AppState) -> (Router, Server<DefaultAcceptor>) {
     // FIXME Hardcoded origin

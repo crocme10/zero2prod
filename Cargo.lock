@@ -757,17 +757,20 @@ dependencies = [
  "chrono",
  "clap",
  "config",
+ "opentelemetry",
+ "opentelemetry-jaeger",
  "scopeguard",
  "serde",
  "serde-aux",
  "serde_json",
+ "serde_with",
  "serial_test",
  "sqlx",
  "tracing",
  "tracing-attributes",
- "tracing-bunyan-formatter",
  "tracing-futures",
  "tracing-log",
+ "tracing-opentelemetry",
  "tracing-subscriber",
  "uuid",
 ]
@@ -1542,16 +1545,6 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
-]
-
-[[package]]
-name = "gethostname"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1ebd34e35c46e00bb73e81363248d627782724609fe1b6396f553f68fe3862e"
-dependencies = [
- "libc",
- "winapi",
 ]
 
 [[package]]
@@ -4758,24 +4751,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-bunyan-formatter"
-version = "0.3.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5c266b9ac83dedf0e0385ad78514949e6d89491269e7065bee51d2bb8ec7373"
-dependencies = [
- "ahash 0.8.3",
- "gethostname",
- "log",
- "serde",
- "serde_json",
- "time 0.3.27",
- "tracing",
- "tracing-core",
- "tracing-log",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "tracing-core"
 version = "0.1.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5416,6 +5391,8 @@ dependencies = [
  "common",
  "man",
  "owo-colors",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

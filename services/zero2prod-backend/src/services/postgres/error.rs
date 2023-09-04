@@ -1,8 +1,9 @@
 use common::err_context::ErrorContext;
+use common::settings::Error as SettingsError;
 use serde::Serialize;
 use std::fmt;
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Debug, Serialize)]
 pub enum Error {
     /// Error returned by sqlx
     Database {
@@ -19,10 +20,11 @@ pub enum Error {
     },
     Configuration {
         context: String,
+        source: SettingsError,
     },
     IO {
         context: String,
-    },
+    }
 }
 
 impl fmt::Display for Error {
@@ -37,8 +39,8 @@ impl fmt::Display for Error {
             Error::Connection { context, source } => {
                 write!(fmt, "Database Connection: {context} | {source}")
             }
-            Error::Configuration { context } => {
-                write!(fmt, "Database Configuration: {context}")
+            Error::Configuration { context, source } => {
+                write!(fmt, "Database Configuration: {context} | {source}")
             }
             Error::IO { context } => {
                 write!(fmt, "IO Error: {context}")
@@ -71,10 +73,19 @@ impl From<ErrorContext<sqlx::Error>> for Error {
     }
 }
 
+impl From<ErrorContext<SettingsError>> for Error {
+    fn from(err: ErrorContext<SettingsError>) -> Self {
+        Error::Configuration {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
 impl From<ErrorContext<std::io::Error>> for Error {
     fn from(err: ErrorContext<std::io::Error>) -> Self {
         Error::IO {
-            context: format!("{}: {}", err.0, err.1),
+            context: format!("{}: {}", err.0, err.1)
         }
     }
 }

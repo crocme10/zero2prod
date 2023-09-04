@@ -1,0 +1,9 @@
+[database]
+host = "localhost"
+port = 5462
+# username, password, and database_name must match the values found in `services/database/sql/00-recreate-db.sql`
+username = "bob"
+password = "secret"
+database_name = "newsletter"
+connection_timeout = 2000 # ms
+require_ssl = false

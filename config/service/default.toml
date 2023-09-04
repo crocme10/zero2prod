@@ -4,8 +4,3 @@ mode = "default"
 http = 8080
 host = "0.0.0.0"
 base_url = "http://127.0.0.1"
-
-[tracing]
-service_name = "zero2prod-backend"
-endpoint = "http://collector:4317"
-level = "debug"

@@ -47,7 +47,7 @@ impl TryInto<settings::Settings> for Opts {
     fn try_into(self) -> Result<settings::Settings, Self::Error> {
         config::merge_configuration(
             self.config_dir.as_ref(),
-            &["service", "database", "email"],
+            &["service", "database", "email", "tracing"],
             self.run_mode.as_deref(),
             "ZERO2PROD",
             self.settings.clone(),

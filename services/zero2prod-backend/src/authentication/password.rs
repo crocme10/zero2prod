@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::domain::ports::secondary::{AuthenticationError, AuthenticationStorage};
 use crate::domain::Credentials;
-use crate::utils::telemetry::spawn_blocking_with_tracing;
+use crate::utils::tracing::spawn_blocking_with_tracing;
 use common::err_context::{ErrorContext, ErrorContextExt};
 
 // TODO This should really be a trait and an implementation...

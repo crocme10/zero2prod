@@ -8,7 +8,7 @@ use crate::authentication::password::compute_password_hash;
 use crate::domain::{
     ports::secondary::AuthenticationError, ports::secondary::AuthenticationStorage, Credentials,
 };
-use crate::utils::telemetry::spawn_blocking_with_tracing;
+use crate::utils::tracing::spawn_blocking_with_tracing;
 
 #[async_trait]
 impl AuthenticationStorage for PostgresStorage {
@@ -20,7 +20,7 @@ impl AuthenticationStorage for PostgresStorage {
         let row: Option<_> = sqlx::query!(
             r#"
             SELECT id, password_hash
-            FROM main.users
+            FROM users
             WHERE username = $1
             "#,
             username,
@@ -52,7 +52,7 @@ impl AuthenticationStorage for PostgresStorage {
             })?;
 
         sqlx::query!(
-            r#"INSERT INTO main.users (id, username, email, password_hash) VALUES ($1, $2, $3, $4)"#,
+            r#"INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4)"#,
             id,
             username,
             email,
@@ -68,7 +68,7 @@ impl AuthenticationStorage for PostgresStorage {
     #[tracing::instrument(name = "Checking user id exists")]
     async fn id_exists(&self, id: &Uuid) -> Result<bool, AuthenticationError> {
         let exist = sqlx::query_scalar!(
-            r#"SELECT EXISTS(SELECT 1 FROM main.users WHERE id = $1)"#,
+            r#"SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)"#,
             id,
         )
         .fetch_one(&self.pool)
@@ -82,7 +82,7 @@ impl AuthenticationStorage for PostgresStorage {
     #[tracing::instrument(name = "Checking email exists")]
     async fn email_exists(&self, email: &str) -> Result<bool, AuthenticationError> {
         let exist = sqlx::query_scalar!(
-            r#"SELECT EXISTS(SELECT 1 FROM main.users WHERE email = $1)"#,
+            r#"SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)"#,
             email,
         )
         .fetch_one(&self.pool)
@@ -96,7 +96,7 @@ impl AuthenticationStorage for PostgresStorage {
     #[tracing::instrument(name = "Checking username exists")]
     async fn username_exists(&self, username: &str) -> Result<bool, AuthenticationError> {
         let exist = sqlx::query_scalar!(
-            r#"SELECT EXISTS(SELECT 1 FROM main.users WHERE username = $1)"#,
+            r#"SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)"#,
             username
         )
         .fetch_one(&self.pool)

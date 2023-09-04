@@ -1,7 +1,8 @@
 SELECT pg_terminate_backend(pid)
-FROM pg_stat_activity
-WHERE username='bob' OR datname=''
- 
-CREATE USE bob PASSWORD 'secret';
+  FROM pg_stat_activity
+  WHERE usename = 'bob' OR datname = 'newsletter';
+DROP DATABASE IF EXISTS newsletter;
+DROP USER IF EXISTS bob;
 
-CREATE DATABASE newsletter OWNER bob ENCODING = 'UTF-8';
+CREATE USER bob PASSWORD 'secret';
+CREATE DATABASE newsletter owner bob ENCODING = 'UTF-8';

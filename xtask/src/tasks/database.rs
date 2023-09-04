@@ -1,39 +1,22 @@
-use common::config::merge_configuration;
-use common::settings::{DatabaseSettings, Settings};
+use common::settings::database_dev_settings;
 use std::process::Command;
+use tracing::info;
 
 use crate::{check_psql_exists, check_sqlx_exists, project_root};
 
-pub fn db_command() -> Result<(), anyhow::Error> {
-    postgres_db()?;
+pub async fn db_command() -> Result<(), anyhow::Error> {
+    postgres_db().await?;
     Ok(())
 }
 
-pub fn database_settings() -> DatabaseSettings {
-    let config_dir = project_root().join("config");
-    println!(
-        "Reading database configuration from {}",
-        config_dir.display()
-    );
-    let settings: Settings = merge_configuration(
-        &config_dir,
-        &["database", "service", "email"],
-        "testing",
-        "ZERO2PROD",
-        vec![],
-    )
-    .unwrap()
-    .try_deserialize()
-    .unwrap();
-    settings.database
-}
-
-pub fn postgres_db() -> Result<(), anyhow::Error> {
+pub async fn postgres_db() -> Result<(), anyhow::Error> {
     check_psql_exists()?;
 
-    let settings = database_settings();
+    let settings = database_dev_settings()
+        .await
+        .expect("dev database settings");
 
-    println!("Building docker image (zero2prod/database:latest) ...");
+    info!("Building docker image (zero2prod/database:latest) ...");
     let status = Command::new("docker")
         .current_dir(project_root())
         .args([
@@ -52,7 +35,7 @@ pub fn postgres_db() -> Result<(), anyhow::Error> {
         anyhow::bail!("Could not build docker image");
     }
 
-    println!("Starting docker image (zero2prod/database:latest) ...");
+    info!("Starting docker image (zero2prod/database:latest) ...");
     let status = Command::new("docker")
         .current_dir(project_root())
         .args([
@@ -72,21 +55,21 @@ pub fn postgres_db() -> Result<(), anyhow::Error> {
         ])
         .status();
 
-    println!("Docker Postgres server online");
-
     if status.is_err() {
         anyhow::bail!("Could not run docker image");
     }
 
-    println!("Set DATABASE_URL=\"{}\"", settings.connection_string());
+    info!("Set DATABASE_URL=\"{}\"", settings.connection_string());
 
     Ok(())
 }
 
-pub fn sqlx_prepare() -> Result<(), anyhow::Error> {
+pub async fn sqlx_prepare() -> Result<(), anyhow::Error> {
     check_sqlx_exists()?;
 
-    let settings = database_settings();
+    let settings = database_dev_settings()
+        .await
+        .expect("dev database settings");
 
     let sqlx_prepare = Command::new("cargo")
         .current_dir(project_root())
