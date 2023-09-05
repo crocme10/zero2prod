@@ -28,7 +28,6 @@ use zero2prod::domain::ports::secondary::EmailService;
 use zero2prod::domain::ports::secondary::{AuthenticationStorage, SubscriptionStorage};
 use zero2prod::domain::BodyData;
 use zero2prod::domain::Credentials;
-use zero2prod::services::postgres::init_dev_db;
 
 /// The TestWorld contains both the context for every tests
 /// and information that needs to be kept between steps of a
@@ -121,9 +120,6 @@ impl fmt::Debug for TestApp {
 pub async fn spawn_app() -> TestApp {
     tracing::info!("Spawning new app");
 
-    let _ = init_dev_db()
-        .await
-        .expect("Could not reset integration test database");
     // We are not using a real Email server, so we spawn a wiremock server,
     // and then use this server's url in our configuration.
     // We don't attach any expectation yet to that MockServer, this will

@@ -1,4 +1,5 @@
 use common::settings::{database_root_settings, database_dev_settings};
+use common::postgres::init_dev_db;
 use std::process::Command;
 use tracing::info;
 
@@ -15,7 +16,7 @@ pub async fn postgres_db() -> Result<(), anyhow::Error> {
     info!("Starting postgres docker image with root settings (postgres/15) ...");
     let settings = database_root_settings()
         .await
-        .expect("Could not get database dev settings");
+        .expect("Could not get database root settings");
 
     let status = Command::new("docker")
         .current_dir(project_root())
@@ -35,6 +36,13 @@ pub async fn postgres_db() -> Result<(), anyhow::Error> {
     if status.is_err() {
         anyhow::bail!("Could not run docker image");
     }
+
+    wait_for_postgres().await?;
+
+    init_dev_db().await?;
+
+    let settings = database_dev_settings()
+        .await.expect("Could not get database dev settings");
 
     info!("Set DATABASE_URL=\"{}\"", settings.connection_string());
 
@@ -60,3 +68,36 @@ pub async fn sqlx_prepare() -> Result<(), anyhow::Error> {
 
     Ok(())
 }
+
+async fn wait_for_postgres() -> Result<(), anyhow::Error> {
+
+    let settings = database_root_settings()
+        .await
+        .expect("Could not get database root settings");
+
+    let mut status = Command::new("psql");
+    let status = status
+        .current_dir(project_root())
+        .env("PGPASSWORD", &settings.password)
+        .args([
+            "-q",
+            "-h",
+            "localhost",
+            "-U",
+            &settings.username,
+            "-p",
+            &settings.port.to_string(),
+            "-d",
+            "postgres",
+            "-c",
+            "\\q",
+        ]);
+
+    while !status.status()?.success() {
+        println!("Postgres is still unavailable. Waiting to try again...");
+        std::thread::sleep(std::time::Duration::from_millis(1000));
+    }
+    Ok(())
+}
+
+

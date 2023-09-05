@@ -15,13 +15,13 @@ async fn health_check(world: &mut TestWorld) {
             .join("..")
             .join("..")
             .join("config"),
-        run_mode: Some("testing".to_string()),
+        run_mode: Some("dev".to_string()),
         settings: vec![],
         cmd: opts::Command::Run,
     };
     let settings: settings::Settings = opts.try_into().expect("Could not get settings");
     let url = format!(
-        "{}:{}/api/health",
+        "{}:{}/api/v1/health",
         settings.application.base_url, settings.application.http
     );
 

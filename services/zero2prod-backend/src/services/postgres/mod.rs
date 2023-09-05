@@ -65,6 +65,7 @@ mod tests {
     use std::sync::Arc;
     use common::postgres::init_dev_db;
     use common::settings::database_dev_settings;
+    use serial_test::serial;
 
     use crate::{
         domain::ports::secondary::SubscriptionStorage,
@@ -76,6 +77,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    #[serial]
     async fn storage_should_store_and_retrieve_subscription() {
         init_dev_db().await.expect("Could not reinitialization development database");
         let settings = database_dev_settings().await.expect("Could not retrieve development database settings");
@@ -103,6 +105,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn storage_should_store_and_retrieve_subscriber_by_token() {
         init_dev_db().await.expect("Could not reinitialization development database");
         let settings = database_dev_settings().await.expect("Could not retrieve development database settings");
@@ -132,6 +135,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn storage_should_not_retrieve_subscriber_by_token_once_deleted() {
         // In this test we store a subscription,
         // Then we confirm the subscriber

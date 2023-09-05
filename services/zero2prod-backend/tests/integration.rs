@@ -9,6 +9,7 @@ use tracing_subscriber::{
     layer::SubscriberExt as _,
     Layer,
 };
+use common::postgres::init_dev_db;
 
 mod state;
 mod steps;
@@ -35,6 +36,7 @@ async fn main() {
                 if let Some(handle) = world.app.server_handle.take() {
                     handle.abort();
                 }
+                init_dev_db().await.expect("Could not reinitialization development database");
                 world.app = state::spawn_app().await;
                 world.subscribers.clear();
                 world.users.clear();
