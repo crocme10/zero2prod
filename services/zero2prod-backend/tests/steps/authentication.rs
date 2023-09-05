@@ -21,6 +21,7 @@ use crate::state;
 #[when(regex = r#"a user registers"#)]
 async fn random_user_registration(world: &mut state::TestWorld) {
     let user = world.app.generate_random_user();
+    tracing::info!("Generated user: {:?}", user);
     let state::RegistrationResponse {
         status_code,
         status: _,

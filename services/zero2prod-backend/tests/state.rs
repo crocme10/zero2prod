@@ -21,13 +21,14 @@ use wiremock::{
     Mock, ResponseTemplate,
 };
 
-use common::settings::Settings;
+use common::settings::{ApplicationSettings, Settings};
 use zero2prod::application::opts::{Command, Opts};
 use zero2prod::application::{Application, Error};
 use zero2prod::domain::ports::secondary::EmailService;
 use zero2prod::domain::ports::secondary::{AuthenticationStorage, SubscriptionStorage};
 use zero2prod::domain::BodyData;
 use zero2prod::domain::Credentials;
+use zero2prod::services::postgres::init_dev_db;
 
 /// The TestWorld contains both the context for every tests
 /// and information that needs to be kept between steps of a
@@ -118,11 +119,11 @@ impl fmt::Debug for TestApp {
 }
 
 pub async fn spawn_app() -> TestApp {
-    // Set up subscriber for logging, only first time per run.
-    // Other times use existing subscriber.
-    // Lazy::force(&TRACING);
-
     tracing::info!("Spawning new app");
+
+    let _ = init_dev_db()
+        .await
+        .expect("Could not reset integration test database");
     // We are not using a real Email server, so we spawn a wiremock server,
     // and then use this server's url in our configuration.
     // We don't attach any expectation yet to that MockServer, this will
@@ -140,7 +141,7 @@ pub async fn spawn_app() -> TestApp {
             .join("..")
             .join("..")
             .join("config"),
-        run_mode: Some("testing".to_string()),
+        run_mode: Some("dev".to_string()),
         settings: vec![override_email_server_url],
         cmd: Command::Run,
     };
@@ -148,21 +149,35 @@ pub async fn spawn_app() -> TestApp {
     // And then build the configuration that would come from the command line arguments.
     let settings: Settings = opts.try_into().expect("settings");
 
+    let Settings {
+        application,
+        database,
+        email_client,
+        tracing: _,
+        mode: _,
+    } = settings;
+
+    let ApplicationSettings {
+        host: _,
+        http,
+        base_url,
+    } = application.clone();
+
     let builder = Application::builder()
-        .authentication(settings.database.clone())
+        .authentication(database.clone())
         .await
-        .expect("authentication service")
-        .subscription(settings.database.clone())
+        .expect("authentication storage")
+        .subscription(database)
         .await
-        .expect("subscription service")
-        .email(settings.email_client.clone())
+        .expect("subscription storage")
+        .email(email_client)
         .await
-        .expect("getting email client")
-        .listener(settings.application.clone())
-        .expect("getting listener")
-        .url(settings.application.base_url.clone())
-        .expect("getting static dir")
-        .secret("secret".to_string());
+        .expect("email client service")
+        .listener(application)
+        .expect("listener")
+        .http(http)
+        .url(base_url.clone())
+        .secret("Secret".to_string());
 
     // Before building the app, we extract a copy of storage and email.
     let authentication = builder.authentication.clone().unwrap();
@@ -172,7 +187,7 @@ pub async fn spawn_app() -> TestApp {
     // Now build the app, and launch it.
     let app = builder.build();
     let port = app.port();
-    let address = format!("{}:{}", settings.application.base_url, app.port());
+    let address = format!("{}:{}", base_url, app.port());
     let handle = tokio::spawn(app.run_until_stopped());
 
     let api_client = reqwest::Client::builder()
@@ -327,7 +342,7 @@ impl TestApp {
         }
     }
 
-    /// Register a random user.
+    /// Generate a random user using Fake.
     pub fn generate_random_user(&self) -> User {
         // We draw random information to define the subscription.
         let username = Name().fake::<String>();
@@ -378,13 +393,6 @@ impl TestApp {
             message: "foo".to_string(),
         }
     }
-
-    // pub async fn add_test_user(&mut self) {
-    //     let credentials: Credentials = C(EN).fake();
-    //     let id = Uuid::new_v4();
-    //     self.storage.create_user(id, &credentials).await.expect("Create test user");
-    //     self.user = Some(credentials);
-    // }
 }
 
 #[derive(Debug)]

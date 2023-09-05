@@ -12,8 +12,8 @@ use self::{login::login, logout::logout, register::register};
 
 pub fn routes(state: AppState) -> Router {
     Router::new()
-        .route("login", post(login))
-        .route("register", post(register))
-        .route("logout", get(logout))
+        .route("/login", post(login))
+        .route("/register", post(register))
+        .route("/logout", get(logout))
         .with_state(state)
 }

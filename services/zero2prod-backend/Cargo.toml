@@ -93,6 +93,6 @@ path = "src/lib.rs"
 name = "zero2prod"
 path = "src/main.rs"
 
-# [[test]]
-# name = "integration"
-# harness = false  # allows Cucumber to print output instead of libtest
+[[test]]
+name = "integration"
+harness = false  # allows Cucumber to print output instead of libtest

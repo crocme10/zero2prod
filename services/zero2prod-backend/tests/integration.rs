@@ -37,13 +37,7 @@ async fn main() {
                 }
                 world.app = state::spawn_app().await;
                 world.subscribers.clear();
-            }
-            .boxed()
-        })
-        .after(move |_feature, _rule, _scenario, _event, world| {
-            async {
-                let handle = world.unwrap().app.server_handle.take().expect("handle");
-                handle.abort();
+                world.users.clear();
             }
             .boxed()
         });
