@@ -81,7 +81,6 @@ mod tests {
         };
 
         let settings: Result<settings::Settings, _> = opts.try_into();
-        println!("settings: {settings:?}");
         assert!(settings.is_ok());
         assert_eq!(settings.unwrap().mode, "default");
     }

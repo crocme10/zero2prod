@@ -6,7 +6,7 @@ mod subscription;
 pub use self::error::Error;
 
 use common::err_context::ErrorContextExt;
-use common::settings::{database_dev_settings, database_root_settings, DatabaseSettings};
+use common::settings::{database_dev_settings, DatabaseSettings};
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use std::fs;
 use std::path::PathBuf;
@@ -79,17 +79,21 @@ pub async fn init_dev_db() -> Result<PostgresStorage, Error> {
     init_dev().await
 }
 
+// FIXME Getting mixed up with root and dev.
+// This function will be called by init_dev_db, to drop and recreate
+// the database. Since the database should have been created with the
+// `cargo xtask postgres` command, I end up using the dev profile here too.
 async fn init_root() -> Result<PostgresStorage, Error> {
-    let settings = database_root_settings()
+    let settings = database_dev_settings()
         .await
-        .context("Could not create root postgres storage")?;
+        .context("Could not get root database settings")?;
     init_sql_with_prefix(settings, "0").await
 }
 
 async fn init_dev() -> Result<PostgresStorage, Error> {
     let settings = database_dev_settings()
         .await
-        .context("Could not create dev postgres storage")?;
+        .context("Could not get dev database settings")?;
     init_sql_with_prefix(settings, "1").await
 }
 
@@ -100,10 +104,10 @@ async fn init_sql_with_prefix(
     let storage = PostgresStorage::new(settings).await?;
     let sql_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
-        .join("zero2prod_database")
+        .join("zero2prod-database")
         .join("sql");
-    let mut paths: Vec<PathBuf> = fs::read_dir(sql_dir)
-        .context("Could not read sql dir")?
+    let mut paths: Vec<PathBuf> = fs::read_dir(sql_dir.clone())
+        .context(format!("Could not read sql dir {}", sql_dir.display()))?
         .filter_map(|entry| {
             let path = entry.ok().map(|e| e.path());
             let name = path

@@ -12,10 +12,6 @@ pub async fn db_command() -> Result<(), anyhow::Error> {
 pub async fn postgres_db() -> Result<(), anyhow::Error> {
     check_psql_exists()?;
 
-    let settings = database_dev_settings()
-        .await
-        .expect("dev database settings");
-
     info!("Building docker image (zero2prod/database:latest) ...");
     let status = Command::new("docker")
         .current_dir(project_root())
@@ -35,7 +31,11 @@ pub async fn postgres_db() -> Result<(), anyhow::Error> {
         anyhow::bail!("Could not build docker image");
     }
 
-    info!("Starting docker image (zero2prod/database:latest) ...");
+    info!("Starting docker image with dev settings (zero2prod/database:latest) ...");
+    let settings = database_dev_settings()
+        .await
+        .expect("Could not get database dev settings");
+
     let status = Command::new("docker")
         .current_dir(project_root())
         .args([
