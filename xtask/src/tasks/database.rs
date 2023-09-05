@@ -1,4 +1,4 @@
-use common::settings::database_dev_settings;
+use common::settings::{database_root_settings, database_dev_settings};
 use std::process::Command;
 use tracing::info;
 
@@ -12,27 +12,8 @@ pub async fn db_command() -> Result<(), anyhow::Error> {
 pub async fn postgres_db() -> Result<(), anyhow::Error> {
     check_psql_exists()?;
 
-    info!("Building docker image (zero2prod/database:latest) ...");
-    let status = Command::new("docker")
-        .current_dir(project_root())
-        .args([
-            "buildx",
-            "build",
-            "--load",
-            "--tag",
-            "zero2prod/database:latest",
-            "-f",
-            "services/zero2prod-database/Dockerfile",
-            "services/zero2prod-database",
-        ])
-        .status();
-
-    if status.is_err() {
-        anyhow::bail!("Could not build docker image");
-    }
-
-    info!("Starting docker image with dev settings (zero2prod/database:latest) ...");
-    let settings = database_dev_settings()
+    info!("Starting postgres docker image with root settings (postgres/15) ...");
+    let settings = database_root_settings()
         .await
         .expect("Could not get database dev settings");
 
@@ -43,15 +24,11 @@ pub async fn postgres_db() -> Result<(), anyhow::Error> {
             "--name",
             "zero2prod",
             "-e",
-            &format!("POSTGRES_USER={}", settings.username),
-            "-e",
             &format!("POSTGRES_PASSWORD={}", settings.password),
-            "-e",
-            &format!("POSTGRES_DB={}", settings.database_name),
             "-p",
             &format!("{}:5432", settings.port),
             "-d",
-            "zero2prod/database:latest",
+            "postgres:15",
         ])
         .status();
 
