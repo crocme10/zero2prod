@@ -58,14 +58,14 @@ pub async fn connect_with_options(config: &DatabaseSettings) -> Result<PgPool, E
 
 #[cfg(test)]
 mod tests {
+    use common::postgres::init_dev_db;
+    use common::settings::database_dev_settings;
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::name::en::Name;
     use fake::Fake;
+    use serial_test::serial;
     use speculoos::prelude::*;
     use std::sync::Arc;
-    use common::postgres::init_dev_db;
-    use common::settings::database_dev_settings;
-    use serial_test::serial;
 
     use crate::{
         domain::ports::secondary::SubscriptionStorage,
@@ -79,9 +79,17 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn storage_should_store_and_retrieve_subscription() {
-        init_dev_db().await.expect("Could not reinitialization development database");
-        let settings = database_dev_settings().await.expect("Could not retrieve development database settings");
-        let storage = Arc::new(PostgresStorage::new(settings).await.expect("Could not get pool for development database"));
+        init_dev_db()
+            .await
+            .expect("Could not reinitialization development database");
+        let settings = database_dev_settings()
+            .await
+            .expect("Could not retrieve development database settings");
+        let storage = Arc::new(
+            PostgresStorage::new(settings)
+                .await
+                .expect("Could not get pool for development database"),
+        );
 
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();
@@ -107,9 +115,17 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn storage_should_store_and_retrieve_subscriber_by_token() {
-        init_dev_db().await.expect("Could not reinitialization development database");
-        let settings = database_dev_settings().await.expect("Could not retrieve development database settings");
-        let storage = Arc::new(PostgresStorage::new(settings).await.expect("Could not get pool for development database"));
+        init_dev_db()
+            .await
+            .expect("Could not reinitialization development database");
+        let settings = database_dev_settings()
+            .await
+            .expect("Could not retrieve development database settings");
+        let storage = Arc::new(
+            PostgresStorage::new(settings)
+                .await
+                .expect("Could not get pool for development database"),
+        );
         // Setup & Fixture
 
         let username = Name().fake::<String>();
@@ -144,9 +160,17 @@ mod tests {
         // which should be deleted from the subscription_token table.
         //
         // Setup & Fixture
-        init_dev_db().await.expect("Could not reinitialization development database");
-        let settings = database_dev_settings().await.expect("Could not retrieve development database settings");
-        let storage = Arc::new(PostgresStorage::new(settings).await.expect("Could not get pool for development database"));
+        init_dev_db()
+            .await
+            .expect("Could not reinitialization development database");
+        let settings = database_dev_settings()
+            .await
+            .expect("Could not retrieve development database settings");
+        let storage = Arc::new(
+            PostgresStorage::new(settings)
+                .await
+                .expect("Could not get pool for development database"),
+        );
 
         let username = Name().fake::<String>();
         let email = SafeEmail().fake::<String>();

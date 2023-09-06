@@ -3,14 +3,16 @@ pub mod health;
 pub mod login;
 pub mod logout;
 pub mod register;
-pub mod subscriptions;
 pub mod static_dir;
+pub mod subscriptions;
 
 use super::AppState;
 use axum::routing::{get, post, Router};
 
 pub use self::error::Error;
-use self::{login::login, logout::logout, register::register, health::health, subscriptions::subscriptions};
+use self::{
+    health::health, login::login, logout::logout, register::register, subscriptions::subscriptions,
+};
 
 pub fn routes(state: AppState) -> Router {
     Router::new()

@@ -41,7 +41,6 @@ async fn main() {
                     tracing::info!("Dropping Test App");
                     drop(app); // Make sure we drop the app, which drops the listener
                 }
-
             }
             .boxed()
         });

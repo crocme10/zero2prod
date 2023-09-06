@@ -1,7 +1,5 @@
 use crate::err_context::{ErrorContext, ErrorContextExt};
-use crate::settings::{
-    database_dev_settings, database_root_settings, Error as SettingsError,
-};
+use crate::settings::{database_dev_settings, database_root_settings, Error as SettingsError};
 use serde::Serialize;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::path::{Path, PathBuf};

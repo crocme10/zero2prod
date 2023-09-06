@@ -21,8 +21,8 @@ use wiremock::{
     Mock, ResponseTemplate,
 };
 
-use common::settings::{ApplicationSettings, Settings};
 use common::postgres::init_dev_db;
+use common::settings::{ApplicationSettings, Settings};
 use zero2prod::application::opts::{Command, Opts};
 use zero2prod::application::{Application, Error};
 use zero2prod::domain::ports::secondary::EmailService;
@@ -51,7 +51,9 @@ impl TestWorld {
     /// Creates a new TestWorld, using a 'testing' configuration.
     pub async fn new() -> Self {
         tracing::info!("Reinitializing development database");
-        init_dev_db().await.expect("Could not reinitialize development database");
+        init_dev_db()
+            .await
+            .expect("Could not reinitialize development database");
         let app = spawn_app().await;
         TestWorld {
             app: Some(app),

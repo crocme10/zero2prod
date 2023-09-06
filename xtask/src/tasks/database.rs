@@ -1,5 +1,5 @@
-use common::settings::{database_root_settings, database_dev_settings};
 use common::postgres::init_dev_db;
+use common::settings::{database_dev_settings, database_root_settings};
 use std::process::Command;
 use tracing::info;
 
@@ -42,7 +42,8 @@ pub async fn postgres_db() -> Result<(), anyhow::Error> {
     init_dev_db().await?;
 
     let settings = database_dev_settings()
-        .await.expect("Could not get database dev settings");
+        .await
+        .expect("Could not get database dev settings");
 
     info!("Set DATABASE_URL=\"{}\"", settings.connection_string());
 
@@ -70,7 +71,6 @@ pub async fn sqlx_prepare() -> Result<(), anyhow::Error> {
 }
 
 async fn wait_for_postgres() -> Result<(), anyhow::Error> {
-
     let settings = database_root_settings()
         .await
         .expect("Could not get database root settings");
@@ -99,5 +99,3 @@ async fn wait_for_postgres() -> Result<(), anyhow::Error> {
     }
     Ok(())
 }
-
-

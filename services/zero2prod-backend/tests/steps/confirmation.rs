@@ -11,7 +11,7 @@ async fn verify_confirmation_link(world: &mut state::TestWorld) {
             .received_requests()
             .await
             .expect("get email server received requests")[0];
-        let confirmation_links = app.get_confirmation_links(&email_request);
+        let confirmation_links = app.get_confirmation_links(email_request);
         // FIXME Other features to assert
         assert_eq!(
             confirmation_links.html.path(),
@@ -34,7 +34,7 @@ async fn store_confirmation_link(world: &mut state::TestWorld) {
             .received_requests()
             .await
             .expect("get email server received requests")[0];
-        let confirmation_links = app.get_confirmation_links(&email_request);
+        let confirmation_links = app.get_confirmation_links(email_request);
         world.subscribers[0].confirmation_link = Some(confirmation_links.html);
     }
 }
