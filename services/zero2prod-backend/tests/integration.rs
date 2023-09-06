@@ -9,7 +9,6 @@ use tracing_subscriber::{
     layer::SubscriberExt as _,
     Layer,
 };
-use common::postgres::init_dev_db;
 
 mod state;
 mod steps;
@@ -30,23 +29,19 @@ async fn main() {
         .fail_on_skipped()
         .with_cli(opts)
         .max_concurrent_scenarios(1)
-        .before(move |_feature, _rule, _scenario, world| {
+        .after(move |_feature, _rule, _scenario, _event, world| {
             async {
-                tracing::info!("Before hook");
-                let app = world.app.take();
+                let app = world.and_then(|w| w.app.take());
 
                 if let Some(mut app) = app {
-                    // Abort the server if its running, and restart the app
+                    tracing::info!("Aborting server");
                     if let Some(handle) = app.server_handle.take() {
                         handle.abort();
                     }
-                    drop(app);
+                    tracing::info!("Dropping Test App");
+                    drop(app); // Make sure we drop the app, which drops the listener
                 }
-                tracing::info!("Reinitializing development database");
-                init_dev_db().await.expect("Could not reinitialize development database");
-                world.app = Some(state::spawn_app().await);
-                world.subscribers.clear();
-                world.users.clear();
+
             }
             .boxed()
         });

@@ -22,6 +22,7 @@ use wiremock::{
 };
 
 use common::settings::{ApplicationSettings, Settings};
+use common::postgres::init_dev_db;
 use zero2prod::application::opts::{Command, Opts};
 use zero2prod::application::{Application, Error};
 use zero2prod::domain::ports::secondary::EmailService;
@@ -49,10 +50,11 @@ pub struct TestWorld {
 impl TestWorld {
     /// Creates a new TestWorld, using a 'testing' configuration.
     pub async fn new() -> Self {
-        let app = None;
-
+        tracing::info!("Reinitializing development database");
+        init_dev_db().await.expect("Could not reinitialize development database");
+        let app = spawn_app().await;
         TestWorld {
-            app,
+            app: Some(app),
             status_code: None,
             subscribers: vec![],
             users: vec![],
@@ -247,7 +249,7 @@ impl TestApp {
 
     /// Send a post request to the subscriptions endpoint.
     pub async fn post_subscriptions(&self, map: HashMap<&str, String>) -> reqwest::Response {
-        let url = format!("{}/api/subscriptions", self.address);
+        let url = format!("{}/api/v1/subscriptions", self.address);
         self.api_client
             .post(url)
             .json(&map)
