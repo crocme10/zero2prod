@@ -25,7 +25,7 @@ use common::err_context::ErrorContextExt;
 pub async fn subscriptions(
     State(state): State<AppState>,
     Json(request): Json<SubscriptionRequest>,
-) -> Result<impl IntoResponse, impl IntoResponse> {
+) -> Result<impl IntoResponse, Error> {
     let subscription =
         NewSubscription::try_from(request).context("Could not get valid subscription")?;
 

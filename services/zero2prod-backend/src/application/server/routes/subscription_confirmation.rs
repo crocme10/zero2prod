@@ -1,13 +1,12 @@
 use axum::extract::{Json, Query, State};
-use axum::http::status::StatusCode;
-use axum::response::{IntoResponse, Response};
+use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use uuid::Uuid;
 
+use super::Error;
+
 use crate::application::server::AppState;
-use crate::domain::ports::secondary::SubscriptionError;
-use common::err_context::{ErrorContext, ErrorContextExt};
+use common::err_context::ErrorContextExt;
 
 /// POST handler for user subscription confirmation
 #[allow(clippy::unused_async)]
@@ -21,7 +20,7 @@ use common::err_context::{ErrorContext, ErrorContextExt};
 pub async fn subscriptions_confirmation(
     State(state): State<AppState>,
     request: Query<SubscriptionConfirmationRequest>,
-) -> Result<impl IntoResponse, impl IntoResponse> {
+) -> Result<impl IntoResponse, Error> {
     let request = request.0;
     match state
         .subscription
@@ -38,21 +37,11 @@ pub async fn subscriptions_confirmation(
                 .confirm_subscriber_by_id_and_delete_token(&id)
                 .await
                 .context("Could not confirm subscriber")?;
-            let resp = SubscriptionConfirmationResp {
-                status: "OK".to_string(),
-            };
-            Ok::<axum::Json<SubscriptionConfirmationResp>, Error>(Json(resp))
+            Ok::<_, Error>(Json(serde_json::json!({
+                "status": "success"
+            })))
         }
     }
-}
-
-/// This is what we return to the user in response to the subscription request.
-/// Currently this is just a placeholder, and it does not return any useful
-/// information.
-/// FIXME Share code with frontend
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubscriptionConfirmationResp {
-    pub status: String,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -60,72 +49,12 @@ pub struct SubscriptionConfirmationRequest {
     pub token: String,
 }
 
-#[derive(Debug, Serialize)]
-pub enum Error {
-    MissingToken {
-        context: String,
-    },
-    Data {
-        context: String,
-        source: SubscriptionError,
-    },
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::MissingToken { context } => {
-                write!(fmt, "Invalid Authentication Scheme: {context} ")
-            }
-            Error::Data { context, source } => {
-                write!(fmt, "Storage Error: {context} | {source}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl From<ErrorContext<SubscriptionError>> for Error {
-    fn from(err: ErrorContext<SubscriptionError>) -> Self {
-        Error::Data {
-            context: err.0,
-            source: err.1,
-        }
-    }
-}
-
-impl IntoResponse for Error {
-    fn into_response(self) -> Response {
-        match self {
-            err @ Error::MissingToken { context: _ } => {
-                (
-                    // FIXME Not all Error leads to UNAUTHORIZED. Some are INTERNAL_ERROR, ...
-                    StatusCode::UNAUTHORIZED,
-                    serde_json::to_string(&err).unwrap(),
-                )
-                    .into_response()
-            }
-            err @ Error::Data {
-                context: _,
-                source: _,
-            } => {
-                (
-                    // FIXME Not all Error leads to UNAUTHORIZED. Some are INTERNAL_ERROR, ...
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    serde_json::to_string(&err).unwrap(),
-                )
-                    .into_response()
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use axum::{
         body::Body,
         http::{Request, StatusCode},
+        middleware::{from_fn_with_state, map_response},
         routing::{post, Router},
     };
     use fake::Fake;
@@ -133,8 +62,12 @@ mod tests {
     use secrecy::Secret;
     use std::sync::Arc;
     use tower::ServiceExt;
+    use tower_cookies::CookieManagerLayer;
 
     use crate::{
+        application::server::{
+            middleware::resolve_context::resolve_context, middleware::response_map::error,
+        },
         application::server::{AppState, ApplicationBaseUrl},
         domain::ports::secondary::{
             MockAuthenticationStorage, MockEmailService, MockSubscriptionStorage,
@@ -144,11 +77,16 @@ mod tests {
     use super::*;
 
     /// This is a helper function to build an App with axum.
-    fn subscriptions_confirmation_route() -> Router<AppState> {
-        Router::new().route(
-            "/subscriptions/confirmation",
-            post(subscriptions_confirmation),
-        )
+    fn subscriptions_confirmation_route(state: AppState) -> Router {
+        Router::new()
+            .route(
+                "/api/subscriptions/confirmation",
+                post(subscriptions_confirmation),
+            )
+            .layer(map_response(error))
+            .layer(from_fn_with_state(state.clone(), resolve_context))
+            .layer(CookieManagerLayer::new())
+            .with_state(state)
     }
 
     /// This is a helper function to build the content of the request
@@ -198,11 +136,11 @@ mod tests {
             secret: Secret::new("secret".to_string()),
         };
 
-        let app = subscriptions_confirmation_route().with_state(state);
+        let app = subscriptions_confirmation_route(state);
 
         let response = app
             .oneshot(send_subscription_confirmation_request(
-                "/subscriptions/confirmation",
+                "/api/subscriptions/confirmation",
                 Some(token),
             ))
             .await
@@ -249,11 +187,11 @@ mod tests {
             secret: Secret::new("secret".to_string()),
         };
 
-        let app = subscriptions_confirmation_route().with_state(state);
+        let app = subscriptions_confirmation_route(state);
 
         let response = app
             .oneshot(send_subscription_confirmation_request(
-                "/subscriptions/confirmation",
+                "/api/subscriptions/confirmation",
                 Some(token),
             ))
             .await
