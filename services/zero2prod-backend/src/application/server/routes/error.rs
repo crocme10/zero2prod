@@ -9,9 +9,11 @@ use std::fmt;
 use crate::application::server::context::ContextError;
 use crate::authentication::password::Error as PasswordError;
 use crate::domain::ports::secondary::AuthenticationError;
+use crate::domain::ports::secondary::EmailError;
+use crate::domain::ports::secondary::SubscriptionError;
 use common::err_context::ErrorContext;
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Debug, Serialize)]
 pub enum Error {
     AuthenticationService {
         context: String,
@@ -35,6 +37,21 @@ pub enum Error {
     WeakPassword {
         context: String,
     },
+    InvalidRequest {
+        context: String,
+        source: String,
+    },
+    MissingToken {
+        context: String,
+    },
+    Data {
+        context: String,
+        source: SubscriptionError,
+    },
+    Email {
+        context: String,
+        source: EmailError,
+    },
 }
 
 impl fmt::Display for Error {
@@ -57,6 +74,18 @@ impl fmt::Display for Error {
             }
             Error::WeakPassword { context } => {
                 write!(fmt, "Weak password: {context} ")
+            }
+            Error::InvalidRequest { context, source } => {
+                write!(fmt, "Invalid Request: {context} {source}")
+            }
+            Error::MissingToken { context } => {
+                write!(fmt, "Missing Token: {context} ")
+            }
+            Error::Data { context, source } => {
+                write!(fmt, "Data: {context} {source}")
+            }
+            Error::Email { context, source } => {
+                write!(fmt, "Email: {context} {source}")
             }
         }
     }
@@ -82,6 +111,33 @@ impl From<ErrorContext<ContextError>> for Error {
 impl From<ErrorContext<AuthenticationError>> for Error {
     fn from(err: ErrorContext<AuthenticationError>) -> Self {
         Error::AuthenticationService {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<String>> for Error {
+    fn from(err: ErrorContext<String>) -> Self {
+        Error::InvalidRequest {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<SubscriptionError>> for Error {
+    fn from(err: ErrorContext<SubscriptionError>) -> Self {
+        Error::Data {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<EmailError>> for Error {
+    fn from(err: ErrorContext<EmailError>) -> Self {
+        Error::Email {
             context: err.0,
             source: err.1,
         }
@@ -137,6 +193,38 @@ impl Error {
                     "status": "fail",
                     "message": context,
                     "code": "auth/weak_password"
+                })),
+            ),
+            Error::InvalidRequest { context, source: _ } => (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "status": "fail",
+                    "message": context,
+                    "code": "tbd"
+                })),
+            ),
+            Error::MissingToken { context } => (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "status": "fail",
+                    "message": context,
+                    "code": "tbd"
+                })),
+            ),
+            Error::Data { context, source: _ } => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "status": "fail",
+                    "message": context,
+                    "code": "tbd"
+                })),
+            ),
+            Error::Email { context, source: _ } => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "status": "fail",
+                    "message": context,
+                    "code": "tbd"
                 })),
             ),
         }
