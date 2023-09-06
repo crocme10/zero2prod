@@ -35,7 +35,7 @@ use zero2prod::domain::Credentials;
 #[derive(World, Debug)]
 #[world(init = Self::new)]
 pub struct TestWorld {
-    pub app: TestApp,
+    pub app: Option<TestApp>,
     // We store an optional response's status code. The response, typically, can be set in
     // a 'when' step, and checked in a following 'then' step.
     pub status_code: Option<reqwest::StatusCode>,
@@ -49,7 +49,7 @@ pub struct TestWorld {
 impl TestWorld {
     /// Creates a new TestWorld, using a 'testing' configuration.
     pub async fn new() -> Self {
-        let app = spawn_app().await;
+        let app = None;
 
         TestWorld {
             app,

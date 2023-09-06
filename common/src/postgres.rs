@@ -94,7 +94,7 @@ async fn exec_file<P: AsRef<Path> + fmt::Debug + ?Sized>(
     let file = path.to_str().ok_or(Error::IO {
         context: format!("Could not get str out of {}", path.display()),
     })?;
-    tracing::info!("{:<12} - pexec: {file}", "FOR-DEV-ONLY");
+    tracing::info!("Executing file {file}");
     let content = fs::read_to_string(file).context("Unable to read file for execution")?;
 
     // FIXME: Make the split more sql proof.

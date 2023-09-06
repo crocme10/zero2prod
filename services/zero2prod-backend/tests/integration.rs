@@ -32,12 +32,19 @@ async fn main() {
         .max_concurrent_scenarios(1)
         .before(move |_feature, _rule, _scenario, world| {
             async {
-                // Abort the server if its running, and restart the app
-                if let Some(handle) = world.app.server_handle.take() {
-                    handle.abort();
+                tracing::info!("Before hook");
+                let app = world.app.take();
+
+                if let Some(mut app) = app {
+                    // Abort the server if its running, and restart the app
+                    if let Some(handle) = app.server_handle.take() {
+                        handle.abort();
+                    }
+                    drop(app);
                 }
-                init_dev_db().await.expect("Could not reinitialization development database");
-                world.app = state::spawn_app().await;
+                tracing::info!("Reinitializing development database");
+                init_dev_db().await.expect("Could not reinitialize development database");
+                world.app = Some(state::spawn_app().await);
                 world.subscribers.clear();
                 world.users.clear();
             }
