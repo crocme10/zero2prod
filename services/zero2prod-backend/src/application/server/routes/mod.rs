@@ -2,20 +2,20 @@ mod error;
 pub mod health;
 pub mod login;
 pub mod logout;
+pub mod newsletter;
 pub mod register;
 pub mod static_dir;
 pub mod subscription_confirmation;
 pub mod subscriptions;
-pub mod newsletter;
 
 use super::AppState;
 use axum::routing::{get, post, Router};
 
 pub use self::error::Error;
 use self::{
-    health::health, login::login, logout::logout, register::register,
-    subscription_confirmation::subscriptions_confirmation, subscriptions::subscriptions,
-    newsletter::publish_newsletter,
+    health::health, login::login, logout::logout, newsletter::publish_newsletter,
+    register::register, subscription_confirmation::subscriptions_confirmation,
+    subscriptions::subscriptions,
 };
 
 pub fn routes(state: AppState) -> Router {

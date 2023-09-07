@@ -6,7 +6,7 @@ use serde_json::Value;
 use serde::Serialize;
 use std::fmt;
 
-use crate::application::server::context::ContextError;
+use crate::application::server::context::Error as ContextError;
 use crate::application::server::middleware::resolve_context::Error as ContextResolutionError;
 use crate::authentication::password::Error as PasswordError;
 use crate::domain::ports::secondary::AuthenticationError;
@@ -24,7 +24,6 @@ pub enum Error {
         context: String,
         source: PasswordError,
     },
-    // This occurs when the credentials are not present in the context
     Context {
         context: String,
         source: ContextError,
@@ -189,7 +188,7 @@ impl Error {
                 })),
             ),
             Error::ContextResolution { context, source: _ } => (
-                StatusCode::INTERNAL_SERVER_ERROR,
+                StatusCode::UNAUTHORIZED,
                 Json(serde_json::json!({
                     "status": "fail",
                     "message": context,

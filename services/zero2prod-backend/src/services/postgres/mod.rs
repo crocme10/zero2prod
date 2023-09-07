@@ -76,8 +76,8 @@ mod tests {
 
     use super::*;
 
-    #[tokio::test]
     #[serial]
+    #[tokio::test]
     async fn storage_should_store_and_retrieve_subscription() {
         init_dev_db()
             .await
@@ -112,8 +112,8 @@ mod tests {
         assert_that(&lhs).is_equal_to(&rhs.unwrap());
     }
 
-    #[tokio::test]
     #[serial]
+    #[tokio::test]
     async fn storage_should_store_and_retrieve_subscriber_by_token() {
         init_dev_db()
             .await
@@ -150,8 +150,8 @@ mod tests {
         assert_that(&id.unwrap()).is_equal_to(subscription.id);
     }
 
-    #[tokio::test]
     #[serial]
+    #[tokio::test]
     async fn storage_should_not_retrieve_subscriber_by_token_once_deleted() {
         // In this test we store a subscription,
         // Then we confirm the subscriber

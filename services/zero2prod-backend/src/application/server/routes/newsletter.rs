@@ -1,12 +1,16 @@
 use axum::extract::{Json, State};
-use axum::Extension;
 use axum::response::IntoResponse;
+use axum::Extension;
 use tower_cookies::Cookies;
 use uuid::Uuid;
 
 use super::Error;
 
-use crate::application::server::{context::Context, AppState};
+use crate::application::server::middleware::resolve_context::Error as ContextResolutionError;
+use crate::application::server::{
+    context::{Context, Error as ContextError},
+    AppState,
+};
 use crate::domain::ports::secondary::Email;
 use crate::domain::BodyData;
 use crate::domain::SubscriberEmail;
@@ -24,17 +28,21 @@ use common::err_context::ErrorContextExt;
     )
 )]
 pub async fn publish_newsletter(
-    Extension(context): Extension<Context>,
+    Extension(context): Extension<Result<Context, ContextResolutionError>>,
     State(state): State<AppState>,
     cookies: Cookies,
     Json(request): Json<BodyData>,
 ) -> Result<impl IntoResponse, Error> {
-    let id = context
-        .user_id()
-        .map(|id| id.to_string())
-        .unwrap_or("None".to_string());
+    println!("publish newsletter");
+    println!("context: {:?}", context);
+    let context = context.context("Could not resolve context")?;
 
-    println!("context user id {}", id);
+    let id = context.user_id().ok_or(Error::Context {
+        context: "Missing User Id".to_string(),
+        source: ContextError::InvalidUserId {
+            context: "User Id is None".to_string(),
+        },
+    })?;
 
     tracing::Span::current().record("userid", &tracing::field::display(id));
 
@@ -233,19 +241,18 @@ mod tests {
             .return_once(|_| Ok(()));
 
         // We also need a storage mock that returns a list of confirmed subscribers
-        let mut authentication_mock = MockAuthenticationStorage::new();
         let mut subscription_mock = MockSubscriptionStorage::new();
 
         subscription_mock
             .expect_get_confirmed_subscribers_email()
             .return_once(move || Ok(vec![confirmed_subscriber]));
 
-        let credentials: Credentials = CredentialsGenerator(EN).fake();
-        let hashed_password = compute_password_hash(credentials.password.clone()).unwrap();
-        let id = Uuid::new_v4();
+        let user_id = Uuid::new_v4();
+        let mut authentication_mock = MockAuthenticationStorage::new();
         authentication_mock
-            .expect_get_credentials()
-            .return_once(move |_| Ok(Some((id, hashed_password))));
+            .expect_id_exists()
+            .withf(move |id: &Uuid| id == &user_id)
+            .return_const(Ok(true));
 
         let state = AppState {
             authentication: Arc::new(authentication_mock),
@@ -268,7 +275,7 @@ mod tests {
             .oneshot(send_newsletter_request_from_json(
                 "/api/newsletter",
                 serde_json::to_value(body).expect("body to json value"),
-                Some(id),
+                Some(user_id),
                 &state.secret,
             ))
             .await
@@ -326,8 +333,6 @@ mod tests {
 
         // Check the response status code.
         assert_that(&response.status()).is_equal_to(StatusCode::UNAUTHORIZED);
-        assert_that(&response.headers()["WWW-Authenticate"])
-            .is_equal_to(HeaderValue::from_static(r#"Basic realm="publish""#))
     }
 
     #[tokio::test]
@@ -337,17 +342,20 @@ mod tests {
         // authorization criteria are not met.
         // So we use 'never' on the mocks.
 
+        let user_id = Uuid::new_v4();
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        authentication_mock
+            .expect_id_exists()
+            .withf(move |id: &Uuid| id == &user_id)
+            .return_const(Ok(false));
+
         let mut email_mock = MockEmailService::new();
         email_mock
             .expect_send_email()
             .never()
             .return_once(|_| Ok(()));
-        let mut authentication_mock = MockAuthenticationStorage::new();
-        authentication_mock
-            .expect_get_credentials()
-            .return_once(move |_| Ok(None));
-        let mut subscription_mock = MockSubscriptionStorage::new();
 
+        let mut subscription_mock = MockSubscriptionStorage::new();
         subscription_mock
             .expect_get_confirmed_subscribers_email()
             .never()
@@ -370,12 +378,11 @@ mod tests {
                 text: "Newsletter Content".to_string(),
             },
         };
-        let id = Uuid::new_v4();
         let response = app
             .oneshot(send_newsletter_request_from_json(
                 "/api/newsletter",
                 serde_json::to_value(body).expect("body to json value"),
-                Some(id),
+                Some(user_id),
                 &state.secret,
             ))
             .await
@@ -383,7 +390,5 @@ mod tests {
 
         // Check the response status code.
         assert_that(&response.status()).is_equal_to(StatusCode::UNAUTHORIZED);
-        assert_that(&response.headers()["WWW-Authenticate"])
-            .is_equal_to(HeaderValue::from_static(r#"Basic realm="publish""#))
     }
 }

@@ -33,6 +33,7 @@ pub async fn register(
     cookies: Cookies,
     Json(request): Json<RegistrationRequest>,
 ) -> Result<impl IntoResponse, Error> {
+    println!("register");
     // Check for duplicates
     if state
         .authentication
@@ -40,6 +41,7 @@ pub async fn register(
         .await
         .context("Could not check if the email exists")?
     {
+        println!("duplicate email");
         return Err(Error::DuplicateEmail {
             context: "Unable to register new user".to_string(),
         });
@@ -51,6 +53,7 @@ pub async fn register(
         .await
         .context("Could not check if the username exists")?
     {
+        println!("duplicate username");
         return Err(Error::DuplicateUsername {
             context: "Unable to register new user".to_string(),
         });
@@ -58,10 +61,13 @@ pub async fn register(
 
     let password_score = scorer::score(&analyzer::analyze(&request.password));
     if password_score < 90f64 {
+        println!("weak password");
         return Err(Error::WeakPassword {
             context: "Unable to register new user".to_string(),
         });
     }
+
+    println!("checked");
 
     let credentials = Credentials {
         username: request.username,

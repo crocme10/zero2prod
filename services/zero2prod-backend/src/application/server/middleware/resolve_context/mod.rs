@@ -25,14 +25,13 @@ pub async fn resolve_context<B: fmt::Debug>(
     mut req: Request<B>,
     next: Next<B>,
 ) -> Result<Response, RoutesError> {
-    println!("resolve context");
     let context = resolve(&cookies, state).await;
 
+    // If there is a token, and it is invalid, we need to remove it from the cookies,
+    // so that the user does not present this token again.
     if context.is_err() && !matches!(context, Err(Error::TokenNotFound)) {
         cookies.remove(Cookie::named(JWT))
     }
-    
-    let context = context.context("Could not extract context")?;
 
     req.extensions_mut().insert(context);
 
@@ -58,7 +57,5 @@ pub async fn resolve(cookies: &Cookies, State(state): State<AppState>) -> Result
 
     println!("inserting id into context {}", id);
 
-    Context::new(Some(id)).map_err(|_| Error::InvalidUserId {
-        context: "invalid user id".to_string(),
-    })
+    Ok(Context::new(Some(id)))
 }
