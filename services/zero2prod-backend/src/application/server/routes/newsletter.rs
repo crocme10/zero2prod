@@ -86,10 +86,8 @@ mod tests {
         routing::{post, Router},
     };
     use fake::faker::internet::en::SafeEmail;
-    use fake::locales::*;
     use fake::Fake;
     use mockall::predicate::*;
-    use reqwest::header::HeaderValue;
     use secrecy::Secret;
     use speculoos::prelude::*;
     use std::sync::Arc;
@@ -102,13 +100,10 @@ mod tests {
             middleware::resolve_context::resolve_context, middleware::response_map::error,
         },
         authentication::jwt::build_token,
-        authentication::password::compute_password_hash,
         domain::ports::secondary::MockAuthenticationStorage,
         domain::ports::secondary::MockEmailService,
         domain::ports::secondary::MockSubscriptionStorage,
-        domain::{
-            ConfirmedSubscriber, Content, Credentials, CredentialsGenerator, SubscriberEmail,
-        },
+        domain::{ConfirmedSubscriber, Content, SubscriberEmail},
     };
 
     use super::*;
@@ -134,7 +129,7 @@ mod tests {
     ) -> Request<Body> {
         let builder = match id {
             Some(id) => {
-                let token = build_token(id, &secret);
+                let token = build_token(id, secret);
                 Request::builder().header(header::COOKIE, format!("{}={}", JWT, token))
             }
             None => Request::builder(),
