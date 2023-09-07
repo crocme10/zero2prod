@@ -50,7 +50,7 @@ pub async fn login(
             source: err,
         })?;
 
-    let token = build_token(id, state.secret);
+    let token = build_token(id, &state.secret);
 
     cookies::set_token_cookie(&cookies, &token);
 

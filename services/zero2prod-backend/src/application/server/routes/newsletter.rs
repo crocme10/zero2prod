@@ -1,26 +1,21 @@
 use axum::extract::{Json, State};
-use axum::http::status::StatusCode;
-use axum::response::{IntoResponse, Response};
-use hyper::header::{self, HeaderMap};
-use serde::{Deserialize, Serialize};
-use std::fmt;
+use axum::Extension;
+use axum::response::IntoResponse;
+use tower_cookies::Cookies;
 use uuid::Uuid;
 
-use crate::application::server::AppState;
-use crate::authentication::{
-    basic::{basic_authentication, Error as AuthenticationSchemeError},
-    password::{Authenticator, Error as CredentialsError},
-};
-use crate::domain::ports::secondary::SubscriptionError;
-use crate::domain::ports::secondary::{Email, EmailError};
-use crate::domain::SubscriberEmail;
+use super::Error;
+
+use crate::application::server::{context::Context, AppState};
+use crate::domain::ports::secondary::Email;
 use crate::domain::BodyData;
-use common::err_context::{ErrorContext, ErrorContextExt};
+use crate::domain::SubscriberEmail;
+use common::err_context::ErrorContextExt;
 
 /// POST handler for newsletter publishing
 #[allow(clippy::unused_async)]
 #[tracing::instrument(
-    name = "Adding a new subscription"
+    name = "Publishing a newsletter"
     skip(state),
     fields(
         request_id = %Uuid::new_v4(),
@@ -29,24 +24,19 @@ use common::err_context::{ErrorContext, ErrorContextExt};
     )
 )]
 pub async fn publish_newsletter(
-    headers: HeaderMap,
+    Extension(context): Extension<Context>,
     State(state): State<AppState>,
+    cookies: Cookies,
     Json(request): Json<BodyData>,
-) -> Result<impl IntoResponse, impl IntoResponse> {
-    let credentials = basic_authentication(&headers).context("Publishing newsletter")?;
+) -> Result<impl IntoResponse, Error> {
+    let id = context
+        .user_id()
+        .map(|id| id.to_string())
+        .unwrap_or("None".to_string());
 
-    tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
+    println!("context user id {}", id);
 
-    let authenticator = Authenticator {
-        storage: state.authentication.clone(),
-    };
-
-    let id = authenticator
-        .validate_credentials(&credentials)
-        .await
-        .context("Could not validate credentials")?;
-
-    tracing::Span::current().record("id", &tracing::field::display(&id));
+    tracing::Span::current().record("userid", &tracing::field::display(id));
 
     let subscribers = state
         .subscription
@@ -63,98 +53,6 @@ pub async fn publish_newsletter(
             .context("Cannot send newsletter email")?;
     }
     Ok::<axum::Json<()>, Error>(Json(()))
-}
-
-#[derive(Debug, Serialize)]
-pub enum Error {
-    AuthenticationScheme {
-        context: String,
-        source: AuthenticationSchemeError,
-    },
-    Credentials {
-        context: String,
-        source: CredentialsError,
-    },
-    Data {
-        context: String,
-        source: SubscriptionError,
-    },
-    Email {
-        context: String,
-        source: EmailError,
-    },
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::AuthenticationScheme { context, source } => {
-                write!(fmt, "Authentication Scheme Error: {context} | {source}")
-            }
-            Error::Credentials { context, source } => {
-                write!(fmt, "Credential Validation Error: {context} | {source}")
-            }
-            Error::Data { context, source } => {
-                write!(fmt, "Storage Error: {context} | {source}")
-            }
-            Error::Email { context, source } => {
-                write!(fmt, "Email Error: {context} | {source}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl From<ErrorContext<AuthenticationSchemeError>> for Error {
-    fn from(err: ErrorContext<AuthenticationSchemeError>) -> Self {
-        Error::AuthenticationScheme {
-            context: err.0,
-            source: err.1,
-        }
-    }
-}
-
-impl From<ErrorContext<CredentialsError>> for Error {
-    fn from(err: ErrorContext<CredentialsError>) -> Self {
-        Error::Credentials {
-            context: err.0,
-            source: err.1,
-        }
-    }
-}
-
-impl From<ErrorContext<SubscriptionError>> for Error {
-    fn from(err: ErrorContext<SubscriptionError>) -> Self {
-        Error::Data {
-            context: err.0,
-            source: err.1,
-        }
-    }
-}
-
-impl From<ErrorContext<EmailError>> for Error {
-    fn from(err: ErrorContext<EmailError>) -> Self {
-        Error::Email {
-            context: err.0,
-            source: err.1,
-        }
-    }
-}
-
-impl IntoResponse for Error {
-    fn into_response(self) -> Response {
-        (
-            // FIXME Not all Error leads to UNAUTHORIZED. Some are INTERNAL_ERROR, ...
-            StatusCode::UNAUTHORIZED,
-            [
-                (header::CONTENT_TYPE, "application/json"),
-                (header::WWW_AUTHENTICATE, r#"Basic realm="publish""#),
-            ],
-            serde_json::to_string(&self).unwrap(),
-        )
-            .into_response()
-    }
 }
 
 /// This is a helper function to create an email sent to the subscriber,
@@ -176,6 +74,7 @@ mod tests {
     use axum::{
         body::Body,
         http::{header, Request, StatusCode},
+        middleware::{from_fn_with_state, map_response},
         routing::{post, Router},
     };
     use fake::faker::internet::en::SafeEmail;
@@ -187,21 +86,33 @@ mod tests {
     use speculoos::prelude::*;
     use std::sync::Arc;
     use tower::ServiceExt;
+    use tower_cookies::CookieManagerLayer;
 
     use crate::{
-        application::server::{AppState, ApplicationBaseUrl},
+        application::server::{cookies::JWT, AppState, ApplicationBaseUrl},
+        application::server::{
+            middleware::resolve_context::resolve_context, middleware::response_map::error,
+        },
+        authentication::jwt::build_token,
         authentication::password::compute_password_hash,
         domain::ports::secondary::MockAuthenticationStorage,
         domain::ports::secondary::MockEmailService,
         domain::ports::secondary::MockSubscriptionStorage,
-        domain::{ConfirmedSubscriber, Credentials, CredentialsGenerator, SubscriberEmail},
+        domain::{
+            ConfirmedSubscriber, Content, Credentials, CredentialsGenerator, SubscriberEmail,
+        },
     };
 
     use super::*;
 
     /// This is a helper function to build an App with axum.
-    fn newsletter_route() -> Router<AppState> {
-        Router::new().route("/api/newsletter", post(publish_newsletter))
+    fn newsletter_route(state: AppState) -> Router {
+        Router::new()
+            .route("/api/newsletter", post(publish_newsletter))
+            .layer(map_response(error))
+            .layer(from_fn_with_state(state.clone(), resolve_context))
+            .layer(CookieManagerLayer::new())
+            .with_state(state)
     }
 
     /// This is a helper function to build the content of the request
@@ -210,13 +121,14 @@ mod tests {
     fn send_newsletter_request_from_json(
         uri: &str,
         request: serde_json::Value,
-        credentials: Option<Credentials>,
+        id: Option<Uuid>,
+        secret: &Secret<String>,
     ) -> Request<Body> {
-        let builder = match credentials {
-            Some(credentials) => Request::builder().header(
-                header::AUTHORIZATION,
-                format!("Basic {}", credentials.encode()),
-            ),
+        let builder = match id {
+            Some(id) => {
+                let token = build_token(id, &secret);
+                Request::builder().header(header::COOKIE, format!("{}={}", JWT, token))
+            }
             None => Request::builder(),
         };
         builder
@@ -229,8 +141,17 @@ mod tests {
 
     #[tokio::test]
     async fn newsletter_returns_400_for_invalid_data() {
-        // Arrange
-        let authentication_mock = MockAuthenticationStorage::new();
+        // Setup & Fixture
+
+        // We create a fake user id, and make sure that the authentication mock believes it exists
+        // in storage
+        let user_id = Uuid::new_v4(); // This is the id of a user
+        let mut authentication_mock = MockAuthenticationStorage::new();
+        authentication_mock
+            .expect_id_exists()
+            .withf(move |id: &Uuid| id == &user_id)
+            .return_const(Ok(true));
+
         let subscription_mock = MockSubscriptionStorage::new();
         let email_mock = MockEmailService::new();
 
@@ -242,6 +163,7 @@ mod tests {
             secret: Secret::new("secret".to_string()),
         };
 
+        // A list of <json = test content, string = test title>
         let test_cases = vec![
             (
                 serde_json::json!({
@@ -257,15 +179,16 @@ mod tests {
                 "missing content",
             ),
         ];
+
+        // Exec and Check
         for (body, message) in test_cases {
-            let app = newsletter_route().with_state(state.clone());
-            //let credentials = Faker.fake::<C>();
-            let credentials: Credentials = CredentialsGenerator(EN).fake();
+            let app = newsletter_route(state.clone());
             let response = app
                 .oneshot(send_newsletter_request_from_json(
                     "/api/newsletter",
                     body,
-                    Some(credentials),
+                    Some(user_id),
+                    &state.secret,
                 ))
                 .await
                 .expect("Failed to execute request.");
@@ -332,7 +255,7 @@ mod tests {
             secret: Secret::new("secret".to_string()),
         };
 
-        let app = newsletter_route().with_state(state);
+        let app = newsletter_route(state.clone());
 
         let body = BodyData {
             title: "Newsletter".to_string(),
@@ -345,7 +268,8 @@ mod tests {
             .oneshot(send_newsletter_request_from_json(
                 "/api/newsletter",
                 serde_json::to_value(body).expect("body to json value"),
-                Some(credentials),
+                Some(id),
+                &state.secret,
             ))
             .await
             .expect("response");
@@ -381,7 +305,7 @@ mod tests {
             secret: Secret::new("secret".to_string()),
         };
 
-        let app = newsletter_route().with_state(state);
+        let app = newsletter_route(state.clone());
 
         let body = BodyData {
             title: "Newsletter".to_string(),
@@ -395,6 +319,7 @@ mod tests {
                 "/api/newsletter",
                 serde_json::to_value(body).expect("body to json value"),
                 None,
+                &state.secret,
             ))
             .await
             .expect("response");
@@ -418,7 +343,6 @@ mod tests {
             .never()
             .return_once(|_| Ok(()));
         let mut authentication_mock = MockAuthenticationStorage::new();
-        let credentials: Credentials = CredentialsGenerator(EN).fake();
         authentication_mock
             .expect_get_credentials()
             .return_once(move |_| Ok(None));
@@ -437,7 +361,7 @@ mod tests {
             secret: Secret::new("secret".to_string()),
         };
 
-        let app = newsletter_route().with_state(state);
+        let app = newsletter_route(state.clone());
 
         let body = BodyData {
             title: "Newsletter".to_string(),
@@ -446,11 +370,13 @@ mod tests {
                 text: "Newsletter Content".to_string(),
             },
         };
+        let id = Uuid::new_v4();
         let response = app
             .oneshot(send_newsletter_request_from_json(
                 "/api/newsletter",
                 serde_json::to_value(body).expect("body to json value"),
-                Some(credentials),
+                Some(id),
+                &state.secret,
             ))
             .await
             .expect("response");

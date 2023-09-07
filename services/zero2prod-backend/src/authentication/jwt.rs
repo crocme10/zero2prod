@@ -17,7 +17,7 @@ pub struct TokenClaims {
     pub exp: usize,
 }
 
-pub fn build_token(id: Uuid, secret: Secret<String>) -> String {
+pub fn build_token(id: Uuid, secret: &Secret<String>) -> String {
     let now = Utc::now();
     let iat = now.timestamp() as usize;
     let exp = (now + Duration::minutes(60)).timestamp() as usize;
@@ -60,6 +60,7 @@ impl Authenticator {
 
         let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| Error::InvalidToken)?;
 
+        println!("token claims contains id: {}", user_id);
         if self
             .storage
             .id_exists(&user_id)

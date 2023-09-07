@@ -25,11 +25,14 @@ pub async fn resolve_context<B: fmt::Debug>(
     mut req: Request<B>,
     next: Next<B>,
 ) -> Result<Response, RoutesError> {
+    println!("resolve context");
     let context = resolve(&cookies, state).await;
 
     if context.is_err() && !matches!(context, Err(Error::TokenNotFound)) {
         cookies.remove(Cookie::named(JWT))
     }
+    
+    let context = context.context("Could not extract context")?;
 
     req.extensions_mut().insert(context);
 
@@ -41,6 +44,8 @@ pub async fn resolve(cookies: &Cookies, State(state): State<AppState>) -> Result
 
     let token = token.ok_or(Error::TokenNotFound)?;
 
+    println!("found token");
+
     let authenticator = Authenticator {
         storage: state.authentication.clone(),
         secret: state.secret.clone(),
@@ -50,6 +55,8 @@ pub async fn resolve(cookies: &Cookies, State(state): State<AppState>) -> Result
         .validate_token(&token)
         .await
         .context("Could not validate token")?;
+
+    println!("inserting id into context {}", id);
 
     Context::new(Some(id)).map_err(|_| Error::InvalidUserId {
         context: "invalid user id".to_string(),

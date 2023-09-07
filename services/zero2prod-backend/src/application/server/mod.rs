@@ -4,16 +4,13 @@ mod middleware;
 pub mod routes;
 
 use axum::{
-    error_handling::HandleErrorLayer,
-    http::{header, HeaderValue, Method, StatusCode},
+    http::{header, HeaderValue, Method},
     middleware::{from_fn_with_state, map_response},
     routing::Router,
-    BoxError,
 };
 use axum_server::{accept::DefaultAcceptor, Server};
 use secrecy::Secret;
-use std::{fmt, net::TcpListener, sync::Arc, time::Duration};
-use tower::{buffer::BufferLayer, limit::RateLimitLayer, ServiceBuilder};
+use std::{fmt, net::TcpListener, sync::Arc};
 use tower_cookies::CookieManagerLayer;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
@@ -34,15 +31,9 @@ pub fn new(listener: TcpListener, state: AppState) -> (Router, Server<DefaultAcc
         .nest("/api/v1", routes::routes(state.clone()))
         .layer(map_response(error))
         .layer(from_fn_with_state(state.clone(), resolve_context))
-        .layer(cors)
-        .layer(TraceLayer::new_for_http().make_span_with(make_span))
         .layer(CookieManagerLayer::new())
-        .layer(
-            ServiceBuilder::new()
-                .layer(HandleErrorLayer::new(handle_timeout_error))
-                .layer(BufferLayer::new(1024))
-                .layer(RateLimitLayer::new(5, Duration::from_secs(1))),
-        );
+        .layer(cors)
+        .layer(TraceLayer::new_for_http().make_span_with(make_span));
 
     let server = axum_server::from_tcp(listener);
 
@@ -71,11 +62,4 @@ impl fmt::Display for ApplicationBaseUrl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
-}
-
-async fn handle_timeout_error(err: BoxError) -> (StatusCode, String) {
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        format!("Unhandled internal error: {}", err),
-    )
 }

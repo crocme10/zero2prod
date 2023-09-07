@@ -76,7 +76,7 @@ pub async fn register(
         .await
         .context("Could not store credentials")?;
 
-    let token = build_token(id, state.secret);
+    let token = build_token(id, &state.secret);
 
     cookies::set_token_cookie(&cookies, &token);
 
@@ -221,6 +221,7 @@ mod tests {
             .await
             .expect("response");
 
+        println!("response: {:?}", response);
         // Check the response status code.
         assert_eq!(response.status(), StatusCode::OK);
 

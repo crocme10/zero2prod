@@ -7,6 +7,7 @@ use serde::Serialize;
 use std::fmt;
 
 use crate::application::server::context::ContextError;
+use crate::application::server::middleware::resolve_context::Error as ContextResolutionError;
 use crate::authentication::password::Error as PasswordError;
 use crate::domain::ports::secondary::AuthenticationError;
 use crate::domain::ports::secondary::EmailError;
@@ -27,6 +28,10 @@ pub enum Error {
     Context {
         context: String,
         source: ContextError,
+    },
+    ContextResolution {
+        context: String,
+        source: ContextResolutionError,
     },
     DuplicateEmail {
         context: String,
@@ -66,6 +71,9 @@ impl fmt::Display for Error {
             Error::Context { context, source } => {
                 write!(fmt, "Context: {context} {source}")
             }
+            Error::ContextResolution { context, source } => {
+                write!(fmt, "Context: {context} {source}")
+            }
             Error::DuplicateEmail { context } => {
                 write!(fmt, "Duplicate email: {context} ")
             }
@@ -102,6 +110,15 @@ impl IntoResponse for Error {
 impl From<ErrorContext<ContextError>> for Error {
     fn from(err: ErrorContext<ContextError>) -> Self {
         Error::Context {
+            context: err.0,
+            source: err.1,
+        }
+    }
+}
+
+impl From<ErrorContext<ContextResolutionError>> for Error {
+    fn from(err: ErrorContext<ContextResolutionError>) -> Self {
+        Error::ContextResolution {
             context: err.0,
             source: err.1,
         }
@@ -169,6 +186,14 @@ impl Error {
                     "status": "fail",
                     "message": context,
                     "code": "auth/missing_credentials".to_string()
+                })),
+            ),
+            Error::ContextResolution { context, source: _ } => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "status": "fail",
+                    "message": context,
+                    "code": "tbd".to_string()
                 })),
             ),
             Error::DuplicateEmail { context } => (
