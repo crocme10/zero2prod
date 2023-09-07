@@ -1,20 +1,16 @@
 use crate::err_context::{ErrorContext, ErrorContextExt};
 use crate::settings::{database_dev_settings, database_root_settings, Error as SettingsError};
+use futures::future::TryFutureExt;
 use serde::Serialize;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::path::{Path, PathBuf};
 use std::{fmt, fs};
-use tokio::time;
 
 pub async fn init_dev_db() -> Result<(), Error> {
     tracing::info!("Initializing dev db");
-    let task = tokio::spawn(async {
-        init_root().await.expect("init root");
-    });
-    while !task.is_finished() {
-        time::sleep(std::time::Duration::from_millis(100)).await;
-    }
-    init_dev().await
+    init_root()
+        .and_then(|_| async move { init_dev().await })
+        .await
 }
 
 async fn init_root() -> Result<(), Error> {
