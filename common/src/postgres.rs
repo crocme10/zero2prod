@@ -4,10 +4,16 @@ use serde::Serialize;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::path::{Path, PathBuf};
 use std::{fmt, fs};
+use tokio::time;
 
 pub async fn init_dev_db() -> Result<(), Error> {
     tracing::info!("Initializing dev db");
-    init_root().await?;
+    let task = tokio::spawn(async {
+        init_root().await.expect("init root");
+    });
+    while !task.is_finished() {
+        time::sleep(std::time::Duration::from_millis(100)).await;
+    }
     init_dev().await
 }
 

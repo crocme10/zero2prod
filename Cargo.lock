@@ -766,6 +766,7 @@ dependencies = [
  "serde_with",
  "serial_test",
  "sqlx",
+ "tokio",
  "tracing",
  "tracing-attributes",
  "tracing-futures",

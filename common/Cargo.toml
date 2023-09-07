@@ -29,6 +29,7 @@ sqlx = { version = "^0.7.1", default-features= false, features = [
     "postgres",
     "runtime-tokio-rustls",
   ] }
+tokio = { version = "^1.32.0", features = [ "rt" ] }
 tracing = "^0.1.37"
 tracing-attributes = "^0.1.26"
 tracing-opentelemetry = { version = "^0.21.0", default-features = false }
