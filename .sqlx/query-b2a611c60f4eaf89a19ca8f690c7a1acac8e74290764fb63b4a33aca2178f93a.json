@@ -1,14 +1,8 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT email FROM main.subscriptions WHERE status = $1",
+  "query": "UPDATE subscriptions SET status = $1 WHERE id = $2",
   "describe": {
-    "columns": [
-      {
-        "ordinal": 0,
-        "name": "email",
-        "type_info": "Text"
-      }
-    ],
+    "columns": [],
     "parameters": {
       "Left": [
         {
@@ -21,12 +15,11 @@
               ]
             }
           }
-        }
+        },
+        "Uuid"
       ]
     },
-    "nullable": [
-      false
-    ]
+    "nullable": []
   },
-  "hash": "77caa9380476a1f3d9991fd65a9022f8f79450126ec1a2da1a6dc19859e17370"
+  "hash": "b2a611c60f4eaf89a19ca8f690c7a1acac8e74290764fb63b4a33aca2178f93a"
 }

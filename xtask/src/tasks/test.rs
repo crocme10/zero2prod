@@ -11,17 +11,17 @@ pub fn xtest() -> Result<(), anyhow::Error> {
 }
 
 pub fn run_unit_test() -> Result<ExitStatus, anyhow::Error> {
-    let test = if check_nextest_exists().is_ok() {
-        Command::new("cargo")
-            .current_dir(project_root())
-            .args(["nextest", "run", "--lib", "--bins"])
-            .status()?
-    } else {
-        Command::new("cargo")
-            .current_dir(project_root())
-            .args(["test", "-p", "zero2prod", "--lib", "--bins"])
-            .status()?
-    };
+    // let test = if check_nextest_exists().is_ok() {
+    //     Command::new("cargo")
+    //         .current_dir(project_root())
+    //         .args(["nextest", "run", "--lib", "--bins"])
+    //         .status()?
+    // } else {
+    let test = Command::new("cargo")
+        .current_dir(project_root())
+        .args(["test", "-p", "zero2prod-backend", "--lib", "--bins"])
+        .status()?;
+    //};
     Ok(test)
 }
 
